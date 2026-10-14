@@ -134,12 +134,73 @@ export const SETTINGS = {
   },
 
   // ---------------------------------------------------------------
-  //  GUN TURRET (visual only in Milestone 1)
+  //  GUN TURRET
   // ---------------------------------------------------------------
   turret: {
     // How fast the turret swings toward your mouse (bigger = snappier).
     turnSpeed: 12,
     // Shots per second when holding the mouse button.
     fireRate: 8,
+    // Damage per bullet. An imp has 40 health, so 4 = 10 bullets (~1.25 s).
+    // This is balanced so the gun and ramming kill at about the same rate
+    // (same "damage per minute"). Watch the DPM meter (top right) to check.
+    damage: 4,
+    // Bullet speed (m/s) and how far bullets fly (m).
+    bulletSpeed: 160,
+    range: 140,
+    // Random inaccuracy in degrees. 0 = laser-perfect.
+    spread: 1.2,
+  },
+
+  // ---------------------------------------------------------------
+  //  RAMMING
+  // ---------------------------------------------------------------
+  ramming: {
+    // Hitting a demon at this speed (mph) with a normal-weight car does
+    // exactly enough damage to splat an imp. Faster = more damage.
+    // Heavier cars hit harder, so they splat at lower speeds.
+    splatSpeedMph: 25,
+    // How much the car slows down per demon it plows through
+    // (fraction of demon weight vs car weight). 0 = none.
+    momentumLoss: 1.0,
+    // Camera shake on a splat. 0 = none.
+    shake: 0.35,
+    // Seconds between ram kills that still count toward a SPLAT combo.
+    comboTime: 1.5,
+  },
+
+  // ---------------------------------------------------------------
+  //  YOUR CAR'S HEALTH (temporary until Milestone 4: parts break off)
+  // ---------------------------------------------------------------
+  health: {
+    max: 200,
+    // Seconds before you respawn after being wrecked.
+    respawnDelay: 2.5,
+  },
+
+  // ---------------------------------------------------------------
+  //  IMPS (the small demons)
+  // ---------------------------------------------------------------
+  imp: {
+    // Most imps alive at once (performance cap).
+    maxActive: 100,
+    health: 40,
+    // Weight in kg (affects how much they slow you down when rammed).
+    mass: 60,
+    // Running speed when chasing you (m/s). 8 m/s is about 18 mph,
+    // slower than the splat speed, so they can't hurt you while you're fast.
+    chaseSpeed: 8,
+    // Strolling speed when they haven't noticed you.
+    wanderSpeed: 2.2,
+    // How close you get before they notice and chase you (m).
+    noticeRange: 75,
+    // Damage per claw swipe, and seconds between swipes (per imp).
+    attackDamage: 3,
+    attackInterval: 1.0,
+    // Imps spawn in packs of this many.
+    packMin: 6,
+    packMax: 14,
+    // Imps farther than this from you vanish and new packs appear (m).
+    despawnDistance: 260,
   },
 };

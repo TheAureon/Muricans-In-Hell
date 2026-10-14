@@ -3,7 +3,8 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
-**Current stage: Milestone 1 — driving feel.**
+**Current stage: Milestone 2 — ram and shoot.** Hordes of imps; splat them
+by ramming at 25+ mph or gun them down.
 
 ## How to play (easiest)
 
@@ -32,7 +33,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | A / D | Steer |
 | Space | Handbrake (drift!) |
 | Mouse | Aim the roof gun |
-| Click (hold) | Fire (visual only for now) |
+| Click (hold) | Fire the roof gun |
 | Mouse wheel | Zoom camera |
 | R | Unstick the car |
 | Backspace | Back to the start |
@@ -56,8 +57,10 @@ src/
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers
   regions/            one data file per region (Ash Plains so far)
-  world/              sky, ground, scenery, visual effects
+  world/              sky, ground, scenery, visual effects, gore
   vehicle/            the car's driving physics and 3D model
+  demons/             demon types (data), their 3D models, spawning + AI
+  combat/             bullets and the damage-per-minute tracker
   camera/             the chase camera
   ui/                 speedometer, help text, tuning panel
 ```

@@ -74,6 +74,11 @@ export class Car {
     this.pitch = { x: 0, v: 0 };
     this.wheelSpin = 0;
 
+    // Health (temporary: Milestone 4 replaces this with parts breaking off)
+    this.health = SETTINGS.health.max;
+    this.wrecked = false;
+    this.hurtTimer = 0; // > 0 right after taking damage (for screen flash)
+
     // Turret
     this.turretYaw = 0;
     this.turretPitch = 0;
@@ -83,6 +88,8 @@ export class Car {
   // Runs at a fixed 60 times per second, before the physics world steps.
   fixedUpdate(input, dt) {
     const S = SETTINGS;
+    if (this.wrecked) input = WRECKED_INPUT;
+    this.hurtTimer = Math.max(0, this.hurtTimer - dt);
     if (this.appliedMass !== S.car.mass) {
       this.collider.setMass(S.car.mass);
       this.appliedMass = S.car.mass;
@@ -188,6 +195,25 @@ export class Car {
     this.currRot.set(r.x, r.y, r.z, r.w);
   }
 
+  takeDamage(amount) {
+    if (this.wrecked) return;
+    this.health = Math.max(0, this.health - amount);
+    this.hurtTimer = 0.25;
+    if (this.health <= 0) this.wrecked = true;
+  }
+
+  // A sudden change in speed (e.g. plowing through a demon).
+  nudge(dx, dz) {
+    const v = this.body.linvel();
+    this.body.setLinvel({ x: v.x + dx, y: v.y, z: v.z + dz }, true);
+  }
+
+  respawn() {
+    this.health = SETTINGS.health.max;
+    this.wrecked = false;
+    this.reset(true);
+  }
+
   // Put the car back upright at the start (or where it is), stopped.
   reset(toSpawn = false) {
     const p = toSpawn ? this.spawn : this.currPos;
@@ -255,6 +281,8 @@ export class Car {
   get heading() { return _fwd.set(0, 0, 1).applyQuaternion(this.model.root.quaternion).setY(0).normalize(); }
   get muzzleWorld() { return this.model.turret.muzzle.getWorldPosition(new THREE.Vector3()); }
 }
+
+const WRECKED_INPUT = { throttle: 0, steer: 0, handbrake: true };
 
 function approach(v, target, step) {
   return v > target ? Math.max(v - step, target) : Math.min(v + step, target);
