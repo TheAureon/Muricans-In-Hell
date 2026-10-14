@@ -141,10 +141,10 @@ export const SETTINGS = {
     turnSpeed: 12,
     // Shots per second when holding the mouse button.
     fireRate: 8,
-    // Damage per bullet. An imp has 40 health, so 4 = 10 bullets (~1.25 s).
-    // This is balanced so the gun and ramming kill at about the same rate
-    // (same "damage per minute"). Watch the DPM meter (top right) to check.
-    damage: 4,
+    // Damage per bullet. An imp has 40 health, so 5 = 8 bullets (~1 s).
+    // Started balanced with ramming (same "damage per minute"), then nudged
+    // up a bit after play-testing. Watch the DPM meter (top right) to compare.
+    damage: 5,
     // Bullet speed (m/s) and how far bullets fly (m).
     bulletSpeed: 160,
     range: 140,
