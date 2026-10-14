@@ -5,7 +5,14 @@ yourself (and never, ever get out of).
 
 **Current stage: Milestone 1 — driving feel.**
 
-## How to run it
+## How to play (easiest)
+
+Double-click **`HELLDRIVE.html`**. That's it: no install, works offline.
+(Opening `index.html` directly will NOT work; that's the developer version.)
+
+To rebuild `HELLDRIVE.html` after changing code: `npm run build:single`.
+
+## How to run it (developer mode, live-reloads when you edit settings)
 
 You need [Node.js](https://nodejs.org) (the "LTS" version) installed once.
 Then, in a terminal inside this folder:
