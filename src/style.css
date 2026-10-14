@@ -68,3 +68,45 @@ canvas { display: block; cursor: none; }
   text-shadow: 0 0 30px #f00, 0 6px 0 #400; display: none; text-align: center; }
 #wrecked small { display: block; font: 16px system-ui; color: #fff; letter-spacing: 3px; }
 #wrecked.on { display: block; animation: pulse 0.8s infinite; }
+
+/* ---- Milestone 3: garage ---- */
+body.garage-open canvas { cursor: crosshair; }
+body.garage-open #hud > *:not(#fps) { display: none; }
+#garage { position: fixed; inset: 0; pointer-events: none; color: #f0e0d0; font: 13px/1.4 system-ui, sans-serif; }
+#garage button { pointer-events: auto; font: inherit; color: inherit; cursor: pointer; }
+#garage .g-title { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); font: 26px 'Arial Black', Impact, sans-serif;
+  color: #ffb070; text-shadow: 0 3px 0 #400, 0 0 12px #f40; text-align: center; white-space: nowrap; }
+#garage .g-title small { display: block; font: 12px system-ui; color: #f0d8c8a0; text-shadow: none; }
+#garage .g-parts { position: absolute; top: 80px; left: 14px; width: 270px; display: flex; flex-direction: column; gap: 6px; }
+#garage .g-parts button[data-type] { display: flex; align-items: center; gap: 10px; text-align: left; background: #120806d8;
+  border: 2px solid #ffffff18; border-radius: 6px; padding: 7px 10px; }
+#garage .g-parts button[data-type]:hover { border-color: #ff9a6080; }
+#garage .g-parts button.sel { border-color: #ff6a30; background: #4a1608e0; box-shadow: 0 0 12px #ff4a1060; }
+#garage .ico { font-size: 22px; }
+#garage .nm { flex: 1; font-weight: 700; }
+#garage .nm small { display: block; font-weight: 400; color: #f0d8c8a0; font-size: 11px; }
+#garage .kg { font-size: 11px; color: #ffcf9a; white-space: nowrap; }
+#garage .g-row { display: flex; gap: 6px; margin-top: 4px; }
+#garage .g-row button { flex: 1; background: #120806d8; border: 2px solid #ffffff18; border-radius: 6px; padding: 6px; }
+#garage .g-stats { position: absolute; top: 80px; right: 14px; width: 240px; background: #120806d8; border-radius: 6px;
+  padding: 10px 14px; border-right: 3px solid #ff5020; }
+#garage .g-stats div { display: flex; gap: 8px; align-items: baseline; }
+#garage .g-stats span { flex: 1; color: #f0d8c8b0; }
+#garage .g-stats b { color: #ffe6c0; }
+#garage .g-stats em { font-style: normal; font-size: 11px; min-width: 52px; text-align: right; }
+#garage .g-stats em.good { color: #7fe07f; }
+#garage .g-stats em.bad { color: #ff7a60; }
+#garage .g-sub { font-size: 10px; letter-spacing: 2px; color: #ff9a60; margin: 8px 0 3px; display: block !important; }
+#garage .g-bal { position: relative; height: 10px; background: linear-gradient(90deg, #ff7a60, #7fe07f 40%, #7fe07f 60%, #ffb060);
+  border-radius: 5px; margin: 4px 0 2px; justify-content: space-between; }
+#garage .g-bal i { position: absolute; top: -3px; width: 4px; height: 16px; background: #fff; box-shadow: 0 0 4px #000; transform: translateX(-2px); }
+#garage .g-bal span { flex: 0 !important; font-size: 9px; position: relative; top: 12px; color: #f0d8c880 !important; }
+#garage .g-baltext { margin-top: 12px; color: #ffcf9a; display: block !important; }
+#garage .g-status { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); background: #120806d8; padding: 6px 14px;
+  border-radius: 6px; white-space: nowrap; }
+#garage .g-status:empty { display: none; }
+#garage .g-status.bad { color: #ff8a70; }
+#garage .g-help { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); color: #f0d8c8b0; white-space: nowrap; }
+#garage .g-help b { color: #ffb070; }
+#garage .g-done { position: absolute; right: 14px; bottom: 16px; font: 20px 'Arial Black', Impact, sans-serif !important;
+  background: #c8202a; border: 0; border-radius: 6px; padding: 10px 22px; color: #fff !important; box-shadow: 0 4px 0 #600; }

@@ -17,8 +17,9 @@ export const SETTINGS = {
   //  CAR: power, speed and weight
   // ---------------------------------------------------------------
   car: {
-    // How heavy the car is (kg). Heavier = slower to speed up, slower to
-    // turn, harder to stop, and (later) hits harder when ramming.
+    // How heavy the bare car is (kg), before any parts you bolt on.
+    // Heavier = slower to speed up, slower to turn, harder to stop, and
+    // hits harder when ramming.
     mass: 1200,
 
     // Engine push. Bigger = faster acceleration.
@@ -167,6 +168,28 @@ export const SETTINGS = {
     shake: 0.35,
     // Seconds between ram kills that still count toward a SPLAT combo.
     comboTime: 1.5,
+  },
+
+  // ---------------------------------------------------------------
+  //  BUILDER (press G for the garage)
+  // ---------------------------------------------------------------
+  build: {
+    // Most parts allowed on one vehicle (keeps the game smooth).
+    maxParts: 40,
+    // How strongly front/back weight changes handling. 0 = not at all.
+    //  Nose-heavy  -> understeer (turns wider, more stable)
+    //  Tail-heavy  -> oversteer (tail slides out more easily)
+    balanceEffect: 1.0,
+  },
+
+  // Every part: weight (kg) and what it does.
+  parts: {
+    armor:   { mass: 60,  armor: 15 },              // +15 max armor each
+    spike:   { mass: 25,  ramBonus: 0.3 },          // +30% ram damage on the side it faces
+    plow:    { mass: 120, ramBonus: 0.7 },          // +70% ram damage on the side it faces
+    gun:     { mass: 80 },                          // one more gun that fires with your main gun
+    booster: { mass: 40,  power: 3500, topSpeed: 2.5 }, // more engine push and top speed (m/s)
+    weight:  { mass: 250 },                         // just heavy. Hits harder, handles worse.
   },
 
   // ---------------------------------------------------------------

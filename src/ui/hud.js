@@ -18,7 +18,7 @@ export class Hud {
         <b>MOUSE</b> aim &nbsp; <b>CLICK</b> (hold) fire<br>
         <b>RAM</b> demons at 25+ mph to splat them<br>
         <b>WHEEL</b> zoom &nbsp; <b>R</b> unstick &nbsp; <b>BACKSPACE</b> back to start<br>
-        <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
+        <b>G</b> garage (build!) &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
       </div>
       <div id="fps"></div>
       <div id="crosshair"></div>
@@ -62,7 +62,8 @@ export class Hud {
     el.style.fontSize = `${Math.min(40 + combo * 5, 72)}px`;
   }
 
-  combat(car, stats, healthMax) {
+  combat(car, stats) {
+    const healthMax = car.stats.maxHealth;
     this.healthFill.style.width = `${(car.health / healthMax) * 100}%`;
     this.healthFill.classList.toggle('low', car.health / healthMax < 0.3);
     this.hurt.style.opacity = car.hurtTimer > 0 ? Math.min(1, car.hurtTimer * 4) : 0;

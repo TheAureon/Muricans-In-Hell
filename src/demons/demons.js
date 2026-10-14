@@ -10,7 +10,6 @@
 // Not enough damage = the demon gets knocked flying and the car gets a jolt.
 import * as THREE from 'three';
 import { SETTINGS } from '../settings.js';
-import { CAR_DIMENSIONS } from '../vehicle/carModel.js';
 import { DEMON_TYPES } from './demonTypes.js';
 
 const GRAVITY = 22;
@@ -176,9 +175,10 @@ export class Demons {
     const lv = car.body.linvel();
     const carVel = new THREE.Vector3(lv.x, 0, lv.z);
     const yawRate = car.body.angvel().y;
-    const massFactor = SETTINGS.car.mass / SETTINGS.steering.referenceMass;
+    const carMass = car.totalMass; // car + all bolted-on parts
+    const massFactor = carMass / SETTINGS.steering.referenceMass;
+    const B = car.localBounds;     // the car's footprint, grown by parts
     const splatSpeed = SETTINGS.ramming.splatSpeedMph * MPH;
-    const C = CAR_DIMENSIONS;
 
     for (const d of this.all) {
       if (!d.alive) continue;
@@ -235,20 +235,20 @@ export class Demons {
       }
 
       // ---- Touching the car? ----
-      if (dist > 6 || d.pos.y > C.halfHeight * 2 + 0.6 || car.wrecked) continue;
+      if (dist > 14 || d.pos.y > B.maxY + 0.3 || car.wrecked) continue;
       _local.subVectors(d.pos, carPos).setY(0).applyQuaternion(_qi);
-      const hx = C.halfWidth + r;
-      const hzF = C.halfLength + 0.45 + r; // front bumper spikes stick out
-      const hzB = C.halfLength + r;
-      const hz = _local.z > 0 ? hzF : hzB;
+      // How deep into the car's footprint is the demon, from the nearest side?
+      const sideX = _local.x > 0 ? 1 : -1, sideZ = _local.z > 0 ? 1 : -1;
+      const px = sideX > 0 ? B.maxX + r - _local.x : _local.x - (B.minX - r);
+      const pz = sideZ > 0 ? B.maxZ + r - _local.z : _local.z - (B.minZ - r);
       const reach = 0.45; // claws reach a bit further than the body
-      if (Math.abs(_local.x) > hx + reach || Math.abs(_local.z) > hz + reach) continue;
-      const touching = Math.abs(_local.x) < hx && Math.abs(_local.z) < hz;
+      if (px < -reach || pz < -reach) continue;
+      const touching = px > 0 && pz > 0;
 
       if (touching) {
         // Which side of the car did we hit? (the side we're least deep into)
-        const px = hx - Math.abs(_local.x), pz = hz - Math.abs(_local.z);
-        if (px < pz) _n.set(Math.sign(_local.x), 0, 0); else _n.set(0, 0, Math.sign(_local.z));
+        const hitSide = px < pz ? `${sideX},0` : `0,${sideZ}`;
+        if (px < pz) _n.set(sideX, 0, 0); else _n.set(0, 0, sideZ);
         _n.applyQuaternion(_q); // to world: points from car toward demon
         // Speed of that bit of car (moving + spinning), into the demon.
         const rx = d.pos.x - carPos.x, rz = d.pos.z - carPos.z;
@@ -263,11 +263,13 @@ export class Demons {
 
         if (impact > 2 && d.ramCd <= 0) {
           d.ramCd = 0.25;
-          const dmg = d.def.stats().health * (impact / splatSpeed) ** 2 * massFactor;
+          // Spikes / plows facing this side make it hurt more.
+          const bonus = 1 + (car.stats.ramBonus[hitSide] || 0);
+          const dmg = d.def.stats().health * (impact / splatSpeed) ** 2 * massFactor * bonus;
           const carPush = new THREE.Vector3(cvx, 0, cvz);
           const killed = this.damage(d, dmg, 'ram', carPush);
           // The car loses a little momentum (heavier demons = more).
-          const loss = Math.min(impact, impact * (d.def.stats().mass / SETTINGS.car.mass) * SETTINGS.ramming.momentumLoss * (killed ? 1 : 2.5));
+          const loss = Math.min(impact, impact * (d.def.stats().mass / carMass) * SETTINGS.ramming.momentumLoss * (killed ? 1 : 2.5));
           car.nudge(_n.x * -loss, _n.z * -loss);
           if (!killed) {
             // Knocked flying!

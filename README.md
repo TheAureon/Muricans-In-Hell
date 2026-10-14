@@ -3,8 +3,9 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
-**Current stage: Milestone 2 — ram and shoot.** Hordes of imps; splat them
-by ramming at 25+ mph or gun them down.
+**Current stage: Milestone 3 — the builder.** Press **G** to open the garage
+and bolt armor, spikes, plows, guns, rockets and lead weights anywhere on your
+car (and onto each other). Weight and balance change how it drives.
 
 ## How to play (easiest)
 
@@ -37,6 +38,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | Mouse wheel | Zoom camera |
 | R | Unstick the car |
 | Backspace | Back to the start |
+| G | Garage: build your car (pauses the game) |
 | T | Live tuning panel |
 | M | Mute |
 | H | Hide help |
@@ -58,11 +60,11 @@ src/
   core/               input, physics setup, sound, random numbers
   regions/            one data file per region (Ash Plains so far)
   world/              sky, ground, scenery, visual effects, gore
-  vehicle/            the car's driving physics and 3D model
+  vehicle/            the car's driving physics, 3D model, parts + build grid
   demons/             demon types (data), their 3D models, spawning + AI
   combat/             bullets and the damage-per-minute tracker
   camera/             the chase camera
-  ui/                 speedometer, help text, tuning panel
+  ui/                 speedometer, help text, tuning panel, garage
 ```
 
 ## Tech

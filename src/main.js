@@ -16,6 +16,7 @@ import { Car } from './vehicle/car.js';
 import { ChaseCamera } from './camera/chaseCamera.js';
 import { Hud, showStartScreen } from './ui/hud.js';
 import { createTuningPanel } from './ui/tuning.js';
+import { Garage } from './ui/garage.js';
 
 async function main() {
   const region = STARTING_REGION;
@@ -38,6 +39,7 @@ async function main() {
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase });
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   demons.populate(car.currPos);
+  const garage = new Garage({ camera, renderer, car, audio });
 
   // Draw one frame behind the start screen so it isn't empty.
   car.capture(); car.capture();
@@ -68,6 +70,19 @@ async function main() {
     if (input.wasPressed('KeyT')) tuning.toggle();
     if (input.wasPressed('KeyH')) hud.toggleHelp();
     if (input.wasPressed('KeyM')) audio.toggleMute();
+    if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
+      if (!car.wrecked) garage.toggle();
+      input.mouse.down = false;
+    }
+    if (garage.open) {
+      // Paused: only the garage camera moves.
+      aim.mesh.visible = false;
+      garage.update(dt);
+      renderer.render(scene, camera);
+      input.endFrame();
+      requestAnimationFrame(frame);
+      return;
+    }
     if (input.wasPressed('KeyR')) car.reset(false);
     if (input.wasPressed('Backspace')) { car.reset(true); demons.clearAround(car.currPos, 60); }
 
@@ -118,8 +133,10 @@ async function main() {
     if (input.mouse.down && fireCooldown <= 0 && !car.wrecked) {
       fireCooldown = 1 / SETTINGS.turret.fireRate;
       car.model.root.updateMatrixWorld(true);
-      car.fireVisual();
-      bullets.fire(car.muzzleWorld, aimPoint);
+      for (const t of car.turrets) {
+        car.fireVisual(t);
+        bullets.fire(car.muzzleWorld(t), aimPoint);
+      }
       audio.gunshot();
     }
 
@@ -149,7 +166,7 @@ async function main() {
     const driftAmount = car.grounded ? THREE.MathUtils.clamp((Math.abs(car.sidewaysSpeed) - 2) / 10, 0, 1) : 0;
     audio.update(Math.min(Math.abs(car.forwardSpeed) / SETTINGS.car.topSpeed, 1), car.throttle, driftAmount);
     hud.update(car, SETTINGS.car.topSpeed, dt, input.mouse);
-    hud.combat(car, stats, SETTINGS.health.max);
+    hud.combat(car, stats);
 
     renderer.render(scene, camera);
     input.endFrame();
@@ -158,7 +175,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVE = { car, SETTINGS, physics, scene, camera, demons, stats };
+  window.HELLDRIVE = { car, SETTINGS, physics, scene, camera, demons, stats, garage };
 }
 
 main().catch((err) => {
