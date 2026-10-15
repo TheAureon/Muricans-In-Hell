@@ -9,6 +9,11 @@ export class Stats {
     this.time = 0;
   }
 
+  reset() {
+    this.events = [];
+    this.kills = { gun: 0, ram: 0 };
+  }
+
   tick(dt) {
     this.time += dt;
     while (this.events.length && this.events[0].t < this.time - WINDOW) this.events.shift();

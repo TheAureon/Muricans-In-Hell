@@ -449,10 +449,12 @@ export class Car {
 
   // Back in one piece with your last garage build. Spare parts you were
   // carrying stay in your stock.
+  // Wrecked = start the whole run over: a complete stock car (every body
+  // piece back), no bolted-on parts, and just the starting kit in stock.
   respawn() {
-    const inventory = this.build.inventory;
-    this.build.load(this.savedBuild);
-    this.build.inventory = inventory;
+    this.build.load({ parts: [], missing: [], inventory: { ...SETTINGS.build.startingKit } });
+    this.savedBuild = this.build.snapshot();
+    this.build.save();
     this.wrecked = false;
     this.applyBuild();
     this.reset(true);

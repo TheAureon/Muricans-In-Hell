@@ -8,6 +8,9 @@ the plains (imps, hellhounds, pincushions, cinder spitters and ash brutes),
 getting nastier the further you drive from the start. Follow the arrow at the
 top of the screen to the bone arena and wake **the Ash Titan**.
 
+Get wrecked (lose the cabin) and the whole run starts over: a complete stock
+car, the starting parts kit, fresh demons, and the Titan asleep again.
+
 Damage is physical: every body section and bolted-on part takes its own
 damage and breaks off as that actual piece. Press **E** to grab scrap, then
 bolt it back on in the garage (**G**), anywhere you like.
@@ -45,6 +48,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | Backspace | Back to the start |
 | E | Grab scrap that fell off your car |
 | R (in garage) | Turn a loose car piece before placing it |
+| Ctrl/⌘ + Z (in garage) | Undo the last change |
 | G | Garage: build + repair (pauses; not with demons close) |
 | T | Live tuning panel |
 | M | Mute |

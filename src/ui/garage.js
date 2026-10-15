@@ -7,6 +7,7 @@
 //   Right drag   spin the camera around      Wheel  zoom
 //   1-9          pick a part                 F      mirror on/off
 //   R            turn a loose car piece (nose, door...) before placing it
+//   Ctrl/⌘ + Z   undo the last change
 //   G / Esc      back to driving
 //
 // Opening the garage repairs everything still attached. Pieces that fell
@@ -33,6 +34,7 @@ export class Garage {
     this.selected = 'armor';
     this.mirror = true;
     this.rot = 0; // quarter-turns for loose car pieces
+    this.history = []; // snapshots of the build before each change (for undo)
     this.hover = null; // { i, j, k, normal, partKey, reason }
 
     // Camera controls (right-drag to orbit, wheel to zoom)
@@ -98,6 +100,7 @@ export class Garage {
     this.gridLines.visible = true;
     // The mechanics patch up everything that's still attached.
     this.car.build.repairAll();
+    this.history = [];
     this.car.applyBuild();
     this.#rebuildHitBoxes();
     this.#refreshUI();
@@ -167,6 +170,7 @@ export class Garage {
     if (!h || h.reason) { this.audio.claw(); return; }
     const b = this.car.build;
     if (!b.has(this.selected)) { this.audio.claw(); this.#status(`✖ No ${pieceInfo(this.selected).name} left in stock. Find scrap out there (E)!`, true); return; }
+    this.#remember();
     b.add(this.selected, h.i, h.j, h.k, h.normal, this.rot);
     if (this.mirror && b.has(this.selected) && !isSectionPiece(this.selected)) {
       const mi = -1 - h.i; // the matching cell on the other side
@@ -181,6 +185,7 @@ export class Garage {
     if (!h || !h.onPart) return;
     const b = this.car.build;
     const { i, j, k } = h.onPart;
+    this.#remember();
     const [removed] = b.remove(i, j, k);
     if (this.mirror && removed && !isSectionPiece(removed.type)) {
       const twin = b.parts.get(`${-1 - i},${j},${k}`);
@@ -188,6 +193,21 @@ export class Garage {
     }
     this.audio.hit();
     this.#changed();
+  }
+
+  // Remember the build as it is now, so the next change can be undone.
+  #remember() {
+    this.history.push(this.car.build.snapshot());
+    if (this.history.length > 100) this.history.shift();
+  }
+
+  #undo() {
+    const snap = this.history.pop();
+    if (!snap) { this.#status('Nothing to undo'); return; }
+    this.car.build.load(snap); // (also puts the parts stock back the way it was)
+    this.audio.hit();
+    this.#changed();
+    this.#status(`Undone. ${this.history.length ? this.history.length + ' more step' + (this.history.length > 1 ? 's' : '') + ' to undo.' : ''}`);
   }
 
   #changed() {
@@ -258,6 +278,7 @@ export class Garage {
     });
     window.addEventListener('keydown', (e) => {
       if (!this.open) return;
+      if (e.code === 'KeyZ' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.#undo(); return; }
       const n = Number(e.key);
       const list = this.#palette();
       if (n >= 1 && n <= list.length) this.#select(list[n - 1]);
@@ -297,10 +318,13 @@ export class Garage {
           <button class="g-mirror"></button>
           <button class="g-clear">🗑️ Clear all</button>
         </div>
+        <div class="g-row">
+          <button class="g-undo">↶ Undo (Ctrl/⌘+Z)</button>
+        </div>
       </div>
       <div class="g-stats"></div>
       <div class="g-status"></div>
-      <div class="g-help"><b>Left click</b> bolt on · <b>Right click</b> remove · <b>Right drag</b> spin view · <b>Wheel</b> zoom · <b>1-9</b> pick part · <b>R</b> turn piece · <b>F</b> mirror · <b>G</b> back to driving</div>
+      <div class="g-help"><b>Left click</b> bolt on · <b>Right click</b> remove · <b>Right drag</b> spin view · <b>Wheel</b> zoom · <b>1-9</b> pick part · <b>R</b> turn piece · <b>F</b> mirror · <b>Ctrl/⌘+Z</b> undo · <b>G</b> back to driving</div>
       <button class="g-done">DRIVE! (G)</button>`;
     document.body.appendChild(ui);
     this.ui = ui;
@@ -309,13 +333,16 @@ export class Garage {
       if (btn) this.#select(btn.dataset.type);
     });
     ui.querySelector('.g-mirror').addEventListener('click', () => this.#toggleMirror());
-    ui.querySelector('.g-clear').addEventListener('click', () => { this.car.build.clear(); this.#changed(); });
+    ui.querySelector('.g-clear').addEventListener('click', () => { this.#remember(); this.car.build.clear(); this.#changed(); });
+    ui.querySelector('.g-undo').addEventListener('click', () => this.#undo());
     ui.querySelector('.g-done').addEventListener('click', () => this.close());
     // "Rebuild" buttons for missing body sections
     ui.querySelector('.g-stats').addEventListener('click', (e) => {
       const id = e.target.dataset?.restore;
       if (!id) return;
+      this.#remember();
       const why = this.car.build.restoreSection(id);
+      if (why) this.history.pop();
       if (why) { this.audio.claw(); this.#status(`✖ ${why}`, true); return; }
       this.audio.thump();
       this.#changed();
@@ -329,6 +356,7 @@ export class Garage {
   }
 
   #refreshUI() {
+    this.ui.querySelector('.g-undo').disabled = !this.history.length;
     const list = this.#palette();
     if (!list.includes(this.selected)) this.selected = list[0];
     const unlimited = SETTINGS.build.unlimitedParts;

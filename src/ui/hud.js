@@ -37,7 +37,7 @@ export class Hud {
       </div>
       <div id="splat"></div>
       <div id="hurt"></div>
-      <div id="wrecked">WRECKED!<small>respawning…</small></div>`;
+      <div id="wrecked">WRECKED!<small>starting over: fresh car, starting kit…</small></div>`;
     this.speedNum = document.getElementById('speed-num');
     this.speedFill = document.getElementById('speed-fill');
     this.drift = document.getElementById('drift');

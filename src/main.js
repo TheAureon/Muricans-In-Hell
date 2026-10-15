@@ -149,11 +149,18 @@ async function main() {
       }
       if (wreckTimer > SETTINGS.damage.respawnDelay) {
         wreckTimer = 0;
+        // Full restart: stock car + starting kit, scrap gone, fresh demons,
+        // the Titan asleep again, and the region no longer counts as cleared.
         car.respawn();
-        scrap.clear(); // your build comes back whole, so its old scrap vanishes
+        scrap.clear();
         projectiles.clear();
-        demons.clearAround(car.currPos, 60);
-        boss?.reset();
+        demons.clearAround(car.currPos, 99999);
+        demons.populate(car.currPos);
+        if (boss) { boss.defeated = false; boss.reset(); }
+        progress.cleared = {};
+        saveProgress(progress);
+        stats.reset();
+        hud.toast('Starting over with a fresh car!', 'warn');
       }
     }
 
