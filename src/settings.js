@@ -14,6 +14,15 @@
 
 export const SETTINGS = {
   // ---------------------------------------------------------------
+  //  DEV / CREATIVE MODE (press C in the game to switch these)
+  // ---------------------------------------------------------------
+  dev: {
+    noEnemies: false, // no demons, no boss
+    noDamage: false,  // your car can't be hurt
+    creative: false,  // free building: unlimited parts, all unlocked, free upgrades
+  },
+
+  // ---------------------------------------------------------------
   //  CAR: power, speed and weight
   // ---------------------------------------------------------------
   car: {

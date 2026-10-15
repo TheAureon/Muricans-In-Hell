@@ -19,7 +19,7 @@ export class Hud {
         <b>RAM</b> demons at 40+ km/h to splat them<br>
         <b>E</b> grab scrap that fell off your car<br>
         <b>WHEEL</b> zoom &nbsp; <b>R</b> unstick &nbsp; <b>BACKSPACE</b> back to start<br>
-        <b>G</b> garage (build!) &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
+        <b>G</b> garage (build!) &nbsp; <b>C</b> dev/creative &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
       </div>
       <div id="fps"></div>
       <div id="crosshair"></div>

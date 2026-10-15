@@ -124,6 +124,7 @@ export class Demons {
 
   // Keep the world topped up with packs, out of sight-ish.
   #refill(carPos, dt, initial = false) {
+    if (SETTINGS.dev.noEnemies) return; // dev mode: peace and quiet
     const S = SETTINGS.demons;
     const max = Math.min(S.maxActive, this.all.length);
     this.spawnTimer -= dt;

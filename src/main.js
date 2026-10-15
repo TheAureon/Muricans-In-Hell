@@ -22,8 +22,10 @@ import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
 import { Progress } from './core/progress.js';
 import { Souls } from './world/souls.js';
+import { DevPanel, loadDevSettings } from './ui/devPanel.js';
 
 async function main() {
+  loadDevSettings(); // dev/creative switches first, so "no enemies" applies from the start
   const region = STARTING_REGION;
   const physics = await createPhysics();
   const { renderer, scene, camera, followPlayer } = createScene(region);
@@ -76,6 +78,44 @@ async function main() {
   demons.boss = boss;
   demons.populate(car.currPos);
 
+  // Dev / creative mode (press C): no enemies, no damage, free building.
+  const dev = new DevPanel({
+    onChange: (which) => {
+      const D = SETTINGS.dev;
+      if (which === 'noEnemies') {
+        if (D.noEnemies) {
+          demons.clearAround(car.currPos, 1e9);
+          projectiles.clear();
+          boss?.reset();
+          if (boss) boss.root.visible = false;
+          hud.bossBar(null);
+        } else {
+          boss?.reset();
+          demons.populate(car.currPos);
+        }
+      }
+      if (which === 'creative' && !D.creative) {
+        // Back to reality: your real saved build, souls, unlocks and chassis.
+        progress.reloadSaved();
+        car.build.restore();
+        car.savedBuild = car.build.snapshot();
+        car.setTier(progress.tier);
+        hud.souls(progress.souls);
+      }
+      if (which === 'creative') car.applyBuild();
+      garage.refresh();
+      hud.toast(`${{ noEnemies: 'No enemies', noDamage: 'No damage', creative: 'Free build' }[which]}: ${D[which] ? 'ON' : 'OFF'}`, 'warn');
+    },
+    onTier: (i) => {
+      if (!SETTINGS.dev.creative) return;
+      progress.tier = i; // (not saved in creative mode)
+      car.setTier(i);
+      garage.refresh();
+      hud.toast(`Chassis: ${SETTINGS.chassisTiers[i].name}`, 'warn');
+    },
+  });
+  if (SETTINGS.dev.noEnemies && boss) boss.root.visible = false;
+
   // Pieces breaking off the car become scrap lying in the world.
   car.onDetach = (pieces) => {
     for (const p of pieces) {
@@ -115,6 +155,7 @@ async function main() {
 
     // --- One-shot keys ---
     if (input.wasPressed('KeyT')) tuning.toggle();
+    if (input.wasPressed('KeyC')) dev.toggle();
     if (input.wasPressed('KeyH')) hud.toggleHelp();
     if (input.wasPressed('KeyM')) audio.toggleMute();
     if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
@@ -145,7 +186,7 @@ async function main() {
       car.capture();
       car.afterStep(); // crash damage from hitting rocks
       demons.fixedUpdate(PHYSICS_STEP, car);
-      boss?.fixedUpdate(PHYSICS_STEP, car);
+      if (!SETTINGS.dev.noEnemies) boss?.fixedUpdate(PHYSICS_STEP, car);
       car.applyCrashDamage();
       accumulator -= PHYSICS_STEP;
     }
@@ -193,7 +234,7 @@ async function main() {
     else if (aim.mesh.visible) aimPoint = tmpAim.copy(aimPoint).setY(0.8);
     car.render(alpha, dt, aimPoint);
     demons.render(alpha, dt);
-    boss?.render(alpha, dt);
+    if (!SETTINGS.dev.noEnemies) boss?.render(alpha, dt);
     chase.update(car, dt, input.wheel);
 
     // --- Shooting: every gun fires at its own weapon's rate ---
@@ -263,7 +304,7 @@ async function main() {
     projectiles.update(dt);
 
     // --- Objective arrow: points at the boss arena until it's awake ---
-    if (boss && !boss.awake && boss.state !== 'dead') {
+    if (boss && !boss.awake && boss.state !== 'dead' && !SETTINGS.dev.noEnemies) {
       const to = boss.arenaCenter.clone().sub(car.position).setY(0);
       const camFwd = new THREE.Vector3();
       camera.getWorldDirection(camFwd);
@@ -289,7 +330,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { progress, souls, boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
 }
 
 main().catch((err) => {

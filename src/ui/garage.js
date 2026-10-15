@@ -84,6 +84,9 @@ export class Garage {
     this.#bindInput();
   }
 
+  // Redraw the lists/stats (e.g. after dev-mode switches change).
+  refresh() { if (this.open) { this.car.applyBuild(); this.#rebuildHitBoxes(); this.#refreshUI(); } }
+
   // ------------------------------------------------------------------ open/close
   toggle() { this.open ? this.close() : this.openGarage(); }
 

@@ -279,7 +279,10 @@ export class Build {
     this.dropFloating();
     this.repairAll();
   }
-  save() { try { localStorage.setItem('helldrive.build', JSON.stringify(this.snapshot())); } catch { /* storage blocked: fine */ } }
+  save() {
+    if (SETTINGS.dev.creative) return; // creative builds never touch your real save
+    try { localStorage.setItem('helldrive.build', JSON.stringify(this.snapshot())); } catch { /* storage blocked: fine */ }
+  }
   restore() {
     try { this.load(JSON.parse(localStorage.getItem('helldrive.build') || '[]')); } catch { /* ignore */ }
   }

@@ -55,6 +55,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | R (in garage) | Turn a loose car piece before placing it |
 | Ctrl/⌘ + Z (in garage) | Undo the last change |
 | G | Garage: build + repair (pauses; not with demons close) |
+| C | Dev / creative panel: no enemies, no damage, free building |
 | T | Live tuning panel |
 | M | Mute |
 | H | Hide help |
