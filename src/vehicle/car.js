@@ -352,10 +352,25 @@ export class Car {
     let vf = _v.dot(_fwd);
     let vs = _v.dot(_right);
 
-    // Are the wheels touching the ground?
-    this.groundRay.origin = { x: t.x, y: t.y, z: t.z };
-    const hit = this.world.castRay(this.groundRay, CAR_DIMENSIONS.halfHeight + 0.35, true, undefined, undefined, undefined, this.body);
-    this.grounded = !!hit;
+    // Safety net: the car must never tip over. If anything ever nudged it
+    // off level, snap it back upright (keeping the direction it faces).
+    if (Math.abs(r.x) > 1e-4 || Math.abs(r.z) > 1e-4) {
+      const yaw = Math.atan2(_fwd.x, _fwd.z);
+      this.body.setRotation({ x: 0, y: Math.sin(yaw / 2), z: 0, w: Math.cos(yaw / 2) }, true);
+      const av = this.body.angvel();
+      this.body.setAngvel({ x: 0, y: av.y, z: 0 }, true);
+    }
+
+    // Are the wheels touching something? Check under the middle AND under
+    // each wheel, so a car half on a rock still has grip and can drive off.
+    let hit = false;
+    for (const [wx, wz] of WHEEL_SPOTS) {
+      this.groundRay.origin = { x: t.x + _right.x * -wx + _fwd.x * wz, y: t.y, z: t.z + _right.z * -wx + _fwd.z * wz };
+      if (this.world.castRay(this.groundRay, CAR_DIMENSIONS.halfHeight + 0.35, true, undefined, undefined, undefined, this.body)) { hit = true; break; }
+    }
+    // Resting on something (not rising or falling) also counts as grounded.
+    this.restingSteps = Math.abs(lv.y) < 0.4 ? (this.restingSteps || 0) + 1 : 0;
+    this.grounded = hit || this.restingSteps > 20;
 
     // Smooth steering input (no instant full lock)
     const steerTarget = input.steer;
@@ -538,6 +553,8 @@ export class Car {
 }
 
 const WRECKED_INPUT = { throttle: 0, steer: 0, handbrake: true };
+// Where to check for ground under the car: middle + the four wheels (x, z).
+const WHEEL_SPOTS = [[0, 0], [0.95, 1.35], [-0.95, 1.35], [0.95, -1.35], [-0.95, -1.35]];
 
 function approach(v, target, step) {
   return v > target ? Math.max(v - step, target) : Math.min(v + step, target);

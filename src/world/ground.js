@@ -62,10 +62,12 @@ export function createGround(scene, physics, region) {
   return { size, half };
 }
 
+const ROCK_GEO = new THREE.IcosahedronGeometry(1, 0);
+
 // Each prop type: a shape, a material, how to sit on the ground, and its crash shape.
 const PROP_BUILDERS = {
   rock: (p) => ({
-    geometry: new THREE.IcosahedronGeometry(1, 0),
+    geometry: ROCK_GEO,
     material: new THREE.MeshStandardMaterial({ color: p.rock, flatShading: true, roughness: 0.95 }),
     shadows: true,
     place: (m, s, rand) => {
@@ -73,7 +75,18 @@ const PROP_BUILDERS = {
       m.position.y = m.scale.y * 0.35;
       m.rotation.set(rand() * 3, rand() * 6, rand() * 3);
     },
-    collider: (RAPIER, m) => RAPIER.ColliderDesc.ball(Math.min(m.scale.x, m.scale.z) * 0.85),
+    // Collision shape = the rock's exact shape (a ball used to stick out
+    // above flat rocks, leaving cars perched on invisible bumps).
+    collider: (RAPIER, m) => {
+      const pos = ROCK_GEO.attributes.position;
+      const pts = new Float32Array(pos.count * 3);
+      const v = new THREE.Vector3();
+      for (let i = 0; i < pos.count; i++) {
+        v.fromBufferAttribute(pos, i).multiply(m.scale).applyQuaternion(m.quaternion);
+        pts.set([v.x, v.y, v.z], i * 3);
+      }
+      return RAPIER.ColliderDesc.convexHull(pts);
+    },
     colorJitter: 0.25,
   }),
 
