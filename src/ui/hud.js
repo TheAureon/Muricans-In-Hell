@@ -26,6 +26,9 @@ export class Hud {
       <div id="cabin-warn">⚠ CABIN CRITICAL ⚠<small>get to the garage (G) away from demons</small></div>
       <div id="prompt"></div>
       <div id="toasts"></div>
+      <div id="compass"><span class="arrow">▲</span><span class="label"></span></div>
+      <div id="bossbar"><div class="name"></div><div class="bar"><div class="fill"></div></div></div>
+      <div id="victory">ASH PLAINS<br>CLEARED!<small>The Ash Titan is dust. Keep roaming, or press Backspace to return to the start.</small></div>
       <div id="stats">
         <div><span>KILLS</span> <b id="kills">0</b></div>
         <div class="dpm-title">DAMAGE / MINUTE</div>
@@ -54,6 +57,31 @@ export class Hud {
     this.hurt = document.getElementById('hurt');
     this.wrecked = document.getElementById('wrecked');
     this.statsTimer = 0;
+    this.compass = document.getElementById('compass');
+    this.bossEl = document.getElementById('bossbar');
+    this.victoryEl = document.getElementById('victory');
+  }
+
+  // Arrow at the top pointing to the objective (null to hide).
+  objective(label, angle) {
+    this.compass.style.display = label ? 'flex' : 'none';
+    if (!label) return;
+    this.compass.querySelector('.label').textContent = label;
+    this.compass.querySelector('.arrow').style.transform = `rotate(${angle}rad)`;
+  }
+
+  // Boss health bar (null to hide).
+  bossBar(name, frac = 1, enraged = false) {
+    this.bossEl.classList.toggle('on', !!name);
+    if (!name) return;
+    this.bossEl.querySelector('.name').textContent = name.toUpperCase() + (enraged ? ' — ENRAGED' : '');
+    this.bossEl.querySelector('.fill').style.width = `${Math.max(0, frac) * 100}%`;
+    this.bossEl.classList.toggle('enraged', enraged);
+  }
+
+  victory() {
+    this.victoryEl.classList.add('on');
+    setTimeout(() => this.victoryEl.classList.remove('on'), 8000);
   }
 
   // Big "SPLAT!" popup; shows a combo count for chains of ram kills.

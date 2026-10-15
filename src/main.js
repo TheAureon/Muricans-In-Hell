@@ -11,6 +11,8 @@ import { Dust, Embers, AimMarker } from './world/effects.js';
 import { Gore } from './world/gore.js';
 import { Scrap } from './world/scrap.js';
 import { Demons } from './demons/demons.js';
+import { AshTitan } from './demons/boss.js';
+import { Projectiles } from './demons/projectiles.js';
 import { Bullets } from './combat/bullets.js';
 import { Stats } from './combat/stats.js';
 import { Car } from './vehicle/car.js';
@@ -37,12 +39,25 @@ async function main() {
   const smoke = new Dust(scene, 120, 0x1a1414, 0.7);
   const gore = new Gore(scene);
   const stats = new Stats();
-  const demons = new Demons(scene, region, { gore, audio, stats, hud, chase });
+  const sparks = new Dust(scene, 160, 0xffd040, 0.95);
+  const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
+  const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
-  demons.populate(car.currPos);
   const garage = new Garage({ camera, renderer, car, audio });
   const scrap = new Scrap(scene);
-  const sparks = new Dust(scene, 120, 0xffd040, 0.95);
+
+  // The region's boss (and what happens when you beat it).
+  const progress = loadProgress();
+  const boss = region.boss ? new AshTitan(scene, physics, {
+    region, car, demons, projectiles, gore, audio, hud, chase, dust, stats,
+    onDefeated: () => {
+      hud.victory();
+      progress.cleared[region.id] = true;
+      saveProgress(progress);
+    },
+  }) : null;
+  demons.boss = boss;
+  demons.populate(car.currPos);
 
   // Pieces breaking off the car become scrap lying in the world.
   car.onDetach = (pieces) => {
@@ -114,6 +129,8 @@ async function main() {
       car.capture();
       car.afterStep(); // crash damage from hitting rocks
       demons.fixedUpdate(PHYSICS_STEP, car);
+      boss?.fixedUpdate(PHYSICS_STEP, car);
+      car.applyCrashDamage();
       accumulator -= PHYSICS_STEP;
     }
     const alpha = accumulator / PHYSICS_STEP;
@@ -134,7 +151,9 @@ async function main() {
         wreckTimer = 0;
         car.respawn();
         scrap.clear(); // your build comes back whole, so its old scrap vanishes
+        projectiles.clear();
         demons.clearAround(car.currPos, 60);
+        boss?.reset();
       }
     }
 
@@ -148,6 +167,7 @@ async function main() {
     else if (aim.mesh.visible) aimPoint = tmpAim.copy(aimPoint).setY(0.8);
     car.render(alpha, dt, aimPoint);
     demons.render(alpha, dt);
+    boss?.render(alpha, dt);
     chase.update(car, dt, input.wheel);
 
     // --- Shooting ---
@@ -210,6 +230,17 @@ async function main() {
     smoke.update(dt);
     sparks.update(dt);
     scrap.update(dt);
+    projectiles.update(dt);
+
+    // --- Objective arrow: points at the boss arena until it's awake ---
+    if (boss && !boss.awake && boss.state !== 'dead') {
+      const to = boss.arenaCenter.clone().sub(car.position).setY(0);
+      const camFwd = new THREE.Vector3();
+      camera.getWorldDirection(camFwd);
+      const angle = Math.atan2(camFwd.x * to.z - camFwd.z * to.x, camFwd.x * to.x + camFwd.z * to.z);
+      const cleared = progress.cleared[region.id] ? ' (beaten before)' : '';
+      hud.objective(`☠ ${boss.name.toUpperCase()}${cleared} · ${Math.round(to.length())} m`, angle);
+    } else hud.objective(null);
     bullets.update(dt);
     gore.update(dt);
     stats.tick(dt);
@@ -228,7 +259,15 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVE = { car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
+  window.HELLDRIVE = { boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
+}
+
+// Which regions you've cleared (kept in the browser).
+function loadProgress() {
+  try { return { cleared: {}, ...JSON.parse(localStorage.getItem('helldrive.progress') || '{}') }; } catch { return { cleared: {} }; }
+}
+function saveProgress(p) {
+  try { localStorage.setItem('helldrive.progress', JSON.stringify(p)); } catch { /* storage blocked: fine */ }
 }
 
 main().catch((err) => {

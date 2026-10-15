@@ -1,16 +1,47 @@
 // Every kind of demon, described as data. Regions list which of these live
-// there (see regions/*.js). Their tweakable numbers live in settings.js.
+// there (see regions/*.js). Their tweakable numbers live in settings.js
+// under "demons".
+//   behavior: 'melee'  = run at you and claw/bite
+//             'ranged' = keep its distance and lob fireballs
+//   heavy:    true = a solid obstacle: your car bounces off it
+//   thorns:   true = ramming it hurts your car too
+//   anim:     how it moves ('waddle', 'gallop', 'stomp', 'sway')
 import { SETTINGS } from '../settings.js';
 import { createImpGeometry, IMP_GORE_COLORS } from './impModel.js';
+import {
+  createHoundGeometry, HOUND_GORE, createSpikerGeometry, SPIKER_GORE,
+  createSpitterGeometry, SPITTER_GORE, createBruteGeometry, BRUTE_GORE,
+} from './demonModels.js';
 
 export const DEMON_TYPES = {
   imp: {
-    name: 'Imp',
-    stats: () => SETTINGS.imp,      // health, speed, damage... (tweakable)
-    createGeometry: createImpGeometry,
-    radius: 0.55,                   // how "wide" it is for collisions (m)
-    height: 1.5,                    // how tall (m)
-    goreColors: IMP_GORE_COLORS,
-    poolSize: 160,                  // hard limit on how many can exist
+    name: 'Imp', behavior: 'melee', anim: 'waddle',
+    stats: () => SETTINGS.demons.imp,
+    createGeometry: createImpGeometry, goreColors: IMP_GORE_COLORS,
+    radius: 0.55, height: 1.5, poolSize: 160,
+  },
+  hound: {
+    name: 'Hellhound', behavior: 'melee', anim: 'gallop',
+    stats: () => SETTINGS.demons.hound,
+    createGeometry: createHoundGeometry, goreColors: HOUND_GORE,
+    radius: 0.6, height: 1.2, poolSize: 60,
+  },
+  spiker: {
+    name: 'Pincushion', behavior: 'melee', anim: 'waddle', thorns: true,
+    stats: () => SETTINGS.demons.spiker,
+    createGeometry: createSpikerGeometry, goreColors: SPIKER_GORE,
+    radius: 1.0, height: 1.8, poolSize: 40,
+  },
+  spitter: {
+    name: 'Cinder Spitter', behavior: 'ranged', anim: 'sway',
+    stats: () => SETTINGS.demons.spitter,
+    createGeometry: createSpitterGeometry, goreColors: SPITTER_GORE,
+    radius: 0.5, height: 2.3, poolSize: 30,
+  },
+  brute: {
+    name: 'Ash Brute', behavior: 'melee', anim: 'stomp', heavy: true,
+    stats: () => SETTINGS.demons.brute,
+    createGeometry: createBruteGeometry, goreColors: BRUTE_GORE,
+    radius: 1.1, height: 3.0, poolSize: 10,
   },
 };

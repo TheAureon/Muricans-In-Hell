@@ -48,11 +48,16 @@ export function createGround(scene, physics, region) {
   }
 
   // ---- Scenery ----
+  // Keep the boss arena free of random scenery.
+  const arena = region.boss?.arena;
+  const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 ||
+    (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2);
   for (const prop of region.props) {
     const builder = PROP_BUILDERS[prop.type];
     if (!builder) { console.warn('Unknown prop type', prop.type); continue; }
-    placeProps(scene, physics, prop, builder(p), half, region.clearRadiusAtStart, rand);
+    placeProps(scene, physics, prop, builder(p), half, keepClear, rand);
   }
+  if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half };
 }
@@ -143,7 +148,7 @@ const PROP_BUILDERS = {
 
 // Uses one "instanced" mesh per prop type: hundreds of copies drawn in a
 // single go, which keeps the game fast.
-function placeProps(scene, physics, prop, b, half, clearRadius, rand) {
+function placeProps(scene, physics, prop, b, half, keepClear, rand) {
   const { RAPIER, world } = physics;
   const mesh = new THREE.InstancedMesh(b.geometry, b.material, prop.count);
   mesh.castShadow = b.shadows;
@@ -158,7 +163,7 @@ function placeProps(scene, physics, prop, b, half, clearRadius, rand) {
     do {
       x = rand.range(-half, half);
       z = rand.range(-half, half);
-    } while (x * x + z * z < clearRadius * clearRadius);
+    } while (keepClear(x, z));
 
     dummy.position.set(x, 0, z);
     dummy.rotation.set(0, 0, 0);
@@ -178,4 +183,61 @@ function placeProps(scene, physics, prop, b, half, clearRadius, rand) {
   mesh.instanceMatrix.needsUpdate = true;
   if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
   scene.add(mesh);
+}
+
+// The boss arena: a scorched circle ringed by giant bone spikes (with four
+// gaps to drive in through), glowing cracks, and a ribcage throne.
+function createArena(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+
+  // Scorched floor
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 6, 40).rotateX(-Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x2a2220, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1 }));
+  floor.position.y = 0.05;
+  floor.receiveShadow = true;
+  group.add(floor);
+
+  // Glowing cracks radiating from the middle
+  const lava = new THREE.MeshBasicMaterial({ color: p.lava });
+  for (let n = 0; n < 14; n++) {
+    const a = (n / 14) * Math.PI * 2 + rand() * 0.2;
+    const len = R * (0.5 + rand() * 0.5);
+    const crack = new THREE.Mesh(new THREE.BoxGeometry(0.5 + rand() * 0.6, 0.05, len), lava);
+    crack.position.set(Math.sin(a) * len / 2, 0.08, Math.cos(a) * len / 2);
+    crack.rotation.y = a;
+    group.add(crack);
+  }
+
+  // Ring of giant bone spikes, with four gaps to get in
+  const boneMat = new THREE.MeshStandardMaterial({ color: p.bone, flatShading: true, roughness: 0.8 });
+  const spikeGeo = new THREE.ConeGeometry(1.4, 14, 6).translate(0, 7, 0);
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const count = 36;
+  for (let n = 0; n < count; n++) {
+    if (n % 9 === 0 || n % 9 === 1) continue; // gaps
+    const a = (n / count) * Math.PI * 2;
+    const s = 0.8 + rand() * 0.5;
+    const m = new THREE.Mesh(spikeGeo, boneMat);
+    m.position.set(Math.sin(a) * (R + 4), 0, Math.cos(a) * (R + 4));
+    m.scale.set(s, s * (0.8 + rand() * 0.5), s);
+    m.rotation.set(Math.cos(a) * 0.25, 0, -Math.sin(a) * 0.25); // lean outward
+    m.castShadow = true;
+    group.add(m);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(5, 1.3 * s).setTranslation(m.position.x, 5, m.position.z), body);
+  }
+
+  // Ribcage "throne" behind the boss (on the far side, seen from the start)
+  const away = Math.atan2(ax, az); // direction pointing away from the start
+  for (let n = 0; n < 6; n++) {
+    const rib = new THREE.Mesh(new THREE.TorusGeometry(6, 0.5, 5, 12, Math.PI), boneMat);
+    const d = 16 + n * 2.2;
+    rib.position.set(Math.sin(away) * d, 0, Math.cos(away) * d);
+    rib.rotation.y = away;
+    rib.castShadow = true;
+    group.add(rib);
+  }
 }

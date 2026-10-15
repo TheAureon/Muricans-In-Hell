@@ -164,6 +164,8 @@ export const SETTINGS = {
     // How much the car slows down per demon it plows through
     // (fraction of demon weight vs car weight). 0 = none.
     momentumLoss: 1.0,
+    // Damage a normal-weight car does hitting a demon at the splat speed.
+    ramPower: 40,
     // Camera shake on a splat. 0 = none.
     shake: 0.35,
     // Seconds between ram kills that still count toward a SPLAT combo.
@@ -228,28 +230,49 @@ export const SETTINGS = {
   },
 
   // ---------------------------------------------------------------
-  //  IMPS (the small demons)
+  //  DEMONS
   // ---------------------------------------------------------------
-  imp: {
-    // Most imps alive at once (performance cap).
+  // Each demon: health, weight (kg), chase speed (m/s; 11 m/s = 40 km/h),
+  // how close you get before it notices you (m), claw/bite damage and
+  // seconds between attacks, and how many come in a pack.
+  // Ramming: hitting a demon at the splat speed with a normal car does
+  // ramming.ramPower damage (40). Twice as fast = 4x the damage.
+  //   imp 40 hp = splats at 40 km/h; brute 450 hp = needs a LOT more.
+  demons: {
+    // Most demons alive at once (performance cap).
     maxActive: 100,
-    health: 40,
-    // Weight in kg (affects how much they slow you down when rammed).
-    mass: 60,
-    // Running speed when chasing you (m/s). 8 m/s is about 29 km/h,
-    // slower than the splat speed, so they can't hurt you while you're fast.
-    chaseSpeed: 8,
+    // Demons farther than this from you vanish and new packs appear (m).
+    despawnDistance: 260,
     // Strolling speed when they haven't noticed you.
     wanderSpeed: 2.2,
-    // How close you get before they notice and chase you (m).
-    noticeRange: 75,
-    // Damage per claw swipe, and seconds between swipes (per imp).
-    attackDamage: 3,
-    attackInterval: 1.0,
-    // Imps spawn in packs of this many.
-    packMin: 6,
-    packMax: 14,
-    // Imps farther than this from you vanish and new packs appear (m).
-    despawnDistance: 260,
+
+    // Small swarmers. Run them over.
+    imp:     { health: 40,  mass: 60,  chaseSpeed: 8,   noticeRange: 75, attackDamage: 3,  attackInterval: 1.0, packMin: 6, packMax: 14 },
+    // Fast pack hunters: faster than the splat speed, but fragile.
+    hound:   { health: 20,  mass: 45,  chaseSpeed: 15,  noticeRange: 110, attackDamage: 2, attackInterval: 0.6, packMin: 3, packMax: 6 },
+    // Covered in bone spikes: ramming it hurts YOUR car (thornDamage).
+    spiker:  { health: 70,  mass: 120, chaseSpeed: 5,   noticeRange: 60, attackDamage: 6,  attackInterval: 1.5, packMin: 2, packMax: 5, thornDamage: 18 },
+    // Lobs fireballs from range and runs away if you get close.
+    spitter: { health: 30,  mass: 50,  chaseSpeed: 6.5, noticeRange: 90, attackDamage: 11, attackInterval: 2.6, packMin: 2, packMax: 4,
+               shootRange: 50, preferredRange: 30, fleeRange: 15, splash: 3 },
+    // Huge and heavy: you bounce off unless you hit it very hard.
+    brute:   { health: 450, mass: 700, chaseSpeed: 4.5, noticeRange: 60, attackDamage: 22, attackInterval: 2.2, packMin: 1, packMax: 2 },
+  },
+
+  // ---------------------------------------------------------------
+  //  BOSS: THE ASH TITAN
+  // ---------------------------------------------------------------
+  boss: {
+    health: 2500,
+    walkSpeed: 4.5,
+    enragedSpeed: 6.5,      // below half health it gets angry and faster
+    slamDamage: 45,         // fist slam when you're close
+    slamRadius: 5,
+    stompDamage: 25,        // shockwave ring: get far away or get hit
+    stompRadius: 32,
+    boulderDamage: 35,      // thrown rocks when you're far
+    boulderSplash: 4,
+    // If you drive this far from the arena center it gives up and heals.
+    leash: 150,
   },
 };

@@ -42,9 +42,25 @@ export default {
   // Keep this area around the start empty so you can warm up (m).
   clearRadiusAtStart: 40,
 
-  // --- Filled in during later milestones ---
-  // Which demons live here. "weight" = how common (bigger = more often).
-  demons: [{ type: 'imp', weight: 1 }],
-  gatingRule: null,    // e.g. { requires: 'none' }  (starter region)
-  boss: null,          // e.g. { type: 'ashTitan' }
+  // Which demons live here.
+  //   weight:      how common (bigger = more often)
+  //   minDistance: they only show up this far (m) from the start, so the
+  //                further out you roam, the nastier it gets.
+  demons: [
+    { type: 'imp',     weight: 10 },
+    { type: 'hound',   weight: 4, minDistance: 150 },
+    { type: 'spiker',  weight: 3, minDistance: 220 },
+    { type: 'spitter', weight: 3, minDistance: 280 },
+    { type: 'brute',   weight: 2, minDistance: 400 },
+  ],
+
+  // What kind of vehicle you need to cross or survive this region.
+  gatingRule: { requires: 'none', description: 'The starter region: any car will do.' },
+
+  // The boss, sleeping in a ring of bones out in the plains.
+  boss: {
+    type: 'ashTitan',
+    name: 'The Ash Titan',
+    arena: { x: 650, z: 820, radius: 70 },
+  },
 };

@@ -3,13 +3,14 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
-**Current stage: Milestone 4 — damage and scrap.** There is no health bar:
-every body section and bolted-on part takes its own damage, chars, smokes and
-breaks off. What breaks off drops as that actual piece (a nose, a door, a
-gun). Lose the cabin and you're wrecked. Press **E** to grab scrap, then in
-the garage (**G**) put pieces back where they belong, or bolt them on
-anywhere (a door on the roof? sure; **R** turns it). The garage also repairs
-whatever is still attached, but won't open with demons close.
+**Current stage: Milestone 5 — the Ash Plains.** Five kinds of demons roam
+the plains (imps, hellhounds, pincushions, cinder spitters and ash brutes),
+getting nastier the further you drive from the start. Follow the arrow at the
+top of the screen to the bone arena and wake **the Ash Titan**.
+
+Damage is physical: every body section and bolted-on part takes its own
+damage and breaks off as that actual piece. Press **E** to grab scrap, then
+bolt it back on in the garage (**G**), anywhere you like.
 
 ## How to play (easiest)
 
@@ -67,7 +68,7 @@ src/
   regions/            one data file per region (Ash Plains so far)
   world/              sky, ground, scenery, visual effects, gore, scrap
   vehicle/            the car's driving physics, 3D model, parts + build grid
-  demons/             demon types (data), their 3D models, spawning + AI
+  demons/             demon types (data), 3D models, spawning + AI, the boss, fireballs
   combat/             bullets and the damage-per-minute tracker
   camera/             the chase camera
   ui/                 speedometer, help text, tuning panel, garage

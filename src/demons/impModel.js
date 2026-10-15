@@ -11,7 +11,7 @@ const EYE = 0xffe040;
 const CLAW = 0x1a1010;
 
 // Paint one piece a solid color and move it into place.
-function piece(geometry, color, x, y, z, rx = 0, ry = 0, rz = 0) {
+export function piece(geometry, color, x, y, z, rx = 0, ry = 0, rz = 0) {
   const g = geometry.toNonIndexed();
   g.rotateX(rx); g.rotateY(ry); g.rotateZ(rz);
   g.translate(x, y, z);

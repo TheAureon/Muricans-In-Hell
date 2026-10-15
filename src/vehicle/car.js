@@ -195,8 +195,10 @@ export class Car {
     const local = this.model.body.worldToLocal(worldPoint.clone());
     let best = null, bestD = Infinity;
     for (const pc of this.pieces()) {
+      // The cabin is inside everything else: outer pieces shield it.
+      const shield = pc.key === 'cabin' ? 2.2 : 1;
       for (const c of pc.cells) {
-        const d = (c.x - local.x) ** 2 + (c.y - local.y) ** 2 * 0.5 + (c.z - local.z) ** 2;
+        const d = ((c.x - local.x) ** 2 + (c.y - local.y) ** 2 * 0.5 + (c.z - local.z) ** 2) * shield;
         if (d < bestD) { bestD = d; best = pc; }
       }
     }
@@ -301,11 +303,20 @@ export class Car {
     const dx = this.vBefore.x - v.x, dz = this.vBefore.z - v.z;
     const lost = Math.hypot(dx, dz);
     const D = SETTINGS.damage;
-    if (lost > D.crashMinSpeed && !this.wrecked) {
+    this.lastCrash = null; // (read by demons/boss to see if you rammed them)
+    if (lost > 3 && !this.wrecked) {
       const dir = new THREE.Vector3(dx, 0, dz).normalize().applyQuaternion(this.currRot.clone().invert());
-      this.takeSideDamage((lost - D.crashMinSpeed) * D.crashDamage, dir);
-      this.crashed = lost;
+      this.lastCrash = { lost, localDir: dir, soften: 1 };
     }
+  }
+
+  // Apply crash damage AFTER demons had a chance to score the ram (so your
+  // plows still count), and softened if you smashed straight through.
+  applyCrashDamage() {
+    const c = this.lastCrash, D = SETTINGS.damage;
+    if (!c || this.wrecked || c.lost <= D.crashMinSpeed) return;
+    this.takeSideDamage((c.lost - D.crashMinSpeed) * D.crashDamage * c.soften, c.localDir);
+    this.crashed = c.lost;
   }
 
   get totalMass() { return this.stats.mass; }
