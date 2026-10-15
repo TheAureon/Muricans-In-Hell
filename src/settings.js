@@ -176,27 +176,53 @@ export const SETTINGS = {
   build: {
     // Most parts allowed on one vehicle (keeps the game smooth).
     maxParts: 40,
+    // true = build with unlimited free parts (no stock counts).
+    unlimitedParts: false,
+    // The parts you start the game with in your stock.
+    startingKit: { armor: 8, spike: 8, plow: 2, gun: 4, booster: 2, weight: 2, panel: 0 },
     // How strongly front/back weight changes handling. 0 = not at all.
     //  Nose-heavy  -> understeer (turns wider, more stable)
     //  Tail-heavy  -> oversteer (tail slides out more easily)
     balanceEffect: 1.0,
   },
 
-  // Every part: weight (kg) and what it does.
+  // Every part: weight (kg), hit points (hp) and what it does.
   parts: {
-    armor:   { mass: 60,  armor: 15 },              // +15 max armor each
-    spike:   { mass: 25,  ramBonus: 0.3 },          // +30% ram damage on the side it faces
-    plow:    { mass: 120, ramBonus: 0.7 },          // +70% ram damage on the side it faces
-    gun:     { mass: 80 },                          // one more gun that fires with your main gun
-    booster: { mass: 40,  power: 3500, topSpeed: 2.5 }, // more engine push and top speed (m/s)
-    weight:  { mass: 250 },                         // just heavy. Hits harder, handles worse.
+    armor:   { mass: 60,  hp: 140 },                // tough block that soaks up hits
+    spike:   { mass: 25,  hp: 50,  ramBonus: 0.3 }, // +30% ram damage on the side it faces
+    plow:    { mass: 120, hp: 160, ramBonus: 0.7 }, // +70% ram damage on the side it faces
+    gun:     { mass: 80,  hp: 60 },                 // one more gun that fires with your main gun
+    booster: { mass: 40,  hp: 50,  power: 3500, topSpeed: 2.5 }, // more engine push and top speed (m/s)
+    weight:  { mass: 250, hp: 220 },                // just heavy. Hits harder, handles worse.
+    panel:   { mass: 50,  hp: 80 },                 // a bent piece of your car's body. Bolt it anywhere!
+  },
+
+  // The car's own body sections: hit points, weight (kg), and how many
+  // Body Panels they break into (also the cost to rebuild them in the garage).
+  // The cabin is where you sit: if it's destroyed, you're wrecked.
+  chassis: {
+    cabin:  { hp: 220, mass: 450, panels: 0 },
+    nose:   { hp: 110, mass: 200, panels: 2 },
+    tail:   { hp: 110, mass: 200, panels: 2 },
+    doorL:  { hp: 90,  mass: 90,  panels: 1 },
+    doorR:  { hp: 90,  mass: 90,  panels: 1 },
+    bumper: { hp: 80,  mass: 90,  panels: 1 },
   },
 
   // ---------------------------------------------------------------
-  //  YOUR CAR'S HEALTH (temporary until Milestone 4: parts break off)
+  //  DAMAGE, SCRAP & REPAIR
   // ---------------------------------------------------------------
-  health: {
-    max: 200,
+  damage: {
+    // Crashing into rocks: speed lost in one hit (m/s) before it hurts.
+    crashMinSpeed: 7,
+    // Damage per m/s of crash speed above that.
+    crashDamage: 9,
+    // Pieces below this fraction of their hp smoke and spark.
+    smokeBelow: 0.4,
+    // Press E to grab scrap within this distance (m).
+    pickupRadius: 8,
+    // You can't open the garage with demons this close (m).
+    garageSafeRadius: 40,
     // Seconds before you respawn after being wrecked.
     respawnDelay: 2.5,
   },

@@ -120,6 +120,13 @@ export class Demons {
 
   populate(carPos) { this.#refill(carPos, 0, true); }
 
+  // How far away is the closest living demon?
+  nearestDistance(pos) {
+    let best = Infinity;
+    for (const d of this.all) if (d.alive) best = Math.min(best, Math.hypot(d.pos.x - pos.x, d.pos.z - pos.z));
+    return best;
+  }
+
   // Remove every demon near a point (used when respawning the player).
   clearAround(pos, radius) {
     for (const d of this.all) if (d.alive && d.pos.distanceTo(pos) < radius) this.#remove(d);
@@ -292,7 +299,7 @@ export class Demons {
         d.attackCd = d.def.stats().attackInterval * (0.8 + Math.random() * 0.4);
         d.lunge = 1;
         d.yaw = Math.atan2(carPos.x - d.pos.x, carPos.z - d.pos.z);
-        car.takeDamage(d.def.stats().attackDamage);
+        car.takeDamage(d.def.stats().attackDamage, _v.copy(d.pos).setY(d.pos.y + 0.8)); // hits the nearest piece
         this.fx.audio.claw();
       }
     }

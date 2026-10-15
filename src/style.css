@@ -110,3 +110,24 @@ body.garage-open #hud > *:not(#fps) { display: none; }
 #garage .g-help b { color: #ffb070; }
 #garage .g-done { position: absolute; right: 14px; bottom: 16px; font: 20px 'Arial Black', Impact, sans-serif !important;
   background: #c8202a; border: 0; border-radius: 6px; padding: 10px 22px; color: #fff !important; box-shadow: 0 4px 0 #600; }
+
+/* ---- Milestone 4: damage & scrap ---- */
+#garage .g-parts button.empty { opacity: 0.45; }
+#garage .kg { text-align: right; line-height: 1.2; }
+#garage .kg b { color: #7fe0c0; font-size: 13px; }
+#garage .g-stats b.ok { color: #7fe07f; }
+#garage .g-sub small { letter-spacing: 0; color: #f0d8c880; }
+#garage .g-restore { pointer-events: auto; background: #c8202a; border: 0; border-radius: 4px; padding: 2px 8px; color: #fff; font-size: 11px; }
+#garage .g-parts { max-height: calc(100vh - 160px); overflow-y: auto; }
+#cabin-warn { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); font-size: 26px; color: #ff3010; text-align: center;
+  text-shadow: 0 0 12px #f00, 0 3px 0 #400; display: none; }
+#cabin-warn small { display: block; font: 12px system-ui; color: #fff; text-shadow: 0 1px 3px #000; }
+#cabin-warn.on { display: block; animation: pulse 0.5s infinite; }
+#prompt { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); background: #0a2a24e0; color: #9affe0; padding: 8px 16px;
+  border: 2px solid #40ffd0; border-radius: 6px; font: 15px system-ui, sans-serif; display: none; white-space: nowrap; }
+#prompt.on { display: block; }
+#toasts { position: absolute; left: 50%; top: 48%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+#toasts .toast { font: 18px 'Arial Black', Impact, sans-serif; color: #9affe0; text-shadow: 0 2px 4px #000; animation: toastup 2.6s ease-out forwards; white-space: nowrap; }
+#toasts .toast.bad { color: #ff7a50; }
+#toasts .toast.warn { color: #ffd040; font-size: 16px; }
+@keyframes toastup { 0% { opacity: 0; transform: translateY(10px); } 10% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-40px); } }

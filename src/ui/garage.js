@@ -5,13 +5,18 @@
 //   Left click   bolt on the selected part
 //   Right click  remove a part (anything only held on by it falls off too)
 //   Right drag   spin the camera around      Wheel  zoom
-//   1-6          pick a part                 F      mirror on/off
+//   1-7          pick a part                 F      mirror on/off
 //   G / Esc      back to driving
+//
+// Opening the garage repairs everything still attached. Pieces that fell
+// off have to be picked up out in the world (E) before you can bolt them
+// back on, anywhere you like. Lost body sections are rebuilt from Body
+// Panels. You can't open it with demons close by.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SETTINGS } from '../settings.js';
 import { PART_TYPES } from '../vehicle/parts.js';
-import { BODY_CELLS, cellCenter, CELL } from '../vehicle/build.js';
+import { BODY_CELLS, cellCenter, CELL, sectionOfCell, SECTION_NAMES } from '../vehicle/build.js';
 
 const MPH = 2.23694;
 const TYPES = Object.keys(PART_TYPES);
@@ -59,6 +64,11 @@ export class Garage {
     this.removeMark.visible = false;
     car.model.body.add(this.removeMark);
 
+    // Red outlines where body sections are missing.
+    this.missingGhosts = new THREE.Group();
+    this.missingMat = new THREE.MeshBasicMaterial({ color: 0xff4020, wireframe: true, transparent: true, opacity: 0.35 });
+    car.model.body.add(this.missingGhosts);
+
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.#buildUI();
@@ -83,6 +93,9 @@ export class Garage {
     this.controls.enabled = true;
     this.controls.update();
     this.gridLines.visible = true;
+    // The mechanics patch up everything that's still attached.
+    this.car.build.repairAll();
+    this.car.applyBuild();
     this.#rebuildHitBoxes();
     this.#refreshUI();
   }
@@ -97,7 +110,9 @@ export class Garage {
     this.gridLines.visible = false;
     this.ghost.visible = false;
     this.removeMark.visible = false;
+    this.missingGhosts.visible = false;
     this.car.build.save();
+    this.car.savedBuild = this.car.build.snapshot(); // you respawn with this
   }
 
   update() {
@@ -142,8 +157,9 @@ export class Garage {
     const h = this.hover;
     if (!h || h.reason) { this.audio.claw(); return; }
     const b = this.car.build;
+    if (!b.has(this.selected)) { this.audio.claw(); this.#status(`✖ No ${PART_TYPES[this.selected].name} left in stock. Find scrap out there (E)!`, true); return; }
     b.add(this.selected, h.i, h.j, h.k, h.normal);
-    if (this.mirror) {
+    if (this.mirror && b.has(this.selected)) {
       const mi = -1 - h.i; // the matching cell on the other side
       if (mi !== h.i) b.add(this.selected, mi, h.j, h.k, [-h.normal[0], h.normal[1], h.normal[2]]);
     }
@@ -179,9 +195,23 @@ export class Garage {
       m.userData = { i, j, k, isPart };
       this.hitGroup.add(m);
     };
-    for (const s of BODY_CELLS) { const [i, j, k] = s.split(',').map(Number); addBox(i, j, k, false); }
+    for (const s of BODY_CELLS) {
+      if (this.car.build.missing.has(sectionOfCell(s))) continue; // fell off: nothing to click on
+      const [i, j, k] = s.split(',').map(Number);
+      addBox(i, j, k, false);
+    }
     for (const p of this.car.build.parts.values()) addBox(p.i, p.j, p.k, true);
     this.hitGroup.updateMatrixWorld(true);
+
+    // Outline the missing body sections
+    this.missingGhosts.clear();
+    this.missingGhosts.visible = true;
+    for (const id of this.car.build.missing) {
+      const g = this.car.model.sections[id].clone(true);
+      g.visible = true;
+      g.traverse((o) => { if (o.isMesh) { o.material = this.missingMat; o.castShadow = false; } });
+      this.missingGhosts.add(g);
+    }
   }
 
   #makeBodyGrid() {
@@ -250,7 +280,7 @@ export class Garage {
       </div>
       <div class="g-stats"></div>
       <div class="g-status"></div>
-      <div class="g-help"><b>Left click</b> bolt on · <b>Right click</b> remove · <b>Right drag</b> spin view · <b>Wheel</b> zoom · <b>1-6</b> pick part · <b>F</b> mirror · <b>G</b> back to driving</div>
+      <div class="g-help"><b>Left click</b> bolt on · <b>Right click</b> remove · <b>Right drag</b> spin view · <b>Wheel</b> zoom · <b>1-7</b> pick part · <b>F</b> mirror · <b>G</b> back to driving</div>
       <button class="g-done">DRIVE! (G)</button>`;
     document.body.appendChild(ui);
     this.ui = ui;
@@ -258,6 +288,15 @@ export class Garage {
     ui.querySelector('.g-mirror').addEventListener('click', () => this.#toggleMirror());
     ui.querySelector('.g-clear').addEventListener('click', () => { this.car.build.clear(); this.#changed(); });
     ui.querySelector('.g-done').addEventListener('click', () => this.close());
+    // "Rebuild" buttons for missing body sections
+    ui.querySelector('.g-stats').addEventListener('click', (e) => {
+      const id = e.target.dataset?.restore;
+      if (!id) return;
+      const why = this.car.build.restoreSection(id);
+      if (why) { this.audio.claw(); this.#status(`✖ ${why}`, true); return; }
+      this.audio.thump();
+      this.#changed();
+    });
   }
 
   #status(text, bad = false) {
@@ -269,10 +308,13 @@ export class Garage {
   #refreshUI() {
     this.ui.querySelectorAll('.g-parts button[data-type]').forEach((b) => {
       b.classList.toggle('sel', b.dataset.type === this.selected);
-      b.querySelector('.kg').textContent = `${SETTINGS.parts[b.dataset.type].mass} kg`;
+      const n = this.car.build.inventory[b.dataset.type] || 0;
+      const unlimited = SETTINGS.build.unlimitedParts;
+      b.querySelector('.kg').innerHTML = `<b>${unlimited ? '∞' : '×' + n}</b><br>${SETTINGS.parts[b.dataset.type].mass} kg`;
+      b.classList.toggle('empty', !unlimited && n <= 0);
     });
     this.ui.querySelector('.g-mirror').textContent = `🪞 Mirror: ${this.mirror ? 'ON' : 'OFF'} (F)`;
-    this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats());
+    this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats()) + bodyHTML(this.car.build);
   }
 }
 
@@ -316,7 +358,6 @@ function statsHTML(st) {
     ${row('0–60 mph', p.zeroSixty ? `${p.zeroSixty.toFixed(1)} s` : 'never!', p.zeroSixty ? diff(p.zeroSixty, stock.zeroSixty, 'down', ' s', 1) : '')}
     ${row('Turning', `${Math.round(p.turn)}%`, diff(p.turn, stock.turn, 'up', '%'))}
     ${row('Guns', st.guns)}
-    ${row('Armor', st.maxHealth, diff(st.maxHealth, SETTINGS.health.max, 'up'))}
     <div class="g-sub">SPLATS IMPS FROM</div>
     ${row('Front', `${Math.round(p.splatFront)} mph`, diff(p.splatFront, stock.splatFront, 'down'))}
     ${row('Sides', `${Math.round(p.splatSide)} mph`, diff(p.splatSide, stock.splatSide, 'down'))}
@@ -324,4 +365,14 @@ function statsHTML(st) {
     <div class="g-sub">BALANCE</div>
     <div class="g-bal"><i style="left:${50 + bal * 45}%"></i><span>tail</span><span>nose</span></div>
     <div class="g-baltext">${balText}</div>`;
+}
+
+// Body sections: OK, or missing with a "Rebuild" button.
+function bodyHTML(build) {
+  const rows = Object.entries(SECTION_NAMES).filter(([id]) => id !== 'cabin').map(([id, name]) => {
+    if (!build.missing.has(id)) return `<div><span>${name}</span><b class="ok">OK</b></div>`;
+    const cost = SETTINGS.chassis[id].panels;
+    return `<div><span>${name}</span><button class="g-restore" data-restore="${id}">Rebuild: ${cost} panel${cost > 1 ? "s" : ""}</button></div>`;
+  });
+  return `<div class="g-sub">BODY <small>(repaired when you open the garage)</small></div>${rows.join('')}`;
 }

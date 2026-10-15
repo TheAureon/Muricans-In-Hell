@@ -13,11 +13,12 @@
 import * as THREE from 'three';
 import { SETTINGS } from '../settings.js';
 import { createCarModel, CAR_DIMENSIONS } from './carModel.js';
-import { Build, cellCenter } from './build.js';
+import { Build, cellCenter, key, SECTION_CELLS, SECTION_NAMES, sectionCenter } from './build.js';
 import { PART_TYPES, createGunTurret } from './parts.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _aim = new THREE.Vector3();
+const CHAR = new THREE.Color(0x1a1210);
 const _fwd = new THREE.Vector3();
 const _right = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -77,10 +78,13 @@ export class Car {
     this.pitch = { x: 0, v: 0 };
     this.wheelSpin = 0;
 
-    // Health (temporary: Milestone 4 replaces this with parts breaking off)
-    this.health = SETTINGS.health.max;
+    // Damage: there's no health bar. Every body section and part has its
+    // own hit points; pieces break off when they run out. Lose the cabin
+    // and you're wrecked.
     this.wrecked = false;
-    this.hurtTimer = 0; // > 0 right after taking damage (for screen flash)
+    this.hurtTimer = 0;      // > 0 right after taking damage (for screen flash)
+    this.onDetach = null;    // called with the pieces that fall off (to spawn scrap)
+    this.vBefore = new THREE.Vector3();
 
     // Guns: the built-in roof gun, plus any Machine Gun parts.
     this.mainTurret = { parts: this.model.turret, yaw: 0, pitch: 0, recoil: 0, recoilDist: 0.25 };
@@ -89,10 +93,12 @@ export class Car {
     // Bolt-on parts (the builder). Restores your last build if there is one.
     this.build = new Build();
     this.build.restore();
+    this.savedBuild = this.build.snapshot(); // what you respawn with
     this.partsGroup = new THREE.Group();
     this.model.body.add(this.partsGroup);
     this.partColliders = [];
     this.boosterFlames = [];
+    this.partObjects = new Map(); // part cell key -> [3D objects]
     this.applyBuild();
   }
 
@@ -102,13 +108,31 @@ export class Car {
     for (const c of this.partColliders) this.world.removeCollider(c, false);
     this.partColliders = [];
     this.partsGroup.clear();
-    this.turrets = [this.mainTurret];
+    this.partObjects.clear();
+    this.turrets = [];
     this.boosterFlames = [];
-    const oldMax = this.stats ? this.stats.maxHealth : SETTINGS.health.max;
     const up = new THREE.Vector3(0, 1, 0);
-    const bounds = { minX: -1.05, maxX: 1.05, minZ: -2.3, maxZ: 2.65, maxY: 1.5 };
 
-    for (const p of this.build.parts.values()) {
+    // Body sections: hide the ones that fell off
+    for (const [id, g] of Object.entries(this.model.sections)) g.visible = !this.build.missing.has(id);
+    if (!this.build.missing.has('cabin')) this.turrets.push(this.mainTurret);
+
+    // The car's footprint for demon collisions: wheels + whatever is still attached.
+    const bounds = { minX: -1.15, maxX: 1.15, minZ: -1.8, maxZ: 1.8, maxY: 1.5 };
+    const grow = (x, y, z, n = null, reach = 0.25) => {
+      bounds.minX = Math.min(bounds.minX, x - 0.25 + (n ? Math.min(0, n.x) * reach : 0));
+      bounds.maxX = Math.max(bounds.maxX, x + 0.25 + (n ? Math.max(0, n.x) * reach : 0));
+      bounds.minZ = Math.min(bounds.minZ, z - 0.25 + (n ? Math.min(0, n.z) * reach : 0));
+      bounds.maxZ = Math.max(bounds.maxZ, z + 0.25 + (n ? Math.max(0, n.z) * reach : 0));
+      bounds.maxY = Math.max(bounds.maxY, y + 0.75);
+    };
+    for (const [id, cells] of Object.entries(SECTION_CELLS)) {
+      if (this.build.missing.has(id)) continue;
+      for (const c of cells) { const p = cellCenter(...c); grow(p.x, p.y, p.z); }
+    }
+    if (!this.build.missing.has('bumper')) bounds.maxZ = Math.max(bounds.maxZ, 2.8); // bumper spikes
+
+    for (const [k, p] of this.build.parts) {
       const def = PART_TYPES[p.type];
       const c = cellCenter(p.i, p.j, p.k);
       const n = new THREE.Vector3(...p.normal);
@@ -117,13 +141,16 @@ export class Car {
       g.quaternion.setFromUnitVectors(up, n);
       def.build(g);
       this.partsGroup.add(g);
+      const objs = [g];
       if (g.userData.flame) this.boosterFlames.push(g.userData.flame);
       if (def.isGun) {
         const t = createGunTurret();
         t.group.position.set(c.x + n.x * 0.12, c.y + n.y * 0.12 + 0.05, c.z + n.z * 0.12);
         this.partsGroup.add(t.group);
         this.turrets.push({ parts: t, yaw: 0, pitch: 0, recoil: 0, recoilDist: 0.15 });
+        objs.push(t.group);
       }
+      this.partObjects.set(k, objs);
       // Solid shape so parts bump into rocks too.
       this.partColliders.push(this.world.createCollider(
         RAPIER.ColliderDesc.cuboid(0.24, 0.24, 0.24)
@@ -134,18 +161,148 @@ export class Car {
           .setRestitution(0.15),
         this.body
       ));
-      // Hit-box for demons (spikes and plows poke out further).
-      const reach = 0.25 + (SETTINGS.parts[p.type].ramBonus ? 0.3 : 0);
-      bounds.minX = Math.min(bounds.minX, c.x - 0.25 + Math.min(0, n.x) * reach);
-      bounds.maxX = Math.max(bounds.maxX, c.x + 0.25 + Math.max(0, n.x) * reach);
-      bounds.minZ = Math.min(bounds.minZ, c.z - 0.25 + Math.min(0, n.z) * reach);
-      bounds.maxZ = Math.max(bounds.maxZ, c.z + 0.25 + Math.max(0, n.z) * reach);
-      bounds.maxY = Math.max(bounds.maxY, c.y + 0.75);
+      // Spikes and plows poke out further.
+      grow(c.x, c.y, c.z, n, 0.25 + (SETTINGS.parts[p.type].ramBonus ? 0.3 : 0));
     }
     this.localBounds = bounds;
     this.stats = this.build.stats();
-    // Extra armor from new armor blocks counts straight away.
-    this.health = Math.min(this.stats.maxHealth, this.health + Math.max(0, this.stats.maxHealth - oldMax));
+    this.#refreshAllTints();
+  }
+
+  // ------------------------------------------------------------ damage
+  // Every damageable piece: { id, kind: 'part'|'section', key, hp, maxHp, center (car space) }
+  pieces() {
+    const list = [];
+    for (const [id, cells] of Object.entries(SECTION_CELLS)) {
+      if (this.build.missing.has(id)) continue;
+      list.push({ id: 's:' + id, kind: 'section', key: id, hp: this.build.sectionHp[id], maxHp: SETTINGS.chassis[id].hp,
+        center: sectionCenter(id), cells: cells.map((c) => cellCenter(...c)) });
+    }
+    for (const [k, p] of this.build.parts) {
+      const c = cellCenter(p.i, p.j, p.k);
+      list.push({ id: 'p:' + k, kind: 'part', key: k, hp: p.hp, maxHp: SETTINGS.parts[p.type].hp, center: c, cells: [c] });
+    }
+    return list;
+  }
+
+  // Something hit the car at this world position: the nearest piece takes it.
+  takeDamage(amount, worldPoint) {
+    if (this.wrecked) return;
+    const local = this.model.body.worldToLocal(worldPoint.clone());
+    let best = null, bestD = Infinity;
+    for (const pc of this.pieces()) {
+      for (const c of pc.cells) {
+        const d = (c.x - local.x) ** 2 + (c.y - local.y) ** 2 * 0.5 + (c.z - local.z) ** 2;
+        if (d < bestD) { bestD = d; best = pc; }
+      }
+    }
+    if (best) this.damagePiece(best, amount);
+  }
+
+  // Hit from a direction (car space, pointing from the car toward what it hit):
+  // the outermost pieces on that side share the damage.
+  // Damage the front layer wipes out carries on to the layer behind it.
+  takeSideDamage(amount, localDir) {
+    let left = amount;
+    for (let layer = 0; layer < 4 && left > 1 && !this.wrecked; layer++) {
+      const ps = this.pieces();
+      const reach = (pc) => Math.max(...pc.cells.map((c) => c.x * localDir.x + c.z * localDir.z));
+      const top = Math.max(...ps.map(reach));
+      const front = ps.filter((pc) => reach(pc) > top - 0.6);
+      const share = left / front.length;
+      left = 0;
+      for (const pc of front) {
+        left += Math.max(0, share - pc.hp);
+        this.damagePiece(pc, share);
+      }
+    }
+  }
+
+  damagePiece(pc, amount) {
+    this.hurtTimer = 0.25;
+    if (pc.kind === 'part') {
+      const p = this.build.parts.get(pc.key);
+      if (!p) return;
+      p.hp -= amount;
+      if (p.hp <= 0) return this.#detach(this.build.breakPart(pc.key));
+      this.#tint(this.partObjects.get(pc.key), p.hp / pc.maxHp);
+    } else {
+      this.build.sectionHp[pc.key] -= amount;
+      const frac = this.build.sectionHp[pc.key] / pc.maxHp;
+      if (frac <= 0) {
+        if (pc.key === 'cabin') { this.wrecked = true; return; }
+        return this.#detach(this.build.breakSection(pc.key));
+      }
+      this.#tint([this.model.sections[pc.key]], frac);
+    }
+  }
+
+  // Pieces fell off: hand them to the scrap system, then rebuild the car.
+  #detach(dropped) {
+    if (!dropped.length) return;
+    this.model.root.updateMatrixWorld(true);
+    const lv = this.body.linvel();
+    const out = [];
+    for (const d of dropped) {
+      if (d.section) {
+        const n = SETTINGS.chassis[d.section].panels;
+        out.push({ objects: [this.model.sections[d.section]], item: { type: 'panel', count: n, label: `${SECTION_NAMES[d.section]} (${n} Body Panel${n > 1 ? 's' : ''})` } });
+      } else {
+        const k = key(d.i, d.j, d.k);
+        out.push({ objects: this.partObjects.get(k) || [], item: { type: d.type, count: 1, label: PART_TYPES[d.type].name } });
+      }
+    }
+    // Fling them outward from the car
+    for (const o of out) {
+      const wp = o.objects[0]?.getWorldPosition(new THREE.Vector3()) || this.currPos.clone();
+      const away = wp.sub(this.currPos).setY(0).normalize().multiplyScalar(4);
+      o.push = new THREE.Vector3(lv.x * 0.6 + away.x, 0, lv.z * 0.6 + away.z);
+    }
+    this.onDetach?.(out);
+    this.applyBuild();
+  }
+
+  // Charred look: lerp each piece's colors toward black as it gets hurt.
+  #tint(objects, frac) {
+    const dark = Math.min(1, Math.max(0, 1 - frac)) * 0.8;
+    for (const o of objects || []) {
+      o.traverse((m) => {
+        if (!m.isMesh || !m.material.color || m.material.transparent) return;
+        if (!m.userData.ownMat) { m.material = m.material.clone(); m.userData.ownMat = true; m.userData.base = m.material.color.clone(); }
+        m.material.color.copy(m.userData.base).lerp(CHAR, dark);
+      });
+    }
+  }
+
+  #refreshAllTints() {
+    for (const pc of this.pieces()) {
+      const objs = pc.kind === 'part' ? this.partObjects.get(pc.key) : [this.model.sections[pc.key]];
+      this.#tint(objs, pc.hp / pc.maxHp);
+    }
+  }
+
+  // World positions of badly damaged pieces (for smoke + sparks).
+  smokingPoints(below) {
+    const out = [];
+    for (const pc of this.pieces()) {
+      if (pc.hp / pc.maxHp < below) out.push({ pos: this.model.body.localToWorld(new THREE.Vector3(pc.center.x, pc.center.y + 0.2, pc.center.z)), frac: pc.hp / pc.maxHp });
+    }
+    return out;
+  }
+
+  get cabinFrac() { return this.build.sectionHp.cabin / SETTINGS.chassis.cabin.hp; }
+
+  // After each physics step: a big sudden loss of speed means we hit something.
+  afterStep() {
+    const v = this.body.linvel();
+    const dx = this.vBefore.x - v.x, dz = this.vBefore.z - v.z;
+    const lost = Math.hypot(dx, dz);
+    const D = SETTINGS.damage;
+    if (lost > D.crashMinSpeed && !this.wrecked) {
+      const dir = new THREE.Vector3(dx, 0, dz).normalize().applyQuaternion(this.currRot.clone().invert());
+      this.takeSideDamage((lost - D.crashMinSpeed) * D.crashDamage, dir);
+      this.crashed = lost;
+    }
   }
 
   get totalMass() { return this.stats.mass; }
@@ -256,6 +413,8 @@ export class Car {
     this.longAccel = (vf - prevVf) / dt;
     this.yawRate = this.body.angvel().y;
     this.drifting = this.grounded && Math.abs(vs) > S.grip.driftThreshold;
+    const after = this.body.linvel();
+    this.vBefore.set(after.x, after.y, after.z); // to spot crashes after the physics step
   }
 
   // After physics step: remember where we were and where we are now.
@@ -268,22 +427,20 @@ export class Car {
     this.currRot.set(r.x, r.y, r.z, r.w);
   }
 
-  takeDamage(amount) {
-    if (this.wrecked) return;
-    this.health = Math.max(0, this.health - amount);
-    this.hurtTimer = 0.25;
-    if (this.health <= 0) this.wrecked = true;
-  }
-
   // A sudden change in speed (e.g. plowing through a demon).
   nudge(dx, dz) {
     const v = this.body.linvel();
     this.body.setLinvel({ x: v.x + dx, y: v.y, z: v.z + dz }, true);
   }
 
+  // Back in one piece with your last garage build. Spare parts you were
+  // carrying stay in your stock.
   respawn() {
-    this.health = this.stats.maxHealth;
+    const inventory = this.build.inventory;
+    this.build.load(this.savedBuild);
+    this.build.inventory = inventory;
     this.wrecked = false;
+    this.applyBuild();
     this.reset(true);
   }
 
@@ -294,6 +451,7 @@ export class Car {
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     if (toSpawn) this.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
+    this.vBefore.set(0, 0, 0);
     this.capture();
     this.capture();
   }

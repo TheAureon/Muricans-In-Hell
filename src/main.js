@@ -9,6 +9,7 @@ import { createScene } from './world/scene.js';
 import { createGround } from './world/ground.js';
 import { Dust, Embers, AimMarker } from './world/effects.js';
 import { Gore } from './world/gore.js';
+import { Scrap } from './world/scrap.js';
 import { Demons } from './demons/demons.js';
 import { Bullets } from './combat/bullets.js';
 import { Stats } from './combat/stats.js';
@@ -40,6 +41,19 @@ async function main() {
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   demons.populate(car.currPos);
   const garage = new Garage({ camera, renderer, car, audio });
+  const scrap = new Scrap(scene);
+  const sparks = new Dust(scene, 120, 0xffd040, 0.95);
+
+  // Pieces breaking off the car become scrap lying in the world.
+  car.onDetach = (pieces) => {
+    for (const p of pieces) {
+      scrap.spawn(p.objects, p.item, p.push);
+      hud.toast(`LOST: ${p.item.label}`, 'bad');
+      for (let i = 0; i < 10; i++) sparks.spawn(p.objects[0].getWorldPosition(new THREE.Vector3()), new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 5, (Math.random() - 0.5) * 8), 0.08, 0.4);
+    }
+    audio.thump();
+    chase.addShake(0.4);
+  };
 
   // Draw one frame behind the start screen so it isn't empty.
   car.capture(); car.capture();
@@ -57,6 +71,7 @@ async function main() {
   let dustTimer = 0;
   let elapsed = 0;
   let wreckTimer = 0;
+  let damageFxTimer = 0;
   let smokeTimer = 0;
   const tmp = new THREE.Vector3();
   const tmpAim = new THREE.Vector3();
@@ -71,7 +86,11 @@ async function main() {
     if (input.wasPressed('KeyH')) hud.toggleHelp();
     if (input.wasPressed('KeyM')) audio.toggleMute();
     if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
-      if (!car.wrecked) garage.toggle();
+      const near = demons.nearestDistance(car.currPos);
+      if (garage.open) garage.close();
+      else if (car.wrecked) { /* wait for respawn */ }
+      else if (near < SETTINGS.damage.garageSafeRadius) hud.toast(`Demons too close! Get ${Math.ceil(SETTINGS.damage.garageSafeRadius - near)} m further away to open the garage.`, 'warn');
+      else garage.openGarage();
       input.mouse.down = false;
     }
     if (garage.open) {
@@ -92,6 +111,7 @@ async function main() {
       car.fixedUpdate(input, PHYSICS_STEP);
       physics.world.step();
       car.capture();
+      car.afterStep(); // crash damage from hitting rocks
       demons.fixedUpdate(PHYSICS_STEP, car);
       accumulator -= PHYSICS_STEP;
     }
@@ -109,9 +129,10 @@ async function main() {
         smokeTimer = 0.05;
         smoke.spawn(tmp.copy(car.position).setY(1.2), new THREE.Vector3((Math.random() - 0.5) * 1.5, 3 + Math.random() * 2, (Math.random() - 0.5) * 1.5), 0.6 + Math.random() * 0.5, 1.6);
       }
-      if (wreckTimer > SETTINGS.health.respawnDelay) {
+      if (wreckTimer > SETTINGS.damage.respawnDelay) {
         wreckTimer = 0;
         car.respawn();
+        scrap.clear(); // your build comes back whole, so its old scrap vanishes
         demons.clearAround(car.currPos, 60);
       }
     }
@@ -155,8 +176,39 @@ async function main() {
       }
     }
 
+    // --- Crashes, smoke and sparks from damaged pieces ---
+    if (car.crashed) {
+      chase.addShake(Math.min(1, car.crashed / 20));
+      audio.thump();
+      car.crashed = 0;
+    }
+    if ((damageFxTimer -= dt) <= 0) {
+      damageFxTimer = 0.09;
+      for (const p of car.smokingPoints(SETTINGS.damage.smokeBelow)) {
+        if (Math.random() < 0.6) smoke.spawn(p.pos, new THREE.Vector3((Math.random() - 0.5), 2 + Math.random() * 1.5, (Math.random() - 0.5)), 0.25 + (1 - p.frac) * 0.3, 1.2);
+        if (p.frac < 0.25 && Math.random() < 0.5) sparks.spawn(p.pos, new THREE.Vector3((Math.random() - 0.5) * 6, 2 + Math.random() * 4, (Math.random() - 0.5) * 6), 0.06, 0.35);
+      }
+    }
+
+    // --- Scrap: press E to grab what's in reach ---
+    const reach = scrap.inReach(car.position, SETTINGS.damage.pickupRadius);
+    if (reach.length && !car.wrecked) {
+      const names = reach.map((s) => s.item.label);
+      hud.setPrompt(`[E] Grab scrap: ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2} more` : ''}`);
+      if (input.wasPressed('KeyE')) {
+        for (const item of scrap.collect(reach, car.position)) {
+          car.build.give(item.type, item.count);
+          hud.toast(`+${item.count} ${item.count > 1 ? 'Body Panels' : item.label}`);
+        }
+        car.build.save();
+        audio.hit();
+      }
+    } else hud.setPrompt('');
+
     dust.update(dt);
     smoke.update(dt);
+    sparks.update(dt);
+    scrap.update(dt);
     bullets.update(dt);
     gore.update(dt);
     stats.tick(dt);
@@ -175,7 +227,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVE = { car, SETTINGS, physics, scene, camera, demons, stats, garage };
+  window.HELLDRIVE = { car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
 }
 
 main().catch((err) => {

@@ -3,9 +3,11 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
-**Current stage: Milestone 3 — the builder.** Press **G** to open the garage
-and bolt armor, spikes, plows, guns, rockets and lead weights anywhere on your
-car (and onto each other). Weight and balance change how it drives.
+**Current stage: Milestone 4 — damage and scrap.** There is no health bar:
+every body section and bolted-on part takes its own damage, chars, smokes and
+breaks off as scrap. Lose the cabin and you're wrecked. Press **E** to grab
+scrap, then bolt it back on (anywhere!) in the garage (**G**), which also
+repairs whatever is still attached. The garage won't open with demons close.
 
 ## How to play (easiest)
 
@@ -38,7 +40,8 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | Mouse wheel | Zoom camera |
 | R | Unstick the car |
 | Backspace | Back to the start |
-| G | Garage: build your car (pauses the game) |
+| E | Grab scrap that fell off your car |
+| G | Garage: build + repair (pauses; not with demons close) |
 | T | Live tuning panel |
 | M | Mute |
 | H | Hide help |
@@ -59,7 +62,7 @@ src/
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers
   regions/            one data file per region (Ash Plains so far)
-  world/              sky, ground, scenery, visual effects, gore
+  world/              sky, ground, scenery, visual effects, gore, scrap
   vehicle/            the car's driving physics, 3D model, parts + build grid
   demons/             demon types (data), their 3D models, spawning + AI
   combat/             bullets and the damage-per-minute tracker
