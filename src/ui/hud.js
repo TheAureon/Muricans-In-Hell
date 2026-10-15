@@ -26,6 +26,7 @@ export class Hud {
       <div id="cabin-warn">⚠ CABIN CRITICAL ⚠<small>get to the garage (G) away from demons</small></div>
       <div id="prompt"></div>
       <div id="toasts"></div>
+      <div id="souls"><span class="ico">✦</span> <b>0</b> <small>SOULS</small></div>
       <div id="compass"><span class="arrow">▲</span><span class="label"></span></div>
       <div id="bossbar"><div class="name"></div><div class="bar"><div class="fill"></div></div></div>
       <div id="victory">ASH PLAINS<br>CLEARED!<small>The Ash Titan is dust. Keep roaming, or press Backspace to return to the start.</small></div>
@@ -60,6 +61,17 @@ export class Hud {
     this.compass = document.getElementById('compass');
     this.bossEl = document.getElementById('bossbar');
     this.victoryEl = document.getElementById('victory');
+  }
+
+  // Soul counter (top left). Pulses when it goes up.
+  souls(n) {
+    const el = this.soulsEl || (this.soulsEl = document.getElementById('souls'));
+    const v = Math.floor(n);
+    const b = el.querySelector('b');
+    if (b.textContent !== String(v)) {
+      if (v > Number(b.textContent)) { el.classList.remove('gain'); void el.offsetWidth; el.classList.add('gain'); }
+      b.textContent = v;
+    }
   }
 
   // Arrow at the top pointing to the objective (null to hide).

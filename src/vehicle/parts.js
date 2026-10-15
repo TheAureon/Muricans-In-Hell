@@ -79,6 +79,47 @@ export const PART_TYPES = {
       g.userData.flame = flame;
     },
   },
+  heavyArmor: {
+    name: 'Heavy Armor',
+    icon: '🧱',
+    desc: 'Hell-forged slab. Very tough, very heavy.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.5, 0.5, 0.5), M.lead);
+      add(g, new THREE.BoxGeometry(0.52, 0.12, 0.52), M.red, 0, 0.12, 0);
+      for (const [x, z] of [[-0.17, -0.17], [0.17, -0.17], [-0.17, 0.17], [0.17, 0.17]]) {
+        add(g, new THREE.ConeGeometry(0.06, 0.12, 4), M.steel, x, 0.3, z); // studs
+      }
+    },
+  },
+  saw: {
+    name: 'Saw Blade',
+    icon: '🪚',
+    desc: '+120% ram damage on the side it faces. Spins!',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.3, 0.2, 0.3), M.dark, 0, -0.15, 0);
+      const disc = new THREE.Group();
+      disc.position.y = 0.12;
+      const blade = add(disc, new THREE.CylinderGeometry(0.42, 0.42, 0.05, 10), M.steel);
+      blade.rotation.x = Math.PI / 2;
+      for (let n = 0; n < 10; n++) { // teeth
+        const a = (n / 10) * Math.PI * 2;
+        const t = add(disc, new THREE.ConeGeometry(0.06, 0.16, 3), M.steel, Math.cos(a) * 0.46, Math.sin(a) * 0.46, 0);
+        t.rotation.z = a - Math.PI / 2;
+      }
+      g.add(disc);
+      g.userData.saw = disc;
+    },
+  },
+  cannon: {
+    name: 'Hell Cannon',
+    icon: '💥',
+    desc: 'Slow, heavy-hitting gun. Shells explode.',
+    isGun: true,
+    weapon: 'cannon',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.26, 0.3, 0.3, 8), M.dark, 0, -0.1, 0);
+    },
+  },
   weight: {
     name: 'Lead Weight',
     icon: '🏋️',
@@ -92,21 +133,24 @@ export const PART_TYPES = {
 
 // A small gun turret (used by the Machine Gun part). Its aiming parts stay
 // lined up with the car, no matter which surface the base is bolted to.
-export function createGunTurret() {
+export function createGunTurret(kind = 'gun') {
+  const big = kind === 'cannon';
   const turret = new THREE.Group();
   const yaw = new THREE.Group();
   turret.add(yaw);
-  add(yaw, new THREE.BoxGeometry(0.34, 0.2, 0.42), M.blue, 0, 0.08, 0);
+  add(yaw, new THREE.BoxGeometry(big ? 0.5 : 0.34, big ? 0.3 : 0.2, big ? 0.6 : 0.42), big ? M.red : M.blue, 0, 0.08, 0);
   const pitch = new THREE.Group();
-  pitch.position.set(0, 0.12, 0.1);
+  pitch.position.set(0, big ? 0.18 : 0.12, 0.1);
   yaw.add(pitch);
   const barrels = new THREE.Group();
   pitch.add(barrels);
-  const bg = new THREE.CylinderGeometry(0.045, 0.05, 0.8, 6);
+  const len = big ? 1.2 : 0.8;
+  const bg = new THREE.CylinderGeometry(big ? 0.1 : 0.045, big ? 0.12 : 0.05, len, 7);
   bg.rotateX(Math.PI / 2);
-  add(barrels, bg, M.steel, 0, 0, 0.4);
+  add(barrels, bg, M.steel, 0, 0, len / 2);
+  if (big) add(barrels, new THREE.CylinderGeometry(0.15, 0.15, 0.2, 7).rotateX(Math.PI / 2), M.dark, 0, 0, len); // muzzle brake
   const muzzle = new THREE.Object3D();
-  muzzle.position.set(0, 0, 0.85);
+  muzzle.position.set(0, 0, len + 0.1);
   barrels.add(muzzle);
   const flash = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.9 }));
   flash.scale.set(1, 1, 1.8);

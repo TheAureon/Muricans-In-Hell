@@ -5,13 +5,16 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
-**Current stage: Milestone 5 — the Ash Plains.** Five kinds of demons roam
-the plains (imps, hellhounds, pincushions, cinder spitters and ash brutes),
-getting nastier the further you drive from the start. Follow the arrow at the
-top of the screen to the bone arena and wake **the Ash Titan**.
+**Current stage: Milestone 6 — progression.** Every demon you kill drops
+**souls**. Spend them in the garage (**G**) to buy parts, unlock new ones
+(Heavy Armor, Saw Blade, Hell Cannon...), and upgrade your ride from Muscle
+Car → Armored Car → Half-Track → **HELL TANK**. Five kinds of demons roam the
+Ash Plains, nastier the further you go; follow the arrow to wake the Ash Titan.
 
 Get wrecked (lose the cabin) and the whole run starts over: a complete stock
-car, the starting parts kit, fresh demons, and the Titan asleep again.
+car, the starting parts kit, zero souls, nothing unlocked, fresh demons, and
+the Titan asleep again. (Set `progression.keepOnWreck` to `true` in
+`src/settings.js` to keep souls and unlocks.)
 
 Damage is physical: every body section and bolted-on part takes its own
 damage and breaks off as that actual piece. Press **E** to grab scrap, then

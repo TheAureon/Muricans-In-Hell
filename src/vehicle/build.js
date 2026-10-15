@@ -92,6 +92,7 @@ export class Build {
     this.missing = new Set();    // body sections that have fallen off
     this.sectionHp = {};         // section id -> hp
     this.inventory = { ...SETTINGS.build.startingKit }; // spare parts in stock
+    this.tier = SETTINGS.chassisTiers[0];  // car / armored / half-track / tank
     this.repairAll();
   }
 
@@ -122,6 +123,9 @@ export class Build {
     if (!touches) return 'Must touch the car or another part';
     return null;
   }
+
+  // How tough a body section is with the current chassis tier.
+  sectionMaxHp(id) { return SETTINGS.chassis[id].hp * this.tier.hp; }
 
   // ---- Stock of spare parts ----
   has(type, n = 1) { return SETTINGS.build.unlimitedParts || (this.inventory[type] || 0) >= n; }
@@ -200,14 +204,14 @@ export class Build {
     }
     this.take(id);
     this.missing.delete(id);
-    this.sectionHp[id] = SETTINGS.chassis[id].hp;
+    this.sectionHp[id] = this.sectionMaxHp(id);
     this.dropFloating(); // (nothing should fall, but keep things tidy)
     return null;
   }
 
   // The garage mechanics patch up everything still attached.
   repairAll() {
-    for (const id of Object.keys(SECTION_CELLS)) if (!this.missing.has(id)) this.sectionHp[id] = SETTINGS.chassis[id].hp;
+    for (const id of Object.keys(SECTION_CELLS)) if (!this.missing.has(id)) this.sectionHp[id] = this.sectionMaxHp(id);
     for (const rec of this.list()) rec.hp = pieceStats(rec.type).hp;
   }
 
@@ -218,7 +222,7 @@ export class Build {
 
   // ---- What the build adds up to ----
   stats() {
-    let mass = SETTINGS.car.mass, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0;
+    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0;
     // Missing body sections make the car lighter (and shift its balance).
     for (const id of this.missing) {
       const m = SETTINGS.chassis[id].mass, c = sectionCenter(id);
@@ -247,8 +251,8 @@ export class Build {
       comX: momentX / mass,
       // -1 (very tail heavy) .. +1 (very nose heavy)
       balance: Math.max(-1, Math.min(1, (momentZ / mass) / 1.0)),
-      enginePower: SETTINGS.car.enginePower + power,
-      topSpeed: SETTINGS.car.topSpeed + topSpeed,
+      enginePower: SETTINGS.car.enginePower * this.tier.power + power,
+      topSpeed: SETTINGS.car.topSpeed * this.tier.topSpeed + topSpeed,
       guns: guns + (this.missing.has('cabin') ? 0 : 1), // + the built-in roof gun
       ramBonus,
     };

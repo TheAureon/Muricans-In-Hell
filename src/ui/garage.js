@@ -14,6 +14,9 @@
 // off have to be picked up out in the world (E) before you can bolt them
 // back on: in their proper place, or anywhere you like (a door on the
 // roof? sure). You can't open it with demons close by.
+//
+// The SHOP lives here too: spend souls to buy parts (+ Buy), unlock new
+// ones (🔒), and upgrade your chassis from car toward HELL TANK.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SETTINGS } from '../settings.js';
@@ -25,7 +28,8 @@ const KMH = 3.6;
 const PART_LIST = Object.keys(PART_TYPES);
 
 export class Garage {
-  constructor({ camera, renderer, car, audio }) {
+  constructor({ camera, renderer, car, audio, progress }) {
+    this.progress = progress;
     this.camera = camera;
     this.car = car;
     this.audio = audio;
@@ -289,9 +293,45 @@ export class Garage {
 
   // What's in the parts list: every normal part, plus loose car pieces
   // (nose, doors...) only while you have some in stock.
+  // What's in the parts list you can pick from: every unlocked part, plus
+  // loose car pieces (nose, doors...) only while you have some in stock.
   #palette() {
     const b = this.car.build;
-    return [...PART_LIST, ...SECTION_PIECES.filter((t) => SETTINGS.build.unlimitedParts || (b.inventory[t] || 0) > 0)];
+    const parts = PART_LIST.filter((t) => this.progress.isUnlocked(t));
+    return [...parts, ...SECTION_PIECES.filter((t) => SETTINGS.build.unlimitedParts || (b.inventory[t] || 0) > 0)];
+  }
+  #lockedParts() { return PART_LIST.filter((t) => !this.progress.isUnlocked(t)); }
+
+  #buy(type) {
+    const price = SETTINGS.shop[type]?.price;
+    if (price == null) return;
+    if (!this.progress.spend(price)) { this.audio.claw(); this.#status(`✖ Not enough souls: ${pieceInfo(type).name} costs ${price} ✦`, true); return; }
+    this.car.build.give(type);
+    this.car.build.save();
+    this.audio.chime();
+    this.#status(`Bought a ${pieceInfo(type).name} (-${price} ✦)`);
+    this.selected = type;
+    this.#refreshUI();
+  }
+
+  #unlock(type) {
+    const cost = SETTINGS.shop[type].unlock;
+    if (!this.progress.unlock(type)) { this.audio.claw(); this.#status(`✖ Not enough souls: unlocking ${pieceInfo(type).name} costs ${cost} ✦`, true); return; }
+    this.audio.wreck();
+    this.#status(`Unlocked: ${pieceInfo(type).name}! Buy some with + Buy.`);
+    this.selected = type;
+    this.#refreshUI();
+  }
+
+  #upgradeChassis() {
+    const next = this.progress.nextTier;
+    if (!next) return;
+    if (!this.progress.upgradeTier()) { this.audio.claw(); this.#status(`✖ Not enough souls: ${next.name} costs ${next.cost} ✦`, true); return; }
+    this.car.setTier(this.progress.tier);
+    this.history = []; // (a chassis upgrade can't be undone)
+    this.audio.wreck();
+    this.#changed();
+    this.#status(`Upgraded to the ${next.name}!`);
   }
 
   #select(type) {
@@ -312,6 +352,7 @@ export class Garage {
     ui.style.display = 'none';
     ui.innerHTML = `
       <div class="g-title">🔧 GARAGE <small>the game is paused · you stay in the car, the mechanics do the rest</small></div>
+      <div class="g-souls"></div>
       <div class="g-parts">
         <div class="g-list"></div>
         <div class="g-row">
@@ -329,8 +370,12 @@ export class Garage {
     document.body.appendChild(ui);
     this.ui = ui;
     ui.querySelector('.g-list').addEventListener('click', (e) => {
-      const btn = e.target.closest('button[data-type]');
-      if (btn) this.#select(btn.dataset.type);
+      const buy = e.target.closest('[data-buy]');
+      if (buy) { this.#buy(buy.dataset.buy); return; }
+      const unl = e.target.closest('[data-unlock]');
+      if (unl) { this.#unlock(unl.dataset.unlock); return; }
+      const row = e.target.closest('[data-type]');
+      if (row) this.#select(row.dataset.type);
     });
     ui.querySelector('.g-mirror').addEventListener('click', () => this.#toggleMirror());
     ui.querySelector('.g-clear').addEventListener('click', () => { this.#remember(); this.car.build.clear(); this.#changed(); });
@@ -338,6 +383,7 @@ export class Garage {
     ui.querySelector('.g-done').addEventListener('click', () => this.close());
     // "Rebuild" buttons for missing body sections
     ui.querySelector('.g-stats').addEventListener('click', (e) => {
+      if (e.target.closest('[data-upgrade]')) { this.#upgradeChassis(); return; }
       const id = e.target.dataset?.restore;
       if (!id) return;
       this.#remember();
@@ -360,16 +406,28 @@ export class Garage {
     const list = this.#palette();
     if (!list.includes(this.selected)) this.selected = list[0];
     const unlimited = SETTINGS.build.unlimitedParts;
-    this.ui.querySelector('.g-list').innerHTML = list.map((t, idx) => {
+    const souls = Math.floor(this.progress.souls);
+    this.ui.querySelector('.g-souls').innerHTML = `✦ <b>${souls}</b> souls`;
+    const rows = list.map((t, idx) => {
       const info = pieceInfo(t);
       const n = this.car.build.inventory[t] || 0;
-      const cls = [t === this.selected ? 'sel' : '', !unlimited && n <= 0 ? 'empty' : '', isSectionPiece(t) ? 'piece' : ''].join(' ');
-      return `<button data-type="${t}" class="${cls}"><span class="ico">${info.icon}</span>
+      const price = SETTINGS.shop[t]?.price;
+      const cls = ['g-item', t === this.selected ? 'sel' : '', !unlimited && n <= 0 ? 'empty' : '', isSectionPiece(t) ? 'piece' : ''].join(' ');
+      const buy = price != null && !unlimited ? `<button class="g-buy ${souls < price ? 'cant' : ''}" data-buy="${t}">+ Buy ${price} ✦</button>` : '';
+      return `<div data-type="${t}" class="${cls}"><span class="ico">${info.icon}</span>
         <span class="nm">${idx < 9 ? idx + 1 + '. ' : ''}${info.name}<small>${info.desc}</small></span>
-        <span class="kg"><b>${unlimited ? '∞' : '×' + n}</b><br>${pieceStats(t).mass} kg</span></button>`;
-    }).join('');
+        <span class="kg"><b>${unlimited ? '∞' : '×' + n}</b><br>${pieceStats(t).mass} kg${buy ? '<br>' + buy : ''}</span></div>`;
+    });
+    // Locked parts at the bottom, with their unlock price
+    for (const t of this.#lockedParts()) {
+      const info = pieceInfo(t), cost = SETTINGS.shop[t].unlock;
+      rows.push(`<div class="g-item locked"><span class="ico">🔒</span>
+        <span class="nm">${info.name}<small>${info.desc}</small></span>
+        <span class="kg"><button class="g-buy unlock ${souls < cost ? 'cant' : ''}" data-unlock="${t}">Unlock ${cost} ✦</button></span></div>`);
+    }
+    this.ui.querySelector('.g-list').innerHTML = rows.join('');
     this.ui.querySelector('.g-mirror').textContent = `🪞 Mirror: ${this.mirror ? 'ON' : 'OFF'} (F)`;
-    this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats()) + bodyHTML(this.car.build);
+    this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats()) + bodyHTML(this.car.build) + chassisHTML(this.progress);
   }
 }
 
@@ -430,4 +488,19 @@ function bodyHTML(build) {
     return `<div><span>${name}</span><b class="lost">LOST — find it (E)</b></div>`;
   });
   return `<div class="g-sub">BODY <small>(repaired when you open the garage)</small></div>${rows.join('')}`;
+}
+
+// Chassis: what you drive now, and the next step toward the HELL TANK.
+const TIER_BLURB = {
+  armored: 'steel plates, tougher body, more engine',
+  halftrack: 'rear treads: grips hard, drifts less, much tougher',
+  tank: 'full treads, spins on the spot, huge armor + a big cannon',
+};
+function chassisHTML(progress) {
+  const now = progress.tierInfo, next = progress.nextTier;
+  const souls = Math.floor(progress.souls);
+  const up = next
+    ? `<button class="g-upgrade ${souls < next.cost ? 'cant' : ''}" data-upgrade="1">Upgrade → ${next.name} · ${next.cost} ✦</button><div class="g-blurb">${TIER_BLURB[next.id] || ''}</div>`
+    : '<div class="g-blurb">Fully upgraded. Go wreck something.</div>';
+  return `<div class="g-sub">CHASSIS</div><div><span>Now</span><b>${now.name}</b></div>${up}`;
 }

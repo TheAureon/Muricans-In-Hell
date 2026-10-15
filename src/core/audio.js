@@ -128,6 +128,28 @@ export class Audio {
     this.#burst({ freq: 1200, endFreq: 80, gain: 1.0, length: 0.9 });
   }
 
+  // Big gun: a deep boom.
+  cannon() {
+    this.#thud(70, 0.35, 0.9);
+    this.#burst({ freq: 1400, endFreq: 120, gain: 0.7, length: 0.3 });
+  }
+
+  // Souls arriving: a soft high chime.
+  chime() {
+    if (!this.ctx || this.muted) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(900 + Math.random() * 300, t);
+    o.frequency.exponentialRampToValueAtTime(1800, t + 0.12);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0.06, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+    o.connect(g).connect(this.master);
+    o.start(t);
+    o.stop(t + 0.2);
+  }
+
   gunshot() {
     if (!this.ctx || this.muted) return;
     const ctx = this.ctx;

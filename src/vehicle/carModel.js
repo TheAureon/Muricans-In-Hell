@@ -67,8 +67,42 @@ function materials() {
 
 // Adds one body section's shapes to group g, in the car's own coordinates.
 // Used for the car itself, and for loose pieces you bolt on elsewhere.
-function buildSection(id, g) {
+function buildSection(id, g, tier = 0) {
   const M = materials();
+  buildBaseSection(id, g, M);
+  if (tier >= 1) addArmor(id, g, M, tier);
+}
+
+// Bolted-on armor for the upgraded chassis tiers (1 = Armored Car, 2 =
+// Half-Track, 3 = HELL TANK). It belongs to the section, so it breaks off
+// with it.
+function addArmor(id, g, M, tier) {
+  const thick = tier >= 3 ? 0.12 : 0.07;
+  if (id === 'doorL' || id === 'doorR') {
+    const sx = id === 'doorL' ? 1 : -1;
+    add(g, new THREE.BoxGeometry(thick, 0.42, 1.8), M.metal, sx * (0.97 + thick / 2), 0.17, 0);
+    for (const z of [-0.6, 0, 0.6]) add(g, new THREE.BoxGeometry(0.03, 0.05, 0.05), M.dark, sx * (1.0 + thick), 0.3, z, false); // rivets
+  } else if (id === 'nose') {
+    add(g, new THREE.BoxGeometry(1.6, thick, 1.2), M.metal, 0, 0.6, 1.35);              // hood plate
+    add(g, new THREE.BoxGeometry(1.5, 0.3, 0.08), M.dark, 0, 0.25, 2.14);              // grille
+    for (const x of [-0.5, -0.25, 0, 0.25, 0.5]) add(g, new THREE.BoxGeometry(0.04, 0.3, 0.1), M.metal, x, 0.25, 2.17, false);
+  } else if (id === 'tail') {
+    add(g, new THREE.BoxGeometry(1.7, thick, 0.8), M.metal, 0, 0.58, -1.7);
+  } else if (id === 'cabin') {
+    for (const x of [-0.45, -0.15, 0.15, 0.45]) add(g, new THREE.BoxGeometry(0.05, 0.42, 0.05), M.dark, x, 0.66, 0.68, false); // window bars
+    add(g, new THREE.BoxGeometry(1.3, 0.06, 0.06), M.dark, 0, 0.66, 0.68, false);
+    if (tier >= 3) { // slanted tank hull plates
+      for (const sx of [-1, 1]) {
+        const plate = add(g, new THREE.BoxGeometry(0.1, 0.55, 2.0), M.metal, sx * 0.8, 0.68, -0.3);
+        plate.rotation.z = sx * 0.35;
+      }
+    }
+  } else if (id === 'bumper' && tier >= 2) {
+    add(g, new THREE.BoxGeometry(2.2, 0.45, 0.12), M.metal, 0, 0.05, 2.38); // ram plate
+  }
+}
+
+function buildBaseSection(id, g, M) {
   if (id === 'cabin') {
     // Cabin: middle of the chassis, glass, roof
     add(g, new THREE.BoxGeometry(1.5, 0.5, 2.0), M.paint, 0, 0.15, 0);
@@ -186,5 +220,45 @@ export function createCarModel() {
     wheels.push({ steer, spin, front, x, z });
   }
 
-  return { root, body, sections, wheels, turret: { yaw, pitch, barrels, muzzle, flash } };
+  // --- Treads (for the Half-Track and the HELL TANK) ---
+  // A tread unit: a dark belt with road wheels showing on the outside.
+  const treads = [];
+  const makeTread = (x, z, length) => {
+    const t = new THREE.Group();
+    t.position.set(x, 0, z);
+    add(t, new THREE.BoxGeometry(0.46, 0.8, length), M.tire, 0, -0.02, 0);
+    add(t, new THREE.BoxGeometry(0.5, 0.08, length + 0.1), M.metal, 0, 0.4, 0); // top guard
+    const rollers = [];
+    const n = Math.max(2, Math.round(length / 0.55));
+    for (let k = 0; k < n; k++) {
+      const r = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.06, 7).rotateZ(Math.PI / 2), M.metal);
+      r.position.set(Math.sign(x) * 0.25, -0.05, -length / 2 + 0.3 + k * ((length - 0.6) / (n - 1)));
+      t.add(r);
+      rollers.push(r);
+    }
+    t.visible = false;
+    root.add(t);
+    const unit = { group: t, rollers };
+    treads.push(unit);
+    return unit;
+  };
+  const rearTreads = [makeTread(1.0, -1.25, 1.7), makeTread(-1.0, -1.25, 1.7)];
+  const fullTreads = [makeTread(1.0, 0, 4.1), makeTread(-1.0, 0, 4.1)];
+
+  const model = { root, body, sections, wheels, treads, turret: { group: turret, yaw, pitch, barrels, muzzle, flash } };
+
+  // Change the look to a chassis tier: 0 car, 1 armored, 2 half-track, 3 tank.
+  model.setTier = (tier) => {
+    for (const [id, g] of Object.entries(sections)) {
+      for (const child of [...g.children]) if (child !== turret) g.remove(child);
+      buildSection(id, g, tier);
+    }
+    for (const w of wheels) w.steer.visible = tier < 2 || (tier === 2 && w.front);
+    for (const t of rearTreads) t.group.visible = tier === 2;
+    for (const t of fullTreads) t.group.visible = tier >= 3;
+    // The tank's roof gun is a big cannon turret.
+    turret.scale.setScalar(tier >= 3 ? 1.35 : 1);
+    barrels.scale.set(tier >= 3 ? 1.6 : 1, tier >= 3 ? 1.6 : 1, tier >= 3 ? 1.4 : 1);
+  };
+  return model;
 }

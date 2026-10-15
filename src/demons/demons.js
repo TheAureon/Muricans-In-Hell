@@ -192,6 +192,7 @@ export class Demons {
   #kill(d, source, push) {
     this.kills++;
     this.fx.stats.kill(source);
+    this.onKill?.(d, source); // (souls!)
     const big = d.def.heavy ? 2.5 : 1;
     this.fx.gore.explode(d.pos, push, d.def.goreColors, (source === 'ram' ? 1 : 0.7) * big);
     this.fx.audio.splat(source === 'ram' || d.def.heavy ? 1 : 0.6);
@@ -202,6 +203,18 @@ export class Demons {
       this.fx.chase.addShake(SETTINGS.ramming.shake * big);
     }
     this.#remove(d);
+  }
+
+  // Damage everything within `radius` of a point (explosions). Less at the edge.
+  damageArea(point, radius, amount, source) {
+    for (const d of this.all) {
+      if (!d.alive) continue;
+      const dist = Math.hypot(d.pos.x - point.x, d.pos.z - point.z);
+      if (dist > radius + d.def.radius) continue;
+      const push = new THREE.Vector3(d.pos.x - point.x, 4, d.pos.z - point.z).normalize().multiplyScalar(10);
+      this.damage(d, amount * (1 - 0.5 * Math.min(1, dist / radius)), source, push);
+    }
+    if (this.boss?.awake && this.boss.distanceTo(point) < radius) this.boss.takeHit(amount, source, new THREE.Vector3());
   }
 
   // ---------------------------------------------------------------- update

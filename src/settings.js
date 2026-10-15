@@ -137,6 +137,9 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   //  GUN TURRET
   // ---------------------------------------------------------------
+  // The HELL TANK's main cannon (and the Hell Cannon part) fire these.
+  cannonShell: { damage: 30, fireRate: 1.6, bulletSpeed: 110, range: 160, spread: 0.6, splash: 3.5 },
+
   turret: {
     // How fast the turret swings toward your mouse (bigger = snappier).
     turnSpeed: 12,
@@ -181,7 +184,7 @@ export const SETTINGS = {
     // true = build with unlimited free parts (no stock counts).
     unlimitedParts: false,
     // The parts you start the game with in your stock.
-    startingKit: { armor: 8, spike: 8, plow: 2, gun: 4, booster: 2, weight: 2 },
+    startingKit: { armor: 4, spike: 4, gun: 1 },
     // How strongly front/back weight changes handling. 0 = not at all.
     //  Nose-heavy  -> understeer (turns wider, more stable)
     //  Tail-heavy  -> oversteer (tail slides out more easily)
@@ -196,7 +199,47 @@ export const SETTINGS = {
     gun:     { mass: 80,  hp: 60 },                 // one more gun that fires with your main gun
     booster: { mass: 40,  hp: 50,  power: 3500, topSpeed: 2.5 }, // more engine push and top speed (m/s)
     weight:  { mass: 250, hp: 220 },                // just heavy. Hits harder, handles worse.
+    heavyArmor: { mass: 140, hp: 380 },             // a slab of hell-forged steel
+    saw:     { mass: 60,  hp: 90,  ramBonus: 1.2 }, // spinning blade: +120% ram damage on its side
+    cannon:  { mass: 160, hp: 120 },                // big gun: slow, hard-hitting, explosive shells
   },
+
+  // ---------------------------------------------------------------
+  //  PROGRESSION: souls, the shop, and the car-to-tank upgrades
+  // ---------------------------------------------------------------
+  progression: {
+    // Souls each demon drops. Ram kills pay extra (ramBonus x).
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, boss: 600 },
+    ramBonus: 1.5,
+    // Getting wrecked restarts the run. true = keep souls, unlocks and
+    // chassis upgrades across wrecks anyway.
+    keepOnWreck: false,
+  },
+
+  // What parts cost in the garage. "unlock" = one-time souls to unlock
+  // the part (0 = available from the start), "price" = souls per part.
+  shop: {
+    armor:      { unlock: 0,   price: 20 },
+    spike:      { unlock: 0,   price: 15 },
+    gun:        { unlock: 0,   price: 60 },
+    weight:     { unlock: 80,  price: 25 },
+    plow:       { unlock: 150, price: 50 },
+    booster:    { unlock: 200, price: 50 },
+    saw:        { unlock: 300, price: 80 },
+    heavyArmor: { unlock: 350, price: 60 },
+    cannon:     { unlock: 500, price: 150 },
+  },
+
+  // The car-to-tank upgrade path, in order. Each tier multiplies the base
+  // car's numbers. cost = souls to upgrade to it.
+  //   hp: body toughness   power/topSpeed: engine   grip: less sliding
+  //   turn: steering       turnInPlace: can spin on the spot (treads)
+  chassisTiers: [
+    { id: 'car',      name: 'Muscle Car',   cost: 0,    massAdd: 0,    hp: 1.0, power: 1.0,  topSpeed: 1.0,  grip: 1.0, turn: 1.0,  turnInPlace: false },
+    { id: 'armored',  name: 'Armored Car',  cost: 400,  massAdd: 350,  hp: 1.6, power: 1.3,  topSpeed: 0.97, grip: 1.0, turn: 1.0,  turnInPlace: false },
+    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false },
+    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true },
+  ],
 
   // The car's own body sections: hit points and weight (kg). When one
   // breaks off it drops as that actual piece: pick it up (E) and put it

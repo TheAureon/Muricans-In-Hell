@@ -88,7 +88,7 @@ export class Car {
     this.vBefore = new THREE.Vector3();
 
     // Guns: the built-in roof gun, plus any Machine Gun parts.
-    this.mainTurret = { parts: this.model.turret, yaw: 0, pitch: 0, recoil: 0, recoilDist: 0.25 };
+    this.mainTurret = { parts: this.model.turret, yaw: 0, pitch: 0, recoil: 0, recoilDist: 0.25, weapon: 'gun', cooldown: 0 };
     this.turrets = [this.mainTurret];
 
     // Bolt-on parts (the builder). Restores your last build if there is one.
@@ -100,6 +100,17 @@ export class Car {
     this.partColliders = [];
     this.boosterFlames = [];
     this.partObjects = new Map(); // part cell key -> [3D objects]
+    this.saws = [];
+    this.setTier(0);
+  }
+
+  // Switch chassis tier (0 car ... 3 tank): new look, numbers and main gun.
+  setTier(index) {
+    this.tierIndex = index;
+    this.build.tier = SETTINGS.chassisTiers[index];
+    this.model.setTier(index);
+    this.mainTurret.weapon = this.build.tier.id === 'tank' ? 'cannon' : 'gun';
+    this.build.repairAll();
     this.applyBuild();
   }
 
@@ -112,6 +123,7 @@ export class Car {
     this.partObjects.clear();
     this.turrets = [];
     this.boosterFlames = [];
+    this.saws = [];
     const up = new THREE.Vector3(0, 1, 0);
 
     // Body sections: hide the ones that fell off
@@ -141,11 +153,12 @@ export class Car {
       this.partsGroup.add(g);
       const objs = [g];
       if (g.userData.flame) this.boosterFlames.push(g.userData.flame);
+      if (g.userData.saw) this.saws.push(g.userData.saw);
       if (def?.isGun) {
-        const t = createGunTurret();
+        const t = createGunTurret(def.weapon || 'gun');
         t.group.position.set(c.x + n.x * 0.12, c.y + n.y * 0.12 + 0.05, c.z + n.z * 0.12);
         this.partsGroup.add(t.group);
-        this.turrets.push({ parts: t, yaw: 0, pitch: 0, recoil: 0, recoilDist: 0.15 });
+        this.turrets.push({ parts: t, yaw: 0, pitch: 0, recoil: 0, recoilDist: def.weapon === 'cannon' ? 0.3 : 0.15, weapon: def.weapon || 'gun', cooldown: 0 });
         objs.push(t.group);
       }
       this.partObjects.set(p.key, objs);
@@ -177,7 +190,7 @@ export class Car {
     const list = [];
     for (const [id, cells] of Object.entries(SECTION_CELLS)) {
       if (this.build.missing.has(id)) continue;
-      list.push({ id: 's:' + id, kind: 'section', key: id, hp: this.build.sectionHp[id], maxHp: SETTINGS.chassis[id].hp,
+      list.push({ id: 's:' + id, kind: 'section', key: id, hp: this.build.sectionHp[id], maxHp: this.build.sectionMaxHp(id),
         center: sectionCenter(id), cells: cells.map((c) => cellCenter(...c)) });
     }
     for (const p of this.build.list()) {
@@ -295,7 +308,7 @@ export class Car {
     return out;
   }
 
-  get cabinFrac() { return this.build.sectionHp.cabin / SETTINGS.chassis.cabin.hp; }
+  get cabinFrac() { return this.build.sectionHp.cabin / this.build.sectionMaxHp('cabin'); }
 
   // After each physics step: a big sudden loss of speed means we hit something.
   afterStep() {
@@ -408,7 +421,8 @@ export class Car {
       if (this.handbrake) vf = approach(vf, 0, Math.abs(vf) * S.grip.handbrakeDrag * dt + 2 * dt);
 
       // ---------- Sideways grip ----------
-      const grip = S.grip.tireGrip * balGrip * (this.handbrake ? S.grip.handbrakeGrip : 1);
+      const T = this.build.tier; // treads grip much harder than tires
+      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1);
       const maxDv = grip * dt;
       const correction = THREE.MathUtils.clamp(-vs, -maxDv, maxDv);
       vs += correction;
@@ -419,14 +433,15 @@ export class Car {
       }
 
       // ---------- Steering (spin) ----------
-      const lowSpeed = Math.min(Math.hypot(vf, vs) / S.steering.fullSteerSpeed, 1);
+      // Treads can spin on the spot; wheels need to be rolling to turn.
+      const lowSpeed = T.turnInPlace ? 1 : Math.min(Math.hypot(vf, vs) / S.steering.fullSteerSpeed, 1);
       const highSpeed = 1 - S.steering.highSpeedReduction * Math.min(Math.hypot(vf, vs) / topSpeed, 1);
       const dir = vf >= -0.3 ? 1 : -1; // steering flips when reversing, like a real car
       const hbBoost = this.handbrake ? 1.3 : 1;
       // When the car is already sliding a lot, the tires can't turn it as hard.
       // This keeps drifts from turning into spin-outs.
       const slideLimit = this.handbrake ? 1 : 1 - Math.min(Math.abs(vs) / 25, 0.5);
-      const targetYaw = -this.steer * S.steering.turnRate * lowSpeed * highSpeed * weightFactor * dir * hbBoost * slideLimit * balTurn;
+      const targetYaw = -this.steer * S.steering.turnRate * lowSpeed * highSpeed * weightFactor * dir * hbBoost * slideLimit * balTurn * T.turn;
       const av = this.body.angvel();
       const resp = 1 - Math.exp(-10 * weightFactor * dt);
       const yaw = av.y + (targetYaw - av.y) * resp;
@@ -529,6 +544,10 @@ export class Car {
         if (tp.flash.material.opacity <= 0) tp.flash.visible = false;
       }
     }
+
+    // --- Saw blades spin, tread rollers roll ---
+    for (const s of this.saws) s.rotation.z += dt * 25;
+    for (const t of this.model.treads) if (t.group.visible) for (const r of t.rollers) r.rotation.x = this.wheelSpin;
 
     // --- Booster flames flicker when on the gas ---
     const on = this.throttle > 0 && !this.wrecked;

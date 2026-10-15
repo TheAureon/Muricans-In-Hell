@@ -20,6 +20,8 @@ import { ChaseCamera } from './camera/chaseCamera.js';
 import { Hud, showStartScreen } from './ui/hud.js';
 import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
+import { Progress } from './core/progress.js';
+import { Souls } from './world/souls.js';
 
 async function main() {
   const region = STARTING_REGION;
@@ -43,17 +45,32 @@ async function main() {
   const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
-  const garage = new Garage({ camera, renderer, car, audio });
+  // Souls, unlocks and your chassis tier.
+  const progress = new Progress();
+  car.setTier(progress.tier);
+  const garage = new Garage({ camera, renderer, car, audio, progress });
+  let lastChime = 0;
+  const souls = new Souls(scene, (value) => {
+    progress.addSouls(value);
+    if (performance.now() - lastChime > 70) { audio.chime(); lastChime = performance.now(); }
+  });
+  hud.souls(progress.souls);
+  progress.onChange((p) => hud.souls(p.souls));
+  // Every kill drops souls (ram kills pay extra).
+  demons.onKill = (d, source) => {
+    const P = SETTINGS.progression;
+    souls.burst(d.pos, (P.souls[d.type] || 1) * (source === 'ram' ? P.ramBonus : 1));
+  };
   const scrap = new Scrap(scene);
 
   // The region's boss (and what happens when you beat it).
-  const progress = loadProgress();
   const boss = region.boss ? new AshTitan(scene, physics, {
     region, car, demons, projectiles, gore, audio, hud, chase, dust, stats,
     onDefeated: () => {
       hud.victory();
+      souls.burst(boss.pos.clone().setY(4), SETTINGS.progression.souls.boss);
       progress.cleared[region.id] = true;
-      saveProgress(progress);
+      progress.save();
     },
   }) : null;
   demons.boss = boss;
@@ -83,7 +100,6 @@ async function main() {
 
   const timer = new THREE.Timer();
   let accumulator = 0;
-  let fireCooldown = 0;
   let dustTimer = 0;
   let elapsed = 0;
   let wreckTimer = 0;
@@ -157,8 +173,11 @@ async function main() {
         demons.clearAround(car.currPos, 99999);
         demons.populate(car.currPos);
         if (boss) { boss.defeated = false; boss.reset(); }
-        progress.cleared = {};
-        saveProgress(progress);
+        souls.clear();
+        if (!SETTINGS.progression.keepOnWreck) progress.reset();
+        progress.save();
+        hud.souls(progress.souls);
+        car.setTier(progress.tier);
         stats.reset();
         hud.toast('Starting over with a fresh car!', 'warn');
       }
@@ -177,17 +196,20 @@ async function main() {
     boss?.render(alpha, dt);
     chase.update(car, dt, input.wheel);
 
-    // --- Shooting ---
-    fireCooldown -= dt;
-    if (input.mouse.down && fireCooldown <= 0 && !car.wrecked) {
-      fireCooldown = 1 / SETTINGS.turret.fireRate;
-      car.model.root.updateMatrixWorld(true);
-      for (const t of car.turrets) {
-        car.fireVisual(t);
-        bullets.fire(car.muzzleWorld(t), aimPoint);
-      }
-      audio.gunshot();
+    // --- Shooting: every gun fires at its own weapon's rate ---
+    let shot = false, boomed = false;
+    car.model.root.updateMatrixWorld(true);
+    for (const t of car.turrets) {
+      t.cooldown -= dt;
+      if (!input.mouse.down || t.cooldown > 0 || car.wrecked) continue;
+      const W = Bullets.weapon(t.weapon);
+      t.cooldown = 1 / W.fireRate;
+      car.fireVisual(t);
+      bullets.fire(car.muzzleWorld(t), aimPoint, t.weapon);
+      if (t.weapon === 'cannon') { boomed = true; chase.addShake(0.15); } else shot = true;
     }
+    if (shot) audio.gunshot();
+    if (boomed) audio.cannon();
 
     // --- Dust from the rear tires when drifting, braking or flooring it ---
     const hardLaunch = car.throttle > 0 && car.forwardSpeed < 12 && car.forwardSpeed > 0.5;
@@ -237,6 +259,7 @@ async function main() {
     smoke.update(dt);
     sparks.update(dt);
     scrap.update(dt);
+    souls.update(dt, car.position);
     projectiles.update(dt);
 
     // --- Objective arrow: points at the boss arena until it's awake ---
@@ -266,15 +289,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
-}
-
-// Which regions you've cleared (kept in the browser).
-function loadProgress() {
-  try { return { cleared: {}, ...JSON.parse(localStorage.getItem('helldrive.progress') || '{}') }; } catch { return { cleared: {} }; }
-}
-function saveProgress(p) {
-  try { localStorage.setItem('helldrive.progress', JSON.stringify(p)); } catch { /* storage blocked: fine */ }
+  window.HELLDRIVERS = { progress, souls, boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
 }
 
 main().catch((err) => {
