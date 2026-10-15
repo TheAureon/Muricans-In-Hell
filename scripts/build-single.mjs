@@ -1,4 +1,4 @@
-// Builds the whole game into ONE file, HELLDRIVE.html, that you can
+// Builds the whole game into ONE file, HELLDRIVERS.html, that you can
 // double-click to play (no server, no install). Run: npm run build:single
 import { build } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
@@ -10,6 +10,6 @@ await build({
   build: { outDir: '.single-build', emptyOutDir: true, chunkSizeWarningLimit: 10000 },
   logLevel: 'warn',
 });
-copyFileSync('.single-build/index.html', 'HELLDRIVE.html');
+copyFileSync('.single-build/index.html', 'HELLDRIVERS.html');
 rmSync('.single-build', { recursive: true, force: true });
-console.log('Built HELLDRIVE.html — double-click it to play.');
+console.log('Built HELLDRIVERS.html — double-click it to play.');

@@ -1,4 +1,6 @@
-# HELLDRIVE
+# HellDrivers
+
+*(A loving nod to Helldivers. Same spirit, but you never leave the car.)*
 
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
@@ -17,10 +19,10 @@ bolt it back on in the garage (**G**), anywhere you like.
 
 ## How to play (easiest)
 
-Double-click **`HELLDRIVE.html`**. That's it: no install, works offline.
+Double-click **`HELLDRIVERS.html`**. That's it: no install, works offline.
 (Opening `index.html` directly will NOT work; that's the developer version.)
 
-To rebuild `HELLDRIVE.html` after changing code: `npm run build:single`.
+To rebuild `HELLDRIVERS.html` after changing code: `npm run build:single`.
 
 ## How to run it (developer mode, live-reloads when you edit settings)
 

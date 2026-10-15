@@ -1,5 +1,5 @@
 // =====================================================================
-//  HELLDRIVE — FEEL SETTINGS
+//  HELLDRIVERS — FEEL SETTINGS
 // =====================================================================
 //  Every number that changes how the game *feels* lives here.
 //  Change a number, save the file, and the game reloads by itself.

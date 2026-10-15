@@ -1,4 +1,4 @@
-// HELLDRIVE — game start-up and main loop.
+// HELLDRIVERS — game start-up and main loop.
 import * as THREE from 'three';
 import { SETTINGS } from './settings.js';
 import { STARTING_REGION } from './regions/index.js';
@@ -266,7 +266,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVE = { boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
+  window.HELLDRIVERS = { boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
 }
 
 // Which regions you've cleared (kept in the browser).
