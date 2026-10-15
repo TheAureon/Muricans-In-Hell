@@ -5,9 +5,10 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 import { copyFileSync, rmSync } from 'node:fs';
 
 await build({
+  root: 'src',
   base: './',
   plugins: [viteSingleFile()],
-  build: { outDir: '.single-build', emptyOutDir: true, chunkSizeWarningLimit: 10000 },
+  build: { outDir: '../.single-build', emptyOutDir: true, chunkSizeWarningLimit: 10000 },
   logLevel: 'warn',
 });
 copyFileSync('.single-build/index.html', 'HELLDRIVERS.html');

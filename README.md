@@ -20,7 +20,7 @@ bolt it back on in the garage (**G**), anywhere you like.
 ## How to play (easiest)
 
 Double-click **`HELLDRIVERS.html`**. That's it: no install, works offline.
-(Opening `index.html` directly will NOT work; that's the developer version.)
+(The developer version of the page lives in `src/index.html`; it only works through `npm start`.)
 
 To rebuild `HELLDRIVERS.html` after changing code: `npm run build:single`.
 
@@ -65,8 +65,8 @@ save, and the game reloads. Or press **T** in-game to drag sliders live.
 ## Folder layout
 
 ```
-index.html            the web page
 src/
+  index.html          the web page (developer version)
   main.js             starts the game and runs the main loop
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
