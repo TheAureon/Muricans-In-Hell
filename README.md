@@ -5,9 +5,11 @@ yourself (and never, ever get out of).
 
 **Current stage: Milestone 4 — damage and scrap.** There is no health bar:
 every body section and bolted-on part takes its own damage, chars, smokes and
-breaks off as scrap. Lose the cabin and you're wrecked. Press **E** to grab
-scrap, then bolt it back on (anywhere!) in the garage (**G**), which also
-repairs whatever is still attached. The garage won't open with demons close.
+breaks off. What breaks off drops as that actual piece (a nose, a door, a
+gun). Lose the cabin and you're wrecked. Press **E** to grab scrap, then in
+the garage (**G**) put pieces back where they belong, or bolt them on
+anywhere (a door on the roof? sure; **R** turns it). The garage also repairs
+whatever is still attached, but won't open with demons close.
 
 ## How to play (easiest)
 
@@ -41,6 +43,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | R | Unstick the car |
 | Backspace | Back to the start |
 | E | Grab scrap that fell off your car |
+| R (in garage) | Turn a loose car piece before placing it |
 | G | Garage: build + repair (pauses; not with demons close) |
 | T | Live tuning panel |
 | M | Mute |

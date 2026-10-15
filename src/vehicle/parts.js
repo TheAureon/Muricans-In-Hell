@@ -79,16 +79,6 @@ export const PART_TYPES = {
       g.userData.flame = flame;
     },
   },
-  panel: {
-    name: 'Body Panel',
-    icon: '🚪',
-    desc: 'A bent bit of your car. Bolt it anywhere, or rebuild a lost section.',
-    build(g) {
-      const plate = add(g, new THREE.BoxGeometry(0.5, 0.12, 0.5), M.blue, 0, -0.17, 0);
-      plate.rotation.set(0.15, 0, -0.1); // a bit bent
-      add(g, new THREE.BoxGeometry(0.5, 0.03, 0.08), M.red, 0, -0.1, 0.1).rotation.set(0.15, 0, -0.1);
-    },
-  },
   weight: {
     name: 'Lead Weight',
     icon: '🏋️',

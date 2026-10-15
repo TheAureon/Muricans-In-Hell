@@ -25,7 +25,10 @@ export class Scrap {
   // item: { type, count, label }. push: velocity to fling it with.
   spawn(objects, item, push) {
     if (!objects.length) return;
-    const pivot = objects[0].getWorldPosition(new THREE.Vector3());
+    // Spin it around its own middle (not the car's).
+    const box = new THREE.Box3();
+    for (const o of objects) box.expandByObject(o);
+    const pivot = box.getCenter(new THREE.Vector3());
     const group = new THREE.Group();
     group.position.copy(pivot);
     group.updateMatrixWorld(true);

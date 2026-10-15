@@ -49,7 +49,8 @@ async function main() {
     for (const p of pieces) {
       scrap.spawn(p.objects, p.item, p.push);
       hud.toast(`LOST: ${p.item.label}`, 'bad');
-      for (let i = 0; i < 10; i++) sparks.spawn(p.objects[0].getWorldPosition(new THREE.Vector3()), new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 5, (Math.random() - 0.5) * 8), 0.08, 0.4);
+      const at = new THREE.Box3().setFromObject(p.objects[0]).getCenter(new THREE.Vector3());
+      for (let i = 0; i < 10; i++) sparks.spawn(at, new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 5, (Math.random() - 0.5) * 8), 0.08, 0.4);
     }
     audio.thump();
     chase.addShake(0.4);
@@ -198,7 +199,7 @@ async function main() {
       if (input.wasPressed('KeyE')) {
         for (const item of scrap.collect(reach, car.position)) {
           car.build.give(item.type, item.count);
-          hud.toast(`+${item.count} ${item.count > 1 ? 'Body Panels' : item.label}`);
+          hud.toast(`+${item.count} ${item.label}`);
         }
         car.build.save();
         audio.hit();

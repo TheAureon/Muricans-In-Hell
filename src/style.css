@@ -78,10 +78,10 @@ body.garage-open #hud > *:not(#fps) { display: none; }
   color: #ffb070; text-shadow: 0 3px 0 #400, 0 0 12px #f40; text-align: center; white-space: nowrap; }
 #garage .g-title small { display: block; font: 12px system-ui; color: #f0d8c8a0; text-shadow: none; }
 #garage .g-parts { position: absolute; top: 80px; left: 14px; width: 270px; display: flex; flex-direction: column; gap: 6px; }
-#garage .g-parts button[data-type] { display: flex; align-items: center; gap: 10px; text-align: left; background: #120806d8;
+#garage .g-list button[data-type] { display: flex; align-items: center; gap: 10px; text-align: left; background: #120806d8;
   border: 2px solid #ffffff18; border-radius: 6px; padding: 7px 10px; }
-#garage .g-parts button[data-type]:hover { border-color: #ff9a6080; }
-#garage .g-parts button.sel { border-color: #ff6a30; background: #4a1608e0; box-shadow: 0 0 12px #ff4a1060; }
+#garage .g-list button[data-type]:hover { border-color: #ff9a6080; }
+#garage .g-list button.sel { border-color: #ff6a30; background: #4a1608e0; box-shadow: 0 0 12px #ff4a1060; }
 #garage .ico { font-size: 22px; }
 #garage .nm { flex: 1; font-weight: 700; }
 #garage .nm small { display: block; font-weight: 400; color: #f0d8c8a0; font-size: 11px; }
@@ -112,7 +112,7 @@ body.garage-open #hud > *:not(#fps) { display: none; }
   background: #c8202a; border: 0; border-radius: 6px; padding: 10px 22px; color: #fff !important; box-shadow: 0 4px 0 #600; }
 
 /* ---- Milestone 4: damage & scrap ---- */
-#garage .g-parts button.empty { opacity: 0.45; }
+#garage .g-list button.empty { opacity: 0.45; }
 #garage .kg { text-align: right; line-height: 1.2; }
 #garage .kg b { color: #7fe0c0; font-size: 13px; }
 #garage .g-stats b.ok { color: #7fe07f; }
@@ -131,3 +131,6 @@ body.garage-open #hud > *:not(#fps) { display: none; }
 #toasts .toast.bad { color: #ff7a50; }
 #toasts .toast.warn { color: #ffd040; font-size: 16px; }
 @keyframes toastup { 0% { opacity: 0; transform: translateY(10px); } 10% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-40px); } }
+#garage .g-list { display: flex; flex-direction: column; gap: 6px; }
+#garage .g-list button.piece { border-color: #40ffd060; }
+#garage .g-stats b.lost { color: #ff8a70; font-size: 11px; }

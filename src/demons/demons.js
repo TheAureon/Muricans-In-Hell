@@ -13,7 +13,7 @@ import { SETTINGS } from '../settings.js';
 import { DEMON_TYPES } from './demonTypes.js';
 
 const GRAVITY = 22;
-const MPH = 0.44704; // 1 mph in m/s
+const KMH = 1 / 3.6; // 1 km/h in m/s
 const _v = new THREE.Vector3();
 const _n = new THREE.Vector3();
 const _q = new THREE.Quaternion();
@@ -185,7 +185,7 @@ export class Demons {
     const carMass = car.totalMass; // car + all bolted-on parts
     const massFactor = carMass / SETTINGS.steering.referenceMass;
     const B = car.localBounds;     // the car's footprint, grown by parts
-    const splatSpeed = SETTINGS.ramming.splatSpeedMph * MPH;
+    const splatSpeed = SETTINGS.ramming.splatSpeedKmh * KMH;
 
     for (const d of this.all) {
       if (!d.alive) continue;

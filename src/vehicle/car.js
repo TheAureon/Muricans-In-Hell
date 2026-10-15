@@ -13,7 +13,8 @@
 import * as THREE from 'three';
 import { SETTINGS } from '../settings.js';
 import { createCarModel, CAR_DIMENSIONS } from './carModel.js';
-import { Build, cellCenter, key, SECTION_CELLS, SECTION_NAMES, sectionCenter } from './build.js';
+import { Build, cellCenter, SECTION_CELLS, sectionCenter, pieceInfo, pieceStats, isSectionPiece } from './build.js';
+import { makePieceModel } from './pieceModel.js';
 import { PART_TYPES, createGunTurret } from './parts.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -132,37 +133,38 @@ export class Car {
     }
     if (!this.build.missing.has('bumper')) bounds.maxZ = Math.max(bounds.maxZ, 2.8); // bumper spikes
 
-    for (const [k, p] of this.build.parts) {
+    for (const p of this.build.list()) {
       const def = PART_TYPES[p.type];
       const c = cellCenter(p.i, p.j, p.k);
       const n = new THREE.Vector3(...p.normal);
-      const g = new THREE.Group();
-      g.position.set(c.x, c.y, c.z);
-      g.quaternion.setFromUnitVectors(up, n);
-      def.build(g);
+      const g = makePieceModel(p);
       this.partsGroup.add(g);
       const objs = [g];
       if (g.userData.flame) this.boosterFlames.push(g.userData.flame);
-      if (def.isGun) {
+      if (def?.isGun) {
         const t = createGunTurret();
         t.group.position.set(c.x + n.x * 0.12, c.y + n.y * 0.12 + 0.05, c.z + n.z * 0.12);
         this.partsGroup.add(t.group);
         this.turrets.push({ parts: t, yaw: 0, pitch: 0, recoil: 0, recoilDist: 0.15 });
         objs.push(t.group);
       }
-      this.partObjects.set(k, objs);
-      // Solid shape so parts bump into rocks too.
-      this.partColliders.push(this.world.createCollider(
-        RAPIER.ColliderDesc.cuboid(0.24, 0.24, 0.24)
-          .setTranslation(c.x, c.y, c.z)
-          .setMass(SETTINGS.parts[p.type].mass)
-          .setFriction(0)
-          .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
-          .setRestitution(0.15),
-        this.body
-      ));
-      // Spikes and plows poke out further.
-      grow(c.x, c.y, c.z, n, 0.25 + (SETTINGS.parts[p.type].ramBonus ? 0.3 : 0));
+      this.partObjects.set(p.key, objs);
+      // Solid shapes (one per cell) so parts bump into rocks too.
+      const st = pieceStats(p.type);
+      for (const cell of p.cells) {
+        const cc = cellCenter(...cell);
+        this.partColliders.push(this.world.createCollider(
+          RAPIER.ColliderDesc.cuboid(0.24, 0.24, 0.24)
+            .setTranslation(cc.x, cc.y, cc.z)
+            .setMass(st.mass / p.cells.length)
+            .setFriction(0)
+            .setFrictionCombineRule(RAPIER.CoefficientCombineRule.Min)
+            .setRestitution(0.15),
+          this.body
+        ));
+        // Spikes and plows poke out further.
+        grow(cc.x, cc.y, cc.z, isSectionPiece(p.type) ? null : n, 0.25 + (st.ramBonus ? 0.3 : 0));
+      }
     }
     this.localBounds = bounds;
     this.stats = this.build.stats();
@@ -178,9 +180,11 @@ export class Car {
       list.push({ id: 's:' + id, kind: 'section', key: id, hp: this.build.sectionHp[id], maxHp: SETTINGS.chassis[id].hp,
         center: sectionCenter(id), cells: cells.map((c) => cellCenter(...c)) });
     }
-    for (const [k, p] of this.build.parts) {
-      const c = cellCenter(p.i, p.j, p.k);
-      list.push({ id: 'p:' + k, kind: 'part', key: k, hp: p.hp, maxHp: SETTINGS.parts[p.type].hp, center: c, cells: [c] });
+    for (const p of this.build.list()) {
+      const cells = p.cells.map((c) => cellCenter(...c));
+      const center = { x: 0, y: 0, z: 0 };
+      for (const c of cells) { center.x += c.x / cells.length; center.y += c.y / cells.length; center.z += c.z / cells.length; }
+      list.push({ id: 'p:' + p.key, kind: 'part', key: p.key, hp: p.hp, maxHp: pieceStats(p.type).hp, center, cells });
     }
     return list;
   }
@@ -244,17 +248,16 @@ export class Car {
     const lv = this.body.linvel();
     const out = [];
     for (const d of dropped) {
+      // Whatever falls off drops as that actual piece (a nose drops a nose).
       if (d.section) {
-        const n = SETTINGS.chassis[d.section].panels;
-        out.push({ objects: [this.model.sections[d.section]], item: { type: 'panel', count: n, label: `${SECTION_NAMES[d.section]} (${n} Body Panel${n > 1 ? 's' : ''})` } });
+        out.push({ objects: [this.model.sections[d.section]], item: { type: d.section, count: 1, label: pieceInfo(d.section).name } });
       } else {
-        const k = key(d.i, d.j, d.k);
-        out.push({ objects: this.partObjects.get(k) || [], item: { type: d.type, count: 1, label: PART_TYPES[d.type].name } });
+        out.push({ objects: this.partObjects.get(d.key) || [], item: { type: d.type, count: 1, label: pieceInfo(d.type).name } });
       }
     }
     // Fling them outward from the car
     for (const o of out) {
-      const wp = o.objects[0]?.getWorldPosition(new THREE.Vector3()) || this.currPos.clone();
+      const wp = o.objects.length ? new THREE.Box3().setFromObject(o.objects[0]).getCenter(new THREE.Vector3()) : this.currPos.clone();
       const away = wp.sub(this.currPos).setY(0).normalize().multiplyScalar(4);
       o.push = new THREE.Vector3(lv.x * 0.6 + away.x, 0, lv.z * 0.6 + away.z);
     }

@@ -5,21 +5,23 @@
 //   Left click   bolt on the selected part
 //   Right click  remove a part (anything only held on by it falls off too)
 //   Right drag   spin the camera around      Wheel  zoom
-//   1-7          pick a part                 F      mirror on/off
+//   1-9          pick a part                 F      mirror on/off
+//   R            turn a loose car piece (nose, door...) before placing it
 //   G / Esc      back to driving
 //
 // Opening the garage repairs everything still attached. Pieces that fell
 // off have to be picked up out in the world (E) before you can bolt them
-// back on, anywhere you like. Lost body sections are rebuilt from Body
-// Panels. You can't open it with demons close by.
+// back on: in their proper place, or anywhere you like (a door on the
+// roof? sure). You can't open it with demons close by.
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SETTINGS } from '../settings.js';
 import { PART_TYPES } from '../vehicle/parts.js';
-import { BODY_CELLS, cellCenter, CELL, sectionOfCell, SECTION_NAMES } from '../vehicle/build.js';
+import { BODY_CELLS, cellCenter, CELL, sectionOfCell, SECTION_NAMES, SECTION_PIECES, isSectionPiece, pieceInfo, pieceStats } from '../vehicle/build.js';
+import { makePieceModel } from '../vehicle/pieceModel.js';
 
-const MPH = 2.23694;
-const TYPES = Object.keys(PART_TYPES);
+const KMH = 3.6;
+const PART_LIST = Object.keys(PART_TYPES);
 
 export class Garage {
   constructor({ camera, renderer, car, audio }) {
@@ -30,6 +32,7 @@ export class Garage {
     this.open = false;
     this.selected = 'armor';
     this.mirror = true;
+    this.rot = 0; // quarter-turns for loose car pieces
     this.hover = null; // { i, j, k, normal, partKey, reason }
 
     // Camera controls (right-drag to orbit, wheel to zoom)
@@ -133,33 +136,39 @@ export class Garage {
     const n = hit.face.normal; // in the box's own space = car space
     const normal = [Math.round(n.x), Math.round(n.y), Math.round(n.z)];
     const ti = i + normal[0], tj = j + normal[1], tk = k + normal[2];
-    const reason = this.car.build.whyNot(ti, tj, tk);
+    const reason = !this.car.build.has(this.selected) ? `No ${pieceInfo(this.selected).name} left in stock. Find scrap out there (E)!`
+      : this.car.build.whyNot(this.selected, ti, tj, tk, this.rot);
     this.hover = { i: ti, j: tj, k: tk, normal, reason, onPart: isPart ? { i, j, k } : null };
 
     // Ghost of the selected part
     this.ghost.clear();
-    const c = cellCenter(ti, tj, tk);
-    this.ghost.position.set(c.x, c.y, c.z);
-    this.ghost.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(...normal));
-    PART_TYPES[this.selected].build(this.ghost);
+    this.ghost.add(makePieceModel({ type: this.selected, i: ti, j: tj, k: tk, normal, rot: this.rot }));
     const m = reason ? this.ghostBad : this.ghostOk;
     this.ghost.traverse((o) => { if (o.isMesh) { o.material = m; o.castShadow = false; } });
     this.ghost.visible = true;
 
     if (isPart) {
-      const pc = cellCenter(i, j, k);
-      this.removeMark.position.set(pc.x, pc.y, pc.z);
+      // Red box around the whole part under the mouse (big pieces fill several cells)
+      const rec = this.car.build.parts.get(`${i},${j},${k}`);
+      const cs = rec.cells.map((cell) => cellCenter(...cell));
+      const min = { x: Math.min(...cs.map((q) => q.x)), y: Math.min(...cs.map((q) => q.y)), z: Math.min(...cs.map((q) => q.z)) };
+      const max = { x: Math.max(...cs.map((q) => q.x)), y: Math.max(...cs.map((q) => q.y)), z: Math.max(...cs.map((q) => q.z)) };
+      this.removeMark.position.set((min.x + max.x) / 2, (min.y + max.y) / 2, (min.z + max.z) / 2);
+      this.removeMark.scale.set((max.x - min.x) / CELL + 1, (max.y - min.y) / CELL + 1, (max.z - min.z) / CELL + 1);
+      this.removeMark.visible = true;
     }
-    this.#status(reason ? `✖ ${reason}` : `Left click: bolt on ${PART_TYPES[this.selected].name}` + (isPart ? ' · Right click: remove the part under it' : ''), !!reason);
+    const name = pieceInfo(this.selected).name;
+    const turnHint = isSectionPiece(this.selected) ? ' · R: turn it' : '';
+    this.#status(reason ? `✖ ${reason}${turnHint}` : `Left click: bolt on ${name}${turnHint}` + (isPart ? ' · Right click: remove the part under it' : ''), !!reason);
   }
 
   #place() {
     const h = this.hover;
     if (!h || h.reason) { this.audio.claw(); return; }
     const b = this.car.build;
-    if (!b.has(this.selected)) { this.audio.claw(); this.#status(`✖ No ${PART_TYPES[this.selected].name} left in stock. Find scrap out there (E)!`, true); return; }
-    b.add(this.selected, h.i, h.j, h.k, h.normal);
-    if (this.mirror && b.has(this.selected)) {
+    if (!b.has(this.selected)) { this.audio.claw(); this.#status(`✖ No ${pieceInfo(this.selected).name} left in stock. Find scrap out there (E)!`, true); return; }
+    b.add(this.selected, h.i, h.j, h.k, h.normal, this.rot);
+    if (this.mirror && b.has(this.selected) && !isSectionPiece(this.selected)) {
       const mi = -1 - h.i; // the matching cell on the other side
       if (mi !== h.i) b.add(this.selected, mi, h.j, h.k, [-h.normal[0], h.normal[1], h.normal[2]]);
     }
@@ -172,8 +181,11 @@ export class Garage {
     if (!h || !h.onPart) return;
     const b = this.car.build;
     const { i, j, k } = h.onPart;
-    b.remove(i, j, k);
-    if (this.mirror) b.remove(-1 - i, j, k);
+    const [removed] = b.remove(i, j, k);
+    if (this.mirror && removed && !isSectionPiece(removed.type)) {
+      const twin = b.parts.get(`${-1 - i},${j},${k}`);
+      if (twin && twin.type === removed.type) b.remove(-1 - i, j, k);
+    }
     this.audio.hit();
     this.#changed();
   }
@@ -181,8 +193,8 @@ export class Garage {
   #changed() {
     this.car.applyBuild();
     this.#rebuildHitBoxes();
+    this.#refreshUI(); // (may switch away from a piece you just used up)
     this.#pick();
-    this.#refreshUI();
     this.car.build.save();
   }
 
@@ -200,7 +212,7 @@ export class Garage {
       const [i, j, k] = s.split(',').map(Number);
       addBox(i, j, k, false);
     }
-    for (const p of this.car.build.parts.values()) addBox(p.i, p.j, p.k, true);
+    for (const kk of this.car.build.parts.keys()) { const [i, j, k] = kk.split(',').map(Number); addBox(i, j, k, true); }
     this.hitGroup.updateMatrixWorld(true);
 
     // Outline the missing body sections
@@ -247,9 +259,18 @@ export class Garage {
     window.addEventListener('keydown', (e) => {
       if (!this.open) return;
       const n = Number(e.key);
-      if (n >= 1 && n <= TYPES.length) this.#select(TYPES[n - 1]);
+      const list = this.#palette();
+      if (n >= 1 && n <= list.length) this.#select(list[n - 1]);
       if (e.code === 'KeyF') this.#toggleMirror();
+      if (e.code === 'KeyR') { this.rot = (this.rot + 1) % 4; this.#pick(); }
     });
+  }
+
+  // What's in the parts list: every normal part, plus loose car pieces
+  // (nose, doors...) only while you have some in stock.
+  #palette() {
+    const b = this.car.build;
+    return [...PART_LIST, ...SECTION_PIECES.filter((t) => SETTINGS.build.unlimitedParts || (b.inventory[t] || 0) > 0)];
   }
 
   #select(type) {
@@ -271,8 +292,7 @@ export class Garage {
     ui.innerHTML = `
       <div class="g-title">🔧 GARAGE <small>the game is paused · you stay in the car, the mechanics do the rest</small></div>
       <div class="g-parts">
-        ${TYPES.map((t, n) => `<button data-type="${t}"><span class="ico">${PART_TYPES[t].icon}</span>
-          <span class="nm">${n + 1}. ${PART_TYPES[t].name}<small>${PART_TYPES[t].desc}</small></span><span class="kg"></span></button>`).join('')}
+        <div class="g-list"></div>
         <div class="g-row">
           <button class="g-mirror"></button>
           <button class="g-clear">🗑️ Clear all</button>
@@ -280,11 +300,14 @@ export class Garage {
       </div>
       <div class="g-stats"></div>
       <div class="g-status"></div>
-      <div class="g-help"><b>Left click</b> bolt on · <b>Right click</b> remove · <b>Right drag</b> spin view · <b>Wheel</b> zoom · <b>1-7</b> pick part · <b>F</b> mirror · <b>G</b> back to driving</div>
+      <div class="g-help"><b>Left click</b> bolt on · <b>Right click</b> remove · <b>Right drag</b> spin view · <b>Wheel</b> zoom · <b>1-9</b> pick part · <b>R</b> turn piece · <b>F</b> mirror · <b>G</b> back to driving</div>
       <button class="g-done">DRIVE! (G)</button>`;
     document.body.appendChild(ui);
     this.ui = ui;
-    ui.querySelectorAll('.g-parts button[data-type]').forEach((b) => b.addEventListener('click', () => this.#select(b.dataset.type)));
+    ui.querySelector('.g-list').addEventListener('click', (e) => {
+      const btn = e.target.closest('button[data-type]');
+      if (btn) this.#select(btn.dataset.type);
+    });
     ui.querySelector('.g-mirror').addEventListener('click', () => this.#toggleMirror());
     ui.querySelector('.g-clear').addEventListener('click', () => { this.car.build.clear(); this.#changed(); });
     ui.querySelector('.g-done').addEventListener('click', () => this.close());
@@ -306,13 +329,17 @@ export class Garage {
   }
 
   #refreshUI() {
-    this.ui.querySelectorAll('.g-parts button[data-type]').forEach((b) => {
-      b.classList.toggle('sel', b.dataset.type === this.selected);
-      const n = this.car.build.inventory[b.dataset.type] || 0;
-      const unlimited = SETTINGS.build.unlimitedParts;
-      b.querySelector('.kg').innerHTML = `<b>${unlimited ? '∞' : '×' + n}</b><br>${SETTINGS.parts[b.dataset.type].mass} kg`;
-      b.classList.toggle('empty', !unlimited && n <= 0);
-    });
+    const list = this.#palette();
+    if (!list.includes(this.selected)) this.selected = list[0];
+    const unlimited = SETTINGS.build.unlimitedParts;
+    this.ui.querySelector('.g-list').innerHTML = list.map((t, idx) => {
+      const info = pieceInfo(t);
+      const n = this.car.build.inventory[t] || 0;
+      const cls = [t === this.selected ? 'sel' : '', !unlimited && n <= 0 ? 'empty' : '', isSectionPiece(t) ? 'piece' : ''].join(' ');
+      return `<button data-type="${t}" class="${cls}"><span class="ico">${info.icon}</span>
+        <span class="nm">${idx < 9 ? idx + 1 + '. ' : ''}${info.name}<small>${info.desc}</small></span>
+        <span class="kg"><b>${unlimited ? '∞' : '×' + n}</b><br>${pieceStats(t).mass} kg</span></button>`;
+    }).join('');
     this.ui.querySelector('.g-mirror').textContent = `🪞 Mirror: ${this.mirror ? 'ON' : 'OFF'} (F)`;
     this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats()) + bodyHTML(this.car.build);
   }
@@ -325,17 +352,17 @@ function performance(st) {
   const roll = S.car.rollingResistance * S.car.gravity * (st.mass / S.steering.referenceMass);
   // Real top speed: where engine push = rolling drag
   const top = st.topSpeed * Math.sqrt(Math.max(0, 1 - (roll * st.mass) / st.enginePower));
-  // 0-60 mph: quick simulation using the same maths as the car
+  // 0-100 km/h: quick simulation using the same maths as the car
   let v = 0, t = 0;
-  while (v < 26.8 && t < 30) {
+  while (v < 100 / 3.6 && t < 30) {
     const r = Math.min(v / st.topSpeed, 1);
     v += (st.enginePower * (1 - r * r) / st.mass - roll) / 60;
     t += 1 / 60;
   }
   const bal = st.balance * S.build.balanceEffect;
   const turn = Math.pow(S.steering.referenceMass / st.mass, S.steering.weightTurnPenalty) * (bal > 0 ? 1 - 0.3 * bal : 1 - 0.1 * bal);
-  const splat = (side) => S.ramming.splatSpeedMph * Math.sqrt(S.steering.referenceMass / (st.mass * (1 + st.ramBonus[side])));
-  return { top: top * MPH, zeroSixty: t >= 30 ? null : t, turn: turn * 100, splatFront: splat('0,1'), splatSide: splat('1,0'), splatBack: splat('0,-1') };
+  const splat = (side) => S.ramming.splatSpeedKmh * Math.sqrt(S.steering.referenceMass / (st.mass * (1 + st.ramBonus[side])));
+  return { top: top * KMH, zeroHundred: t >= 30 ? null : t, turn: turn * 100, splatFront: splat('0,1'), splatSide: splat('1,0'), splatBack: splat('0,-1') };
 }
 
 function statsHTML(st) {
@@ -354,14 +381,14 @@ function statsHTML(st) {
     <div class="g-sub">YOUR MONSTROSITY</div>
     ${row('Parts', `${st.count} / ${SETTINGS.build.maxParts}`)}
     ${row('Weight', `${Math.round(st.mass)} kg`, diff(st.mass, SETTINGS.car.mass, 'down', ' kg'))}
-    ${row('Top speed', `${Math.round(p.top)} mph`, diff(p.top, stock.top, 'up'))}
-    ${row('0–60 mph', p.zeroSixty ? `${p.zeroSixty.toFixed(1)} s` : 'never!', p.zeroSixty ? diff(p.zeroSixty, stock.zeroSixty, 'down', ' s', 1) : '')}
+    ${row('Top speed', `${Math.round(p.top)} km/h`, diff(p.top, stock.top, 'up'))}
+    ${row('0–100 km/h', p.zeroHundred ? `${p.zeroHundred.toFixed(1)} s` : 'never!', p.zeroHundred ? diff(p.zeroHundred, stock.zeroHundred, 'down', ' s', 1) : '')}
     ${row('Turning', `${Math.round(p.turn)}%`, diff(p.turn, stock.turn, 'up', '%'))}
     ${row('Guns', st.guns)}
     <div class="g-sub">SPLATS IMPS FROM</div>
-    ${row('Front', `${Math.round(p.splatFront)} mph`, diff(p.splatFront, stock.splatFront, 'down'))}
-    ${row('Sides', `${Math.round(p.splatSide)} mph`, diff(p.splatSide, stock.splatSide, 'down'))}
-    ${row('Back', `${Math.round(p.splatBack)} mph`, diff(p.splatBack, stock.splatBack, 'down'))}
+    ${row('Front', `${Math.round(p.splatFront)} km/h`, diff(p.splatFront, stock.splatFront, 'down'))}
+    ${row('Sides', `${Math.round(p.splatSide)} km/h`, diff(p.splatSide, stock.splatSide, 'down'))}
+    ${row('Back', `${Math.round(p.splatBack)} km/h`, diff(p.splatBack, stock.splatBack, 'down'))}
     <div class="g-sub">BALANCE</div>
     <div class="g-bal"><i style="left:${50 + bal * 45}%"></i><span>tail</span><span>nose</span></div>
     <div class="g-baltext">${balText}</div>`;
@@ -371,8 +398,8 @@ function statsHTML(st) {
 function bodyHTML(build) {
   const rows = Object.entries(SECTION_NAMES).filter(([id]) => id !== 'cabin').map(([id, name]) => {
     if (!build.missing.has(id)) return `<div><span>${name}</span><b class="ok">OK</b></div>`;
-    const cost = SETTINGS.chassis[id].panels;
-    return `<div><span>${name}</span><button class="g-restore" data-restore="${id}">Rebuild: ${cost} panel${cost > 1 ? "s" : ""}</button></div>`;
+    if (build.has(id)) return `<div><span>${name}</span><button class="g-restore" data-restore="${id}">Put it back</button></div>`;
+    return `<div><span>${name}</span><b class="lost">LOST — find it (E)</b></div>`;
   });
   return `<div class="g-sub">BODY <small>(repaired when you open the garage)</small></div>${rows.join('')}`;
 }

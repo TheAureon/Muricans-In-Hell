@@ -1,12 +1,12 @@
 // On-screen display: speedometer, drift label, crosshair, help, start screen.
-const MPH = 2.23694; // 1 m/s = 2.237 mph
+const KMH = 3.6; // 1 m/s = 3.6 km/h
 
 export class Hud {
   constructor() {
     document.getElementById('hud').innerHTML = `
       <div id="speedo">
         <div id="speed-num">0</div>
-        <div id="speed-unit">MPH</div>
+        <div id="speed-unit">KM/H</div>
         <div id="speed-bar"><div id="speed-fill"></div></div>
       </div>
       <div id="drift">DRIFT!</div>
@@ -16,7 +16,7 @@ export class Hud {
         <b>A / D</b> steer<br>
         <b>SPACE</b> handbrake (drift!)<br>
         <b>MOUSE</b> aim &nbsp; <b>CLICK</b> (hold) fire<br>
-        <b>RAM</b> demons at 25+ mph to splat them<br>
+        <b>RAM</b> demons at 40+ km/h to splat them<br>
         <b>E</b> grab scrap that fell off your car<br>
         <b>WHEEL</b> zoom &nbsp; <b>R</b> unstick &nbsp; <b>BACKSPACE</b> back to start<br>
         <b>G</b> garage (build!) &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
@@ -82,8 +82,8 @@ export class Hud {
   }
 
   update(car, topSpeed, dt, mouse) {
-    const mph = car.speed * MPH;
-    this.speedNum.textContent = Math.round(mph);
+    const kmh = car.speed * KMH;
+    this.speedNum.textContent = Math.round(kmh);
     this.speedFill.style.width = `${Math.min(100, (car.speed / topSpeed) * 100)}%`;
     this.drift.classList.toggle('on', car.drifting);
     this.air.classList.toggle('on', !car.grounded);

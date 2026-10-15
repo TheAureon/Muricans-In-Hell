@@ -9,7 +9,7 @@
 //  values you like, copy them back into this file (or tell Claude).
 //
 //  Units: distances are in meters, speeds in meters per second
-//  (1 m/s is about 2.24 mph), weights in kilograms.
+//  (1 m/s = 3.6 km/h), weights in kilograms.
 // =====================================================================
 
 export const SETTINGS = {
@@ -27,7 +27,7 @@ export const SETTINGS = {
     // same engine feels slower. That's the weight tradeoff.
     enginePower: 15000,
 
-    // Top speed going forward (m/s). 40 m/s is about 90 mph.
+    // Top speed going forward (m/s). 40 m/s = 144 km/h.
     topSpeed: 40,
 
     // Top speed in reverse (m/s).
@@ -157,10 +157,10 @@ export const SETTINGS = {
   //  RAMMING
   // ---------------------------------------------------------------
   ramming: {
-    // Hitting a demon at this speed (mph) with a normal-weight car does
+    // Hitting a demon at this speed (km/h) with a normal-weight car does
     // exactly enough damage to splat an imp. Faster = more damage.
     // Heavier cars hit harder, so they splat at lower speeds.
-    splatSpeedMph: 25,
+    splatSpeedKmh: 40,
     // How much the car slows down per demon it plows through
     // (fraction of demon weight vs car weight). 0 = none.
     momentumLoss: 1.0,
@@ -179,7 +179,7 @@ export const SETTINGS = {
     // true = build with unlimited free parts (no stock counts).
     unlimitedParts: false,
     // The parts you start the game with in your stock.
-    startingKit: { armor: 8, spike: 8, plow: 2, gun: 4, booster: 2, weight: 2, panel: 0 },
+    startingKit: { armor: 8, spike: 8, plow: 2, gun: 4, booster: 2, weight: 2 },
     // How strongly front/back weight changes handling. 0 = not at all.
     //  Nose-heavy  -> understeer (turns wider, more stable)
     //  Tail-heavy  -> oversteer (tail slides out more easily)
@@ -194,19 +194,19 @@ export const SETTINGS = {
     gun:     { mass: 80,  hp: 60 },                 // one more gun that fires with your main gun
     booster: { mass: 40,  hp: 50,  power: 3500, topSpeed: 2.5 }, // more engine push and top speed (m/s)
     weight:  { mass: 250, hp: 220 },                // just heavy. Hits harder, handles worse.
-    panel:   { mass: 50,  hp: 80 },                 // a bent piece of your car's body. Bolt it anywhere!
   },
 
-  // The car's own body sections: hit points, weight (kg), and how many
-  // Body Panels they break into (also the cost to rebuild them in the garage).
+  // The car's own body sections: hit points and weight (kg). When one
+  // breaks off it drops as that actual piece: pick it up (E) and put it
+  // back in the garage, or bolt it on somewhere it doesn't belong.
   // The cabin is where you sit: if it's destroyed, you're wrecked.
   chassis: {
-    cabin:  { hp: 220, mass: 450, panels: 0 },
-    nose:   { hp: 110, mass: 200, panels: 2 },
-    tail:   { hp: 110, mass: 200, panels: 2 },
-    doorL:  { hp: 90,  mass: 90,  panels: 1 },
-    doorR:  { hp: 90,  mass: 90,  panels: 1 },
-    bumper: { hp: 80,  mass: 90,  panels: 1 },
+    cabin:  { hp: 220, mass: 450 },
+    nose:   { hp: 110, mass: 200 },
+    tail:   { hp: 110, mass: 200 },
+    doorL:  { hp: 90,  mass: 90 },
+    doorR:  { hp: 90,  mass: 90 },
+    bumper: { hp: 80,  mass: 90 },
   },
 
   // ---------------------------------------------------------------
@@ -236,7 +236,7 @@ export const SETTINGS = {
     health: 40,
     // Weight in kg (affects how much they slow you down when rammed).
     mass: 60,
-    // Running speed when chasing you (m/s). 8 m/s is about 18 mph,
+    // Running speed when chasing you (m/s). 8 m/s is about 29 km/h,
     // slower than the splat speed, so they can't hurt you while you're fast.
     chaseSpeed: 8,
     // Strolling speed when they haven't noticed you.
