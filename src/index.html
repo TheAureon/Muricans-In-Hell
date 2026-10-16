@@ -6,18 +6,14 @@
     <title>HellDrivers</title>
     <link rel="stylesheet" href="./style.css" />
     <script>
-      // If this page was opened by double-clicking the file, the game code
-      // can't load. Explain what to do instead of showing a blank page.
-      if (location.protocol === 'file:') {
-        document.addEventListener('DOMContentLoaded', function () {
-          if (document.querySelector('script[type=module]:not([src])')) return; // packed version: fine
-          document.body.innerHTML = '<div style="font:18px/1.6 system-ui,sans-serif;max-width:640px;margin:60px auto;padding:24px;color:#222">' +
-            '<h1 style="color:#c22">HELLDRIVERS can\'t start from this file</h1>' +
-            '<p>This <b>index.html</b> is the developer version and needs the local server.</p>' +
-            '<p><b>Easiest:</b> double-click <b>HELLDRIVERS.html</b> in the main game folder instead.</p>' +
-            '<p><b>Or:</b> open a terminal in the main game folder and run <code>npm install &amp;&amp; npm start</code>.</p></div>';
-        });
-      }
+      // This is the DEVELOPER version of the page: it only runs through the
+      // dev server (npm start). If a website or a double-click opens it
+      // directly, jump to the real, ready-to-play game one folder up.
+      document.addEventListener('DOMContentLoaded', function () {
+        var raw = document.querySelector('script[src$="main.js"]');       // un-built source
+        var devServer = document.querySelector('script[src*="@vite/client"]');
+        if (raw && !devServer) location.replace('../index.html' + location.search + location.hash);
+      });
     </script>
   </head>
   <body>
