@@ -19,7 +19,8 @@ import { Bullets } from './combat/bullets.js';
 import { Stats } from './combat/stats.js';
 import { Car } from './vehicle/car.js';
 import { ChaseCamera } from './camera/chaseCamera.js';
-import { Hud, showStartScreen } from './ui/hud.js';
+import { Hud } from './ui/hud.js';
+import { showTitleScreen } from './ui/titleScreen.js';
 import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
 import { Progress } from './core/progress.js';
@@ -186,15 +187,41 @@ async function main() {
     chase.addShake(0.4);
   };
 
-  // Draw one frame behind the start screen so it isn't empty.
+  // Title screen: the camera slowly circles your car, with the car on the
+  // right so the logo and menu have room on the left.
   car.capture(); car.capture();
   car.render(1, 0, null);
   demons.render(1, 0);
-  chase.update(car, 1 / 60, 0);
-  renderer.render(scene, camera);
+  let onTitle = true;
+  const titleTimer = new THREE.Timer();
+  let titleT = 0;
+  const titleLook = new THREE.Vector3();
+  function titleFrame() {
+    if (!onTitle) return;
+    titleTimer.update();
+    const dt = Math.min(titleTimer.getDelta(), 0.1);
+    titleT += dt;
+    const a = 2.4 + titleT * 0.07;
+    const c = car.position;
+    camera.position.set(c.x + Math.sin(a) * 8.5, c.y + 2.2 + Math.sin(titleT * 0.3) * 0.3, c.z + Math.cos(a) * 8.5);
+    const right = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)); // camera's right-hand side
+    titleLook.copy(c).addScaledVector(right, -3.2).setY(c.y + 1.4);
+    camera.lookAt(titleLook);
+    car.render(1, dt, null);
+    embers.update(dt, c);
+    hazards.update(dt, c, sparks);
+    sparks.update(dt);
+    followPlayer(c);
+    renderer.render(scene, camera);
+    requestAnimationFrame(titleFrame);
+  }
+  titleFrame();
 
-  await showStartScreen(region.name, region.tagline);
+  await showTitleScreen({ region, progress });
+  onTitle = false;
   audio.start();
+  // Swoop from the title view into the chase camera.
+  const intro = { t: 0, pos: camera.position.clone(), look: titleLook.clone() };
   if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
 
   const timer = new THREE.Timer();
@@ -299,6 +326,12 @@ async function main() {
     demons.render(alpha, dt);
     if (!SETTINGS.dev.noEnemies) boss?.render(alpha, dt);
     chase.update(car, dt, input.wheel);
+    if (intro.t < 1) {
+      intro.t = Math.min(1, intro.t + dt / 1.4);
+      const k = 1 - (1 - intro.t) ** 3; // ease out
+      camera.position.lerpVectors(intro.pos, camera.position, k);
+      camera.lookAt(titleLook.lerpVectors(intro.look, chase.lookAt, k));
+    }
 
     // --- Shooting: every gun fires at its own weapon's rate ---
     let shot = false, boomed = false;

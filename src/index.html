@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>HellDrivers</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Metal+Mania&family=Oswald:wght@500;700&display=swap" />
     <link rel="stylesheet" href="./style.css" />
     <script>
       // If this page was opened by double-clicking the file, the game code
@@ -23,10 +25,16 @@
   <body>
     <div id="hud"></div>
     <div id="start">
-      <h1>HELLDRIVERS</h1>
-      <p class="region">Loading…</p>
-      <p class="click">CLICK TO START YOUR ENGINE</p>
-      <p class="sub">Milestone 7 · Regions: the Lava Rivers</p>
+      <div class="t-shade"></div>
+      <div class="t-col">
+        <div class="t-logo"><span class="t-hell">HELL</span><span class="t-drivers">DRIVERS</span></div>
+        <div class="t-tag">Build a car. Invade Hell. <b>Never get out.</b></div>
+        <div class="t-rule"></div>
+        <div class="t-menu"><div class="t-loading"><span></span>Summoning demons…</div></div>
+      </div>
+      <div class="t-run"></div>
+      <div class="t-panel"></div>
+      <div class="t-foot"><span>Milestone 7 · Regions</span><span class="t-keys">↑ ↓ choose · ENTER drive</span></div>
     </div>
     <script type="module" src="./main.js"></script>
   </body>

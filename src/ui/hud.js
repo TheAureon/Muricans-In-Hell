@@ -182,14 +182,3 @@ export class Hud {
 
   toggleHelp() { this.help.classList.toggle('hidden'); }
 }
-
-// Shows the title screen and resolves when the player clicks.
-export function showStartScreen(regionName, tagline = '') {
-  const el = document.getElementById('start');
-  el.querySelector('.region').textContent = regionName;
-  if (tagline) el.querySelector('.region').insertAdjacentHTML('beforeend', `<small>${tagline}</small>`);
-  el.classList.add('ready');
-  return new Promise((resolve) => {
-    el.addEventListener('click', () => { el.remove(); resolve(); }, { once: true });
-  });
-}
