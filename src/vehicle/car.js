@@ -306,7 +306,7 @@ export class Car {
 
   // quiet = no red screen flash (for slow burns).
   damagePiece(pc, amount, quiet = false) {
-    if (SETTINGS.dev.noDamage) return; // dev mode: invincible
+    if (SETTINGS.dev.noDamage || this.invulnerable) return; // dev mode / title-screen demo: invincible
     if (!quiet) this.hurtTimer = 0.25;
     if (pc.kind === 'part') {
       const p = this.build.parts.get(pc.key);

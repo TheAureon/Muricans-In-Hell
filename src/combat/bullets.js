@@ -45,6 +45,12 @@ export class Bullets {
     b.active = true;
   }
 
+  // Remove every bullet in flight.
+  clear() {
+    for (let i = 0; i < MAX; i++) { this.pool[i].active = false; this.#hide(i); }
+    this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
   update(dt) {
     for (let i = 0; i < MAX; i++) {
       const b = this.pool[i];

@@ -49,7 +49,7 @@ export function createScene(region) {
     sun.target.position.copy(pos);
   }
 
-  return { renderer, scene, camera, followPlayer };
+  return { renderer, scene, camera, followPlayer, lights: { hemi, sun, sunOffset } };
 }
 
 // A big sphere around the world, dark at the top and glowing red at the horizon.

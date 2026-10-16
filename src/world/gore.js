@@ -46,6 +46,15 @@ export class Gore {
     this.hideAll();
   }
 
+  // Wipe all chunks and splats (fresh start).
+  clear() {
+    for (const c of this.chunkData) c.life = 0;
+    for (const s of this.splatData) s.life = 0;
+    this.hideAll();
+    this.chunks.instanceMatrix.needsUpdate = true;
+    this.splats.instanceMatrix.needsUpdate = true;
+  }
+
   hideAll() {
     this.dummy.scale.setScalar(0);
     this.dummy.updateMatrix();

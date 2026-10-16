@@ -1,9 +1,11 @@
-// The title screen: logo, a small menu, and your current run, over the live
-// 3D world (main.js slowly circles the camera around your car behind it).
+// The title screen and the main menu, over the attract-mode movie (see
+// attract.js). First the TITLE: the big logo and "click anywhere". Click (or
+// press any key) and you get the MENU:
 //   DRIVE / CONTINUE  start playing (in the region you're in)
 //   HOW TO PLAY       the controls and the basic idea
 //   NEW RUN           wipe souls, unlocks, chassis and build (asks twice)
-// Arrow keys + Enter work too. Resolves when you start driving.
+// Arrow keys + Enter work too. onMenu() is called when the menu opens;
+// the promise resolves when you start driving.
 import { SETTINGS } from '../settings.js';
 import { REGIONS, PLANNED_REGIONS } from '../regions/index.js';
 
@@ -26,7 +28,7 @@ const HOW_TO = `
   </table>
   <p class="dim">Pieces of your car break off as they take damage. Lose the cabin and the whole run starts over.</p>`;
 
-export function showTitleScreen({ region, progress }) {
+export function showTitleScreen({ region, progress, onMenu }) {
   const el = document.getElementById('start');
   document.body.classList.add('title-open');
   const regionNo = REGIONS.indexOf(region) + 1;
@@ -61,6 +63,22 @@ export function showTitleScreen({ region, progress }) {
   el.classList.add('ready');
 
   return new Promise((resolve) => {
+    // ---- Title: wait for a click or any key ----
+    const toMenu = (e) => {
+      if (e.type === 'keydown' && ['Tab', 'F5', 'F11', 'F12'].includes(e.code)) return;
+      e.preventDefault?.();
+      el.removeEventListener('click', toMenu);
+      window.removeEventListener('keydown', toMenu);
+      el.classList.add('menu');
+      onMenu?.();
+      // (give the click a moment so it doesn't also press a menu button)
+      setTimeout(() => {
+        el.addEventListener('click', onClick);
+        el.addEventListener('mouseover', onHover);
+        window.addEventListener('keydown', onKey);
+      }, 150);
+    };
+
     const choose = (i) => {
       const it = items[i];
       if (it.id === 'drive') {
@@ -106,8 +124,7 @@ export function showTitleScreen({ region, progress }) {
       el.removeEventListener('mouseover', onHover);
       window.removeEventListener('keydown', onKey);
     };
-    el.addEventListener('click', onClick);
-    el.addEventListener('mouseover', onHover);
-    window.addEventListener('keydown', onKey);
+    el.addEventListener('click', toMenu);
+    window.addEventListener('keydown', toMenu);
   });
 }

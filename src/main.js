@@ -21,6 +21,7 @@ import { Car } from './vehicle/car.js';
 import { ChaseCamera } from './camera/chaseCamera.js';
 import { Hud } from './ui/hud.js';
 import { showTitleScreen } from './ui/titleScreen.js';
+import { Autopilot, Director, CinemaLook } from './ui/attract.js';
 import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
 import { Progress } from './core/progress.js';
@@ -42,7 +43,7 @@ async function main() {
   const region = regionById(jump || progress.region);
   const next = nextRegion(region);
   const physics = await createPhysics();
-  const { renderer, scene, camera, followPlayer } = createScene(region);
+  const { renderer, scene, camera, followPlayer, lights } = createScene(region);
   const hazards = new Hazards(scene, region);
   createGround(scene, physics, region, hazards);
 
@@ -80,6 +81,7 @@ async function main() {
   progress.onChange((p) => hud.souls(p.souls));
   // Every kill drops souls (ram kills pay extra).
   demons.onKill = (d, source) => {
+    if (mode === 'title') return; // the title-screen movie doesn't earn souls
     const P = SETTINGS.progression;
     souls.burst(d.pos, (P.souls[d.type] || 1) * (source === 'ram' ? P.ramBonus : 1));
   };
@@ -187,42 +189,50 @@ async function main() {
     chase.addShake(0.4);
   };
 
-  // Title screen: the camera slowly circles your car, with the car on the
-  // right so the logo and menu have room on the left.
-  car.capture(); car.capture();
-  car.render(1, 0, null);
-  demons.render(1, 0);
-  let onTitle = true;
-  const titleTimer = new THREE.Timer();
-  let titleT = 0;
-  const titleLook = new THREE.Vector3();
-  function titleFrame() {
-    if (!onTitle) return;
-    titleTimer.update();
-    const dt = Math.min(titleTimer.getDelta(), 0.1);
-    titleT += dt;
-    const a = 2.4 + titleT * 0.07;
-    const c = car.position;
-    camera.position.set(c.x + Math.sin(a) * 8.5, c.y + 2.2 + Math.sin(titleT * 0.3) * 0.3, c.z + Math.cos(a) * 8.5);
-    const right = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a)); // camera's right-hand side
-    titleLook.copy(c).addScaledVector(right, -3.2).setY(c.y + 1.4);
-    camera.lookAt(titleLook);
-    car.render(1, dt, null);
-    embers.update(dt, c);
-    hazards.update(dt, c, sparks);
-    sparks.update(dt);
-    followPlayer(c);
-    renderer.render(scene, camera);
-    requestAnimationFrame(titleFrame);
-  }
-  titleFrame();
+  // ---- Title screen + menu, with the attract-mode movie behind them ----
+  // The car drives itself (invincible) through the demons while a virtual
+  // camera crew films it. Nothing that happens in it counts.
+  let mode = 'title';
+  car.invulnerable = true;
+  const autopilot = new Autopilot(car, demons);
+  const cutEl = document.getElementById('cut');
+  const flashCut = () => { cutEl.className = ''; void cutEl.offsetWidth; cutEl.className = 'flash'; };
+  const director = new Director(camera, car, flashCut);
+  const cinema = new CinemaLook({ renderer, scene, camera, lights, car, dimmed: [dust.mesh.material] });
+  cinema.set(true);
+  let intro = { t: 1, pos: new THREE.Vector3(), look: new THREE.Vector3() };
+  const introLook = new THREE.Vector3();
 
-  await showTitleScreen({ region, progress });
-  onTitle = false;
-  audio.start();
-  // Swoop from the title view into the chase camera.
-  const intro = { t: 0, pos: camera.position.clone(), look: titleLook.clone() };
-  if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
+  // DRIVE pressed: cut to black, reset the world, swoop into the chase camera.
+  function startPlaying() {
+    cutEl.className = 'black';
+    setTimeout(() => {
+      mode = 'play';
+      car.invulnerable = false;
+      cinema.set(false);
+      car.reset(true);
+      car.burns.clear();
+      car.build.repairAll();
+      car.applyBuild();
+      demons.clearAround(car.currPos, 1e9);
+      demons.populate(car.currPos);
+      projectiles.clear();
+      bullets.clear();
+      gore.clear();
+      hazards.clearPools();
+      souls.clear();
+      scrap.clear();
+      stats.reset();
+      if (boss && boss.state !== 'dead') boss.reset();
+      camera.fov = SETTINGS.camera.fov;
+      camera.updateProjectionMatrix();
+      chase.initialized = false;
+      // Start high above and behind the car, then swoop down.
+      intro = { t: 0, pos: car.currPos.clone().add(new THREE.Vector3(0, 16, -22)), look: car.currPos.clone() };
+      cutEl.className = 'fadeout';
+      if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
+    }, 320);
+  }
 
   const timer = new THREE.Timer();
   let accumulator = 0;
@@ -239,35 +249,40 @@ async function main() {
     const dt = Math.min(timer.getDelta(), 0.1);
     elapsed += dt;
 
+    const playing = mode === 'play';
+    if (!playing) autopilot.update(dt);
+
     // --- One-shot keys ---
-    if (input.wasPressed('KeyT')) tuning.toggle();
-    if (input.wasPressed('KeyC')) dev.toggle();
-    if (input.wasPressed('KeyH')) hud.toggleHelp();
-    if (input.wasPressed('KeyM')) audio.toggleMute();
-    if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
-      const near = demons.nearestDistance(car.currPos);
-      if (garage.open) garage.close();
-      else if (car.wrecked) { /* wait for respawn */ }
-      else if (near < SETTINGS.damage.garageSafeRadius) hud.toast(`Demons too close! Get ${Math.ceil(SETTINGS.damage.garageSafeRadius - near)} m further away to open the garage.`, 'warn');
-      else garage.openGarage();
-      input.mouse.down = false;
+    if (playing) {
+      if (input.wasPressed('KeyT')) tuning.toggle();
+      if (input.wasPressed('KeyC')) dev.toggle();
+      if (input.wasPressed('KeyH')) hud.toggleHelp();
+      if (input.wasPressed('KeyM')) audio.toggleMute();
+      if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
+        const near = demons.nearestDistance(car.currPos);
+        if (garage.open) garage.close();
+        else if (car.wrecked) { /* wait for respawn */ }
+        else if (near < SETTINGS.damage.garageSafeRadius) hud.toast(`Demons too close! Get ${Math.ceil(SETTINGS.damage.garageSafeRadius - near)} m further away to open the garage.`, 'warn');
+        else garage.openGarage();
+        input.mouse.down = false;
+      }
+      if (garage.open) {
+        // Paused: only the garage camera moves.
+        aim.mesh.visible = false;
+        garage.update(dt);
+        renderer.render(scene, camera);
+        input.endFrame();
+        requestAnimationFrame(frame);
+        return;
+      }
+      if (input.wasPressed('KeyR')) car.reset(false);
+      if (input.wasPressed('Backspace')) { car.reset(true); demons.clearAround(car.currPos, 60); }
     }
-    if (garage.open) {
-      // Paused: only the garage camera moves.
-      aim.mesh.visible = false;
-      garage.update(dt);
-      renderer.render(scene, camera);
-      input.endFrame();
-      requestAnimationFrame(frame);
-      return;
-    }
-    if (input.wasPressed('KeyR')) car.reset(false);
-    if (input.wasPressed('Backspace')) { car.reset(true); demons.clearAround(car.currPos, 60); }
 
     // --- Physics at a fixed rate ---
     accumulator += dt;
     while (accumulator >= PHYSICS_STEP) {
-      car.fixedUpdate(input, PHYSICS_STEP);
+      car.fixedUpdate(playing ? input : autopilot.input, PHYSICS_STEP);
       physics.world.step();
       car.capture();
       car.afterStep(); // crash damage from hitting rocks
@@ -322,15 +337,19 @@ async function main() {
     const aimed = demons.raycast(aim.raycaster.ray);
     if (aimed) aimPoint = aimed.point;
     else if (aim.mesh.visible) aimPoint = tmpAim.copy(aimPoint).setY(0.8);
+    if (!playing) { aim.mesh.visible = false; aimPoint = autopilot.aim; }
     car.render(alpha, dt, aimPoint);
     demons.render(alpha, dt);
     if (!SETTINGS.dev.noEnemies) boss?.render(alpha, dt);
-    chase.update(car, dt, input.wheel);
-    if (intro.t < 1) {
-      intro.t = Math.min(1, intro.t + dt / 1.4);
-      const k = 1 - (1 - intro.t) ** 3; // ease out
-      camera.position.lerpVectors(intro.pos, camera.position, k);
-      camera.lookAt(titleLook.lerpVectors(intro.look, chase.lookAt, k));
+    if (!playing) director.update(dt);
+    else {
+      chase.update(car, dt, input.wheel);
+      if (intro.t < 1) {
+        intro.t = Math.min(1, intro.t + dt / 1.8);
+        const k = 1 - (1 - intro.t) ** 3; // ease out
+        camera.position.lerpVectors(intro.pos, camera.position, k);
+        camera.lookAt(introLook.lerpVectors(intro.look, chase.lookAt, k));
+      }
     }
 
     // --- Shooting: every gun fires at its own weapon's rate ---
@@ -338,7 +357,7 @@ async function main() {
     car.model.root.updateMatrixWorld(true);
     for (const t of car.turrets) {
       t.cooldown -= dt;
-      if (!input.mouse.down || t.cooldown > 0 || car.wrecked) continue;
+      if (!(playing ? input.mouse.down : autopilot.fire) || t.cooldown > 0 || car.wrecked) continue;
       const W = Bullets.weapon(t.weapon);
       t.cooldown = 1 / W.fireRate;
       car.fireVisual(t);
@@ -387,7 +406,7 @@ async function main() {
 
     // --- Scrap: press E to grab what's in reach ---
     const reach = scrap.inReach(car.position, SETTINGS.damage.pickupRadius);
-    if (reach.length && !car.wrecked) {
+    if (reach.length && !car.wrecked && playing) {
       const names = reach.map((s) => s.item.label);
       hud.setPrompt(`[E] Grab scrap: ${names.slice(0, 2).join(', ')}${names.length > 2 ? ` +${names.length - 2} more` : ''}`);
       if (input.wasPressed('KeyE')) {
@@ -408,7 +427,7 @@ async function main() {
     projectiles.update(dt);
     hazards.update(dt, car.position, sparks);
     flames.update(dt);
-    if (gate?.update(dt, car, sparks)) {
+    if (gate?.update(dt, car, sparks) && playing) {
       if (gate.leadsTo) travelTo(gate.leadsTo);
       else if (!gate.toldSealed) { gate.toldSealed = true; hud.toast('This Hellgate is sealed... for now (next update!)', 'warn'); }
     } else if (gate) gate.toldSealed = false;
@@ -442,11 +461,12 @@ async function main() {
     hud.update(car, SETTINGS.car.topSpeed, dt, input.mouse);
     hud.combat(car, stats);
 
-    renderer.render(scene, camera);
+    cinema.render(scene, camera);
     input.endFrame();
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
+  showTitleScreen({ region, progress, onMenu: () => audio.start() }).then(startPlaying);
 
   // Handy for debugging in the browser console.
   window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo };
