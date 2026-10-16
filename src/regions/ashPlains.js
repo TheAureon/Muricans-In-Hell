@@ -61,6 +61,9 @@ export default {
   boss: {
     type: 'ashTitan',
     name: 'The Ash Titan',
-    arena: { x: 650, z: 820, radius: 70 },
+    arena: { x: 650, z: 820, radius: 70, style: 'bones' },
+    look: { skin: 0x5a5450, dark: 0x2e2a28, glow: 0xff5a10, horn: 0xe0d6bc, eye: 0xffe040, vents: false },
+    summons: [['imp', 8], ['imp', 8], ['hound', 4]],
+    throwKind: 'boulder',
   },
 };

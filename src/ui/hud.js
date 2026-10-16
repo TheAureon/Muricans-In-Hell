@@ -29,7 +29,10 @@ export class Hud {
       <div id="souls"><span class="ico">✦</span> <b>0</b> <small>SOULS</small></div>
       <div id="compass"><span class="arrow">▲</span><span class="label"></span></div>
       <div id="bossbar"><div class="name"></div><div class="bar"><div class="fill"></div></div></div>
-      <div id="victory">ASH PLAINS<br>CLEARED!<small>The Ash Titan is dust. Keep roaming, or press Backspace to return to the start.</small></div>
+      <div id="victory"></div>
+      <div id="banner"><b></b><small></small></div>
+      <div id="lava-warn">🔥 ON LAVA 🔥<small></small></div>
+      <div id="travel"><span></span></div>
       <div id="stats">
         <div><span>KILLS</span> <b id="kills">0</b></div>
         <div class="dpm-title">DAMAGE / MINUTE</div>
@@ -91,9 +94,34 @@ export class Hud {
     this.bossEl.classList.toggle('enraged', enraged);
   }
 
-  victory() {
+  victory(title, sub) {
+    this.victoryEl.innerHTML = `${title}<br>CLEARED!<small>${sub}</small>`;
     this.victoryEl.classList.add('on');
-    setTimeout(() => this.victoryEl.classList.remove('on'), 8000);
+    setTimeout(() => this.victoryEl.classList.remove('on'), 9000);
+  }
+
+  // Big title card across the top (e.g. arriving in a new region).
+  banner(title, sub, seconds = 7) {
+    const el = document.getElementById('banner');
+    el.querySelector('b').textContent = title;
+    el.querySelector('small').textContent = sub;
+    el.classList.add('on');
+    clearTimeout(this.bannerTimer);
+    this.bannerTimer = setTimeout(() => el.classList.remove('on'), seconds * 1000);
+  }
+
+  // Warning while driving on lava (text = how protected you are), null = off.
+  lava(text) {
+    const el = this.lavaEl || (this.lavaEl = document.getElementById('lava-warn'));
+    el.classList.toggle('on', text != null);
+    if (text != null && el.dataset.t !== text) { el.dataset.t = text; el.querySelector('small').textContent = text; }
+  }
+
+  // Screen fades to fire while traveling to another region.
+  travel(name) {
+    const el = document.getElementById('travel');
+    el.querySelector('span').textContent = `ENTERING ${name.toUpperCase()}…`;
+    el.classList.add('on');
   }
 
   // Big "SPLAT!" popup; shows a combo count for chains of ram kills.
@@ -156,9 +184,10 @@ export class Hud {
 }
 
 // Shows the title screen and resolves when the player clicks.
-export function showStartScreen(regionName) {
+export function showStartScreen(regionName, tagline = '') {
   const el = document.getElementById('start');
   el.querySelector('.region').textContent = regionName;
+  if (tagline) el.querySelector('.region').insertAdjacentHTML('beforeend', `<small>${tagline}</small>`);
   el.classList.add('ready');
   return new Promise((resolve) => {
     el.addEventListener('click', () => { el.remove(); resolve(); }, { once: true });

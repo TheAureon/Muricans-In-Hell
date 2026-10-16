@@ -1,10 +1,16 @@
-// THE ASH TITAN: the Ash Plains boss. A 9 m giant asleep in a ring of bones.
+// REGION BOSSES. One giant per region, all built on the same body plan;
+// each region's file says what it looks like (look), what it throws
+// (throwKind) and who it calls for help (summons). Its numbers are in
+// settings.js -> bosses.
+//   Ash Plains:  THE ASH TITAN, asleep in a ring of bones. Throws boulders.
+//   Lava Rivers: THE MAGMA COLOSSUS, on an island in a lake of lava. Its
+//                lava bombs leave burning pools, and its fists set you on fire.
 // Drive into the arena (or shoot it) and it wakes up.
 //
 //  - Walks toward you, turning slowly.
 //  - Fist SLAM when you're close (big damage where the fist lands).
 //  - STOMP: a shockwave ring rolls outward. Be far away or take a hit.
-//  - Throws BOULDERS when you keep your distance.
+//  - Throws BOULDERS (or lava bombs) when you keep your distance.
 //  - At 2/3 and 1/3 health it calls in demon reinforcements.
 //  - Below half health it gets angry and faster.
 //  - Drive too far from the arena and it gives up, goes back, and heals.
@@ -16,12 +22,15 @@ import { raySphere } from './demons.js';
 const KMH = 1 / 3.6;
 const UP = new THREE.Vector3(0, 1, 0);
 
-export class AshTitan {
+export class Boss {
   constructor(scene, physics, ctx) {
     this.isBoss = true;
-    this.name = ctx.region.boss.name;
-    this.ctx = ctx; // { car, demons, projectiles, gore, audio, hud, chase, dust, stats, onDefeated }
-    const A = ctx.region.boss.arena;
+    const cfg = ctx.region.boss;
+    this.cfg = cfg;
+    this.name = cfg.name;
+    this.B = SETTINGS.bosses[cfg.type];
+    this.ctx = ctx; // { car, demons, projectiles, gore, audio, hud, chase, dust, stats, hazards, onDefeated }
+    const A = cfg.arena;
     this.arenaCenter = new THREE.Vector3(A.x, 0, A.z);
     this.arenaRadius = A.radius;
     this.radius = 2.6;
@@ -49,7 +58,7 @@ export class AshTitan {
     this.pos = this.arenaCenter.clone();
     this.prev = this.pos.clone();
     this.yaw = Math.atan2(-this.arenaCenter.x, -this.arenaCenter.z); // faces the way you'll come in
-    this.hp = SETTINGS.boss.health;
+    this.hp = this.B.health;
     this.state = this.defeated ? 'dead' : 'dormant';
     this.action = null;
     this.cd = { slam: 0, stomp: 4, throw: 2 };
@@ -90,7 +99,7 @@ export class AshTitan {
 
   // ------------------------------------------------------------------ update
   fixedUpdate(dt, car) {
-    const B = SETTINGS.boss;
+    const B = this.B;
     this.prev.copy(this.pos);
     this.flash = Math.max(0, this.flash - dt * 5);
     const carPos = car.currPos;
@@ -200,7 +209,7 @@ export class AshTitan {
   #start(type, windup) { this.action = { type, t: 0, windup, done: false }; }
 
   #runAction(dt, car, toCar, dist) {
-    const B = SETTINGS.boss;
+    const B = this.B;
     const a = this.action;
     a.t += dt;
     if (a.t < a.windup) {
@@ -217,6 +226,7 @@ export class AshTitan {
         const d = Math.hypot(car.currPos.x - at.x, car.currPos.z - at.z);
         if (d < B.slamRadius + 2 && !car.wrecked) {
           car.takeDamage(B.slamDamage, at);
+          if (B.slamBurn) car.igniteAt(at, B.slamBurn, 4);
           const away = car.currPos.clone().sub(at).setY(0).normalize();
           car.nudge(away.x * 9, away.z * 9);
         }
@@ -234,7 +244,18 @@ export class AshTitan {
       } else if (a.type === 'throw') {
         this.cd.throw = 3.5;
         const hand = this.pos.clone().add(new THREE.Vector3(0, 8.5, 0)).addScaledVector(fwd, 1.5);
-        this.ctx.projectiles.throwAt('boulder', hand, B.boulderDamage, B.boulderSplash, THREE.MathUtils.clamp(dist / 20, 1.1, 2.6));
+        const kind = this.cfg.throwKind || 'boulder';
+        const flight = THREE.MathUtils.clamp(dist / 20, 1.1, 2.6);
+        const onLand = kind === 'lavaBomb' && this.ctx.hazards
+          ? (at) => this.ctx.hazards.addPool(at.x, at.z, B.poolRadius, B.poolTime) : null;
+        this.ctx.projectiles.throwAt(kind, hand, B.throwDamage, B.throwSplash, flight, onLand);
+        // Lava bombs come in threes, spread around you.
+        if (kind === 'lavaBomb') {
+          for (const side of [-1, 1]) {
+            const h2 = hand.clone().addScaledVector(new THREE.Vector3(fwd.z, 0, -fwd.x), side * 2);
+            this.ctx.projectiles.throwAt(kind, h2, B.throwDamage, B.throwSplash, flight * (0.75 + Math.random() * 0.5), onLand);
+          }
+        }
       }
     }
     if (a.t > a.windup + 0.6) this.action = null; // recover, then carry on
@@ -242,11 +263,13 @@ export class AshTitan {
 
   #summon() {
     const { demons, hud } = this.ctx;
-    for (const [type, n, ang] of [['imp', 8, 0], ['imp', 8, 2.1], ['hound', 4, 4.2]]) {
+    const list = this.cfg.summons || [['imp', 8], ['imp', 8], ['hound', 4]];
+    list.forEach(([type, n], i) => {
+      const ang = (i / list.length) * Math.PI * 2;
       const c = this.pos.clone().add(new THREE.Vector3(Math.cos(ang) * 14, 0, Math.sin(ang) * 14));
       demons.spawnPack(c, n, type);
-    }
-    hud.toast('The Titan calls for help!', 'warn');
+    });
+    hud.toast(`${this.name} calls for help!`, 'warn');
     this.ctx.audio.wreck();
   }
 
@@ -255,7 +278,7 @@ export class AshTitan {
     this.state = 'waking';
     this.wakeTimer = 2.5;
     this.ctx.hud.toast(`${this.name.toUpperCase()} AWAKENS!`, 'warn');
-    this.ctx.hud.bossBar(this.name, this.hp / SETTINGS.boss.health, false);
+    this.ctx.hud.bossBar(this.name, this.hp / this.B.health, false);
     this.ctx.audio.wreck();
     this.ctx.chase.addShake(1);
   }
@@ -276,7 +299,8 @@ export class AshTitan {
     this.exploded = true;
     this.defeated = true;
     this.state = 'dead';
-    const colors = [0x5a5450, 0x3a3432, 0xff6a20, 0x9a0a0a, 0xe0d6bc];
+    const L = this.cfg.look || {};
+    const colors = [L.skin ?? 0x5a5450, L.dark ?? 0x3a3432, L.glow ?? 0xff6a20, 0x9a0a0a, L.horn ?? 0xe0d6bc];
     for (const y of [1, 4, 7]) {
       this.ctx.gore.explode(this.pos.clone().setY(y), new THREE.Vector3((Math.random() - 0.5) * 10, 6, (Math.random() - 0.5) * 10), colors, 4);
     }
@@ -304,7 +328,7 @@ export class AshTitan {
     this.root.position.lerpVectors(this.prev, this.pos, alpha);
     this.root.rotation.y = this.yaw;
     this.matAsh.emissive.setRGB(this.flash * 0.8, this.flash * 0.15, 0);
-    this.matLava.emissiveIntensity = 1.2 + Math.sin(performance.now() / 300) * 0.4 + (this.hp < SETTINGS.boss.health * 0.5 ? 0.8 : 0);
+    this.matLava.emissiveIntensity = 1.2 + Math.sin(performance.now() / 300) * 0.4 + (this.hp < this.B.health * 0.5 ? 0.8 : 0);
 
     // Default walking pose
     const swing = Math.sin(this.phase) * 0.35;
@@ -330,17 +354,18 @@ export class AshTitan {
 
     if (this.wave) {
       this.ring.scale.setScalar(this.wave.r);
-      this.ring.material.opacity = 0.8 * (1 - this.wave.r / SETTINGS.boss.stompRadius);
+      this.ring.material.opacity = 0.8 * (1 - this.wave.r / this.B.stompRadius);
     }
   }
 
   // ------------------------------------------------------------------ model
   #buildModel(scene) {
-    this.matAsh = new THREE.MeshStandardMaterial({ color: 0x5a5450, flatShading: true, roughness: 0.9 });
-    const dark = new THREE.MeshStandardMaterial({ color: 0x2e2a28, flatShading: true, roughness: 0.9 });
-    this.matLava = new THREE.MeshStandardMaterial({ color: 0xff5a10, emissive: 0xff4a00, emissiveIntensity: 1.4, flatShading: true });
-    const bone = new THREE.MeshStandardMaterial({ color: 0xe0d6bc, flatShading: true });
-    const eye = new THREE.MeshBasicMaterial({ color: 0xffe040 });
+    const L = { skin: 0x5a5450, dark: 0x2e2a28, glow: 0xff5a10, horn: 0xe0d6bc, eye: 0xffe040, ...this.cfg.look };
+    this.matAsh = new THREE.MeshStandardMaterial({ color: L.skin, flatShading: true, roughness: 0.9 });
+    const dark = new THREE.MeshStandardMaterial({ color: L.dark, flatShading: true, roughness: 0.9 });
+    this.matLava = new THREE.MeshStandardMaterial({ color: L.glow, emissive: L.glow, emissiveIntensity: 1.4, flatShading: true });
+    const bone = new THREE.MeshStandardMaterial({ color: L.horn, flatShading: true });
+    const eye = new THREE.MeshBasicMaterial({ color: L.eye });
     const add = (parent, geo, mat, x, y, z) => {
       const mesh = new THREE.Mesh(geo, mat);
       mesh.position.set(x, y, z);
@@ -391,6 +416,14 @@ export class AshTitan {
       add(sh, box(1.9, 1.6, 1.9), dark, 0, -3.8, 0.2); // fist
       upper.add(sh);
       arms[name] = sh;
+    }
+    // Magma Colossus: volcanoes on its shoulders and molten fists.
+    if (L.vents) {
+      for (const x of [2.4, -2.4]) {
+        add(upper, new THREE.CylinderGeometry(0.5, 1.3, 1.6, 7), dark, x, 7.3, -0.3);
+        add(upper, new THREE.CylinderGeometry(0.45, 0.45, 0.1, 7), this.matLava, x, 8.12, -0.3);
+      }
+      for (const arm of Object.values(arms)) add(arm, box(2.0, 0.5, 2.0), this.matLava, 0, -4.4, 0.2);
     }
     this.parts = { upper, ...legs, ...arms };
     this.root = root;

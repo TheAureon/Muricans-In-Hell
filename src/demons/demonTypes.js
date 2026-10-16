@@ -5,12 +5,15 @@
 //             'ranged' = keep its distance and lob fireballs
 //   heavy:    true = a solid obstacle: your car bounces off it
 //   thorns:   true = ramming it hurts your car too
+//   ramBurn:  true = ramming it sets the side you hit it with on fire
+//   (stats with burnDps/burnTime = its attacks set your car on fire)
 //   anim:     how it moves ('waddle', 'gallop', 'stomp', 'sway')
 import { SETTINGS } from '../settings.js';
-import { createImpGeometry, IMP_GORE_COLORS } from './impModel.js';
+import { createImpGeometry, IMP_GORE_COLORS, createFireImpGeometry, FIRE_IMP_GORE } from './impModel.js';
 import {
   createHoundGeometry, HOUND_GORE, createSpikerGeometry, SPIKER_GORE,
   createSpitterGeometry, SPITTER_GORE, createBruteGeometry, BRUTE_GORE,
+  createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
 } from './demonModels.js';
 
 export const DEMON_TYPES = {
@@ -42,6 +45,19 @@ export const DEMON_TYPES = {
     name: 'Ash Brute', behavior: 'melee', anim: 'stomp', heavy: true,
     stats: () => SETTINGS.demons.brute,
     createGeometry: createBruteGeometry, goreColors: BRUTE_GORE,
+    radius: 1.1, height: 3.0, poolSize: 10,
+  },
+  // ---- Lava Rivers ----
+  fireImp: {
+    name: 'Fire Imp', behavior: 'melee', anim: 'waddle',
+    stats: () => SETTINGS.demons.fireImp,
+    createGeometry: createFireImpGeometry, goreColors: FIRE_IMP_GORE,
+    radius: 0.55, height: 1.6, poolSize: 160,
+  },
+  magmaBrute: {
+    name: 'Magma Brute', behavior: 'melee', anim: 'stomp', heavy: true, ramBurn: true,
+    stats: () => SETTINGS.demons.magmaBrute,
+    createGeometry: createMagmaBruteGeometry, goreColors: MAGMA_BRUTE_GORE,
     radius: 1.1, height: 3.0, poolSize: 10,
   },
 };

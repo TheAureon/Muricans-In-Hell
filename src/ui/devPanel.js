@@ -16,9 +16,10 @@ export function loadDevSettings() {
 }
 
 export class DevPanel {
-  constructor({ onChange, onTier }) {
+  constructor({ onChange, onTier, onRegion, regions = [], current = null }) {
     this.onChange = onChange; // (which) => void
     this.onTier = onTier;     // (tierIndex) => void
+    this.onRegion = onRegion; // (regionId) => void
     loadDevSettings();
 
     const el = document.createElement('div');
@@ -28,7 +29,8 @@ export class DevPanel {
       <label><input type="checkbox" data-k="noEnemies"> No enemies <small>(no demons, no boss)</small></label>
       <label><input type="checkbox" data-k="noDamage"> No damage <small>(invincible car)</small></label>
       <label><input type="checkbox" data-k="creative"> Free build <small>(unlimited parts, all unlocked, not saved)</small></label>
-      <div class="d-tiers"><span>Chassis:</span>${SETTINGS.chassisTiers.map((t, i) => `<button data-tier="${i}">${t.name}</button>`).join('')}</div>`;
+      <div class="d-tiers"><span>Chassis:</span>${SETTINGS.chassisTiers.map((t, i) => `<button data-tier="${i}">${t.name}</button>`).join('')}</div>
+      <div class="d-regions"><span>Go to region:</span>${regions.map((r) => `<button data-region="${r.id}" ${r.id === current ? 'class="here"' : ''}>${r.name}</button>`).join('')}</div>`;
     document.body.appendChild(el);
     this.el = el;
     this.badge = document.createElement('div');
@@ -48,6 +50,8 @@ export class DevPanel {
     el.addEventListener('click', (e) => {
       const t = e.target.dataset?.tier;
       if (t != null) this.onTier(Number(t));
+      const r = e.target.dataset?.region;
+      if (r) this.onRegion?.(r);
     });
     this.#refresh();
   }

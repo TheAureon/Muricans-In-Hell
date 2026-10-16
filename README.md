@@ -5,14 +5,21 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
-**Current stage: Milestone 6 — progression.** Every demon you kill drops
-**souls**. Spend them in the garage (**G**) to buy parts, unlock new ones
-(Heavy Armor, Saw Blade, Hell Cannon...), and upgrade your ride from Muscle
-Car → Armored Car → Half-Track → **HELL TANK**. Five kinds of demons roam the
-Ash Plains, nastier the further you go; follow the arrow to wake the Ash Titan.
+**Current stage: Milestone 7 — regions (part 1: the Lava Rivers).** Beat the
+Ash Titan and a **Hellgate** opens next to its arena: drive through it to
+reach region 2, **the Lava Rivers**: black basalt plains cut by rivers of
+lava. Lava burns your car from below and bogs it down, so you'll want an
+Armored Car (or better) and **Hover Fans** (each fan = 25% less burn and
+drag, 4 = immune). Cross on the dark crust bridges. New demons: **Fire Imps**
+(their claws set you on fire) and **Magma Brutes** (ramming one burns your
+front). The boss, **the Magma Colossus**, waits on an island in a lake of lava
+and throws lava bombs that leave burning pools.
 
-Get wrecked (lose the cabin) and the whole run starts over: a complete stock
-car, the starting parts kit, zero souls, nothing unlocked, fresh demons, and
+Souls from kills buy parts and chassis upgrades in the garage (**G**):
+Muscle Car → Armored Car → Half-Track → **HELL TANK**.
+
+Get wrecked (lose the cabin) and the whole run starts over, back in the Ash
+Plains: a complete stock car, the starting parts kit, zero souls, nothing unlocked, fresh demons, and
 the Titan asleep again. (Set `progression.keepOnWreck` to `true` in
 `src/settings.js` to keep souls and unlocks.)
 
@@ -55,7 +62,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | R (in garage) | Turn a loose car piece before placing it |
 | Ctrl/⌘ + Z (in garage) | Undo the last change |
 | G | Garage: build + repair (pauses; not with demons close) |
-| C | Dev / creative panel: no enemies, no damage, free building |
+| C | Dev / creative panel: no enemies, no damage, free building, jump to any region |
 | T | Live tuning panel |
 | M | Mute |
 | H | Hide help |
@@ -75,8 +82,8 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers
-  regions/            one data file per region (Ash Plains so far)
-  world/              sky, ground, scenery, visual effects, gore, scrap
+  regions/            one data file per region (Ash Plains, Lava Rivers) + the travel order
+  world/              sky, ground, scenery, lava (hazards), Hellgates, effects, gore, scrap
   vehicle/            the car's driving physics, 3D model, parts + build grid
   demons/             demon types (data), 3D models, spawning + AI, the boss, fireballs
   combat/             bullets and the damage-per-minute tracker

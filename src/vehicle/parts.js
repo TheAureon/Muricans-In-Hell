@@ -14,6 +14,7 @@ const M = {
   yellow: mat(0xf0c020),
   lead: mat(0x2c2e33, { metalness: 0.7, roughness: 0.4 }),
   flame: new THREE.MeshBasicMaterial({ color: 0xffa030, transparent: true, opacity: 0.85 }),
+  cool: new THREE.MeshBasicMaterial({ color: 0x60d0ff }),
 };
 
 function add(group, geometry, material, x = 0, y = 0, z = 0) {
@@ -118,6 +119,27 @@ export const PART_TYPES = {
     weapon: 'cannon',
     build(g) {
       add(g, new THREE.CylinderGeometry(0.26, 0.3, 0.3, 8), M.dark, 0, -0.1, 0);
+    },
+  },
+  hoverFan: {
+    name: 'Hover Fan',
+    icon: '🌀',
+    desc: 'Blows lava away from the car. Each fan: -25% lava burn & drag (4 = immune).',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.24, 0.24, 0.1, 10), M.dark, 0, -0.2, 0);          // mount
+      const duct = add(g, new THREE.TorusGeometry(0.22, 0.05, 5, 12), M.steel, 0, 0.05, 0);  // ring
+      duct.rotation.x = Math.PI / 2;
+      add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.3, 6), M.dark, 0, -0.05, 0);          // shaft
+      const rotor = new THREE.Group();
+      rotor.position.y = 0.06;
+      for (let n = 0; n < 3; n++) {
+        const blade = add(rotor, new THREE.BoxGeometry(0.36, 0.02, 0.09), M.steel);
+        blade.rotation.y = (n / 3) * Math.PI * 2;
+        blade.rotation.x = 0.35;
+      }
+      add(rotor, new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), M.cool);                    // glowing hub
+      g.add(rotor);
+      g.userData.fan = rotor;
     },
   },
   weight: {

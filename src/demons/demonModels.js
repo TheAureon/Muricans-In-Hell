@@ -69,8 +69,8 @@ export function createSpitterGeometry() {
 
 // ASH BRUTE: 2.8 m of grey muscle with glowing lava cracks and huge fists.
 export const BRUTE_GORE = [0x55504c, 0x3a3634, 0xff6a20, 0x9a0a0a];
-export function createBruteGeometry() {
-  const ASH = 0x5a5450, DARK = 0x3a3432, LAVA = 0xff6a20, HORN = 0x1a1414, EYE = 0xffd040;
+export function createBruteGeometry(colors = {}, extra = []) {
+  const { ASH, DARK, LAVA, HORN, EYE } = { ASH: 0x5a5450, DARK: 0x3a3432, LAVA: 0xff6a20, HORN: 0x1a1414, EYE: 0xffd040, ...colors };
   return merged([
     piece(box(0.45, 1.0, 0.5), DARK, 0.4, 0.5, 0), piece(box(0.45, 1.0, 0.5), DARK, -0.4, 0.5, 0), // legs
     piece(box(1.5, 1.2, 0.95), ASH, 0, 1.65, 0),                    // torso
@@ -80,5 +80,19 @@ export function createBruteGeometry() {
     piece(cone(0.12, 0.6), HORN, 0.35, 2.85, 0.15, 0, 0, -0.7), piece(cone(0.12, 0.6), HORN, -0.35, 2.85, 0.15, 0, 0, 0.7),
     piece(box(0.4, 1.1, 0.45), ASH, 0.95, 1.55, 0.2, -0.3), piece(box(0.4, 1.1, 0.45), ASH, -0.95, 1.55, 0.2, -0.3), // arms
     piece(box(0.6, 0.55, 0.6), DARK, 0.95, 0.95, 0.45), piece(box(0.6, 0.55, 0.6), DARK, -0.95, 0.95, 0.45),        // fists
+    ...extra,
+  ]);
+}
+
+// MAGMA BRUTE (Lava Rivers): a basalt brute with molten fists and a
+// little volcano smoking on each shoulder.
+export const MAGMA_BRUTE_GORE = [0x221e1e, 0x120f0f, 0xff7a10, 0xffd040];
+export function createMagmaBruteGeometry() {
+  const LAVA = 0xff7a10, HOT = 0xffc030, ROCK = 0x1c1818;
+  return createBruteGeometry({ ASH: 0x262222, DARK: 0x141111, LAVA, HORN: 0x2a1418, EYE: 0xfff070 }, [
+    piece(box(0.62, 0.2, 0.62), HOT, 0.95, 0.75, 0.45), piece(box(0.62, 0.2, 0.62), HOT, -0.95, 0.75, 0.45), // molten fists
+    piece(cone(0.35, 0.6, 6), ROCK, 0.6, 2.5, -0.2), piece(cone(0.35, 0.6, 6), ROCK, -0.6, 2.5, -0.2),       // shoulder volcanoes
+    piece(box(0.14, 0.08, 0.14), HOT, 0.6, 2.8, -0.2), piece(box(0.14, 0.08, 0.14), HOT, -0.6, 2.8, -0.2),
+    piece(box(0.08, 0.08, 0.97), LAVA, -0.4, 1.9, 0), piece(box(1.0, 0.08, 0.97), LAVA, 0.1, 2.05, 0),        // more cracks
   ]);
 }

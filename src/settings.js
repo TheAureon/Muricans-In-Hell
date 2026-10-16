@@ -211,6 +211,7 @@ export const SETTINGS = {
     heavyArmor: { mass: 140, hp: 380 },             // a slab of hell-forged steel
     saw:     { mass: 60,  hp: 90,  ramBonus: 1.2 }, // spinning blade: +120% ram damage on its side
     cannon:  { mass: 160, hp: 120 },                // big gun: slow, hard-hitting, explosive shells
+    hoverFan: { mass: 50, hp: 70 },                 // blows lava away: less lava burn and drag (see "lava")
   },
 
   // ---------------------------------------------------------------
@@ -218,7 +219,8 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, boss: 600 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35 },
+    // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
     // chassis upgrades across wrecks anyway.
@@ -236,6 +238,7 @@ export const SETTINGS = {
     booster:    { unlock: 200, price: 50 },
     saw:        { unlock: 300, price: 80 },
     heavyArmor: { unlock: 350, price: 60 },
+    hoverFan:   { unlock: 250, price: 60 },
     cannon:     { unlock: 500, price: 150 },
   },
 
@@ -243,12 +246,25 @@ export const SETTINGS = {
   // car's numbers. cost = souls to upgrade to it.
   //   hp: body toughness   power/topSpeed: engine   grip: less sliding
   //   turn: steering       turnInPlace: can spin on the spot (treads)
+  //   heatResist: how much less lava burns you (0.4 = 40% less)
   chassisTiers: [
-    { id: 'car',      name: 'Muscle Car',   cost: 0,    massAdd: 0,    hp: 1.0, power: 1.0,  topSpeed: 1.0,  grip: 1.0, turn: 1.0,  turnInPlace: false },
-    { id: 'armored',  name: 'Armored Car',  cost: 400,  massAdd: 350,  hp: 1.6, power: 1.3,  topSpeed: 0.97, grip: 1.0, turn: 1.0,  turnInPlace: false },
-    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false },
-    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true },
+    { id: 'car',      name: 'Muscle Car',   cost: 0,    massAdd: 0,    hp: 1.0, power: 1.0,  topSpeed: 1.0,  grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0 },
+    { id: 'armored',  name: 'Armored Car',  cost: 400,  massAdd: 350,  hp: 1.6, power: 1.3,  topSpeed: 0.97, grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0.4 },
+    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false, heatResist: 0.5 },
+    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true,  heatResist: 0.6 },
   ],
+
+  // ---------------------------------------------------------------
+  //  LAVA (rivers in the Lava Rivers, and pools the Magma Colossus spits)
+  // ---------------------------------------------------------------
+  // Driving on lava sets the bottom of your car on fire and bogs you down.
+  // Protection: a better chassis (heatResist above) and Hover Fan parts.
+  lava: {
+    burnDps: 16,      // damage per second to EACH piece touching the lava
+    afterBurn: 1.5,   // pieces keep burning this long after you get out (s)
+    speedFactor: 0.3, // top speed while on lava (0.3 = 30% of normal)
+    fanShield: 0.25,  // each Hover Fan blocks this much burn AND drag (4 fans = immune)
+  },
 
   // The car's own body sections: hit points and weight (kg). When one
   // breaks off it drops as that actual piece: pick it up (E) and put it
@@ -309,22 +325,49 @@ export const SETTINGS = {
                shootRange: 50, preferredRange: 30, fleeRange: 15, splash: 3 },
     // Huge and heavy: you bounce off unless you hit it very hard.
     brute:   { health: 450, mass: 700, chaseSpeed: 4.5, noticeRange: 60, attackDamage: 22, attackInterval: 2.2, packMin: 1, packMax: 2 },
+    // LAVA RIVERS
+    // Imps on fire: their claws set the piece they hit burning (burnDps for burnTime s).
+    fireImp: { health: 35,  mass: 55,  chaseSpeed: 9,   noticeRange: 80, attackDamage: 2,  attackInterval: 1.0, packMin: 6, packMax: 12, burnDps: 6, burnTime: 3 },
+    // A walking volcano: burning punches, and ramming it sets your front on fire.
+    magmaBrute: { health: 600, mass: 900, chaseSpeed: 4.2, noticeRange: 60, attackDamage: 24, attackInterval: 2.4, packMin: 1, packMax: 2, burnDps: 10, burnTime: 4 },
   },
 
   // ---------------------------------------------------------------
-  //  BOSS: THE ASH TITAN
+  //  BOSSES (one per region)
   // ---------------------------------------------------------------
-  boss: {
-    health: 2500,
-    walkSpeed: 4.5,
-    enragedSpeed: 6.5,      // below half health it gets angry and faster
-    slamDamage: 45,         // fist slam when you're close
-    slamRadius: 5,
-    stompDamage: 25,        // shockwave ring: get far away or get hit
-    stompRadius: 32,
-    boulderDamage: 35,      // thrown rocks when you're far
-    boulderSplash: 4,
-    // If you drive this far from the arena center it gives up and heals.
-    leash: 150,
+  bosses: {
+    // Ash Plains: a 9 m giant asleep in a ring of bones.
+    ashTitan: {
+      health: 2500,
+      walkSpeed: 4.5,
+      enragedSpeed: 6.5,      // below half health it gets angry and faster
+      slamDamage: 45,         // fist slam when you're close
+      slamRadius: 5,
+      slamBurn: 0,            // (sets the hit piece on fire: damage/s)
+      stompDamage: 25,        // shockwave ring: get far away or get hit
+      stompRadius: 32,
+      throwDamage: 35,        // thrown boulders when you're far
+      throwSplash: 4,
+      // If you drive this far from the arena center it gives up and heals.
+      leash: 150,
+      souls: 600,
+    },
+    // Lava Rivers: a basalt giant on an island in a lake of lava.
+    magmaColossus: {
+      health: 4000,
+      walkSpeed: 4.2,
+      enragedSpeed: 6.2,
+      slamDamage: 55,
+      slamRadius: 6,
+      slamBurn: 10,
+      stompDamage: 30,
+      stompRadius: 36,
+      throwDamage: 30,        // lava bombs...
+      throwSplash: 5,
+      poolRadius: 7,          // ...that leave a pool of burning lava (m)
+      poolTime: 10,           // for this many seconds
+      leash: 170,
+      souls: 1000,
+    },
   },
 };

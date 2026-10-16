@@ -101,6 +101,11 @@ export class Car {
     this.boosterFlames = [];
     this.partObjects = new Map(); // part cell key -> [3D objects]
     this.saws = [];
+    this.fans = [];
+    // Fire: pieces that are burning (piece id -> { t: seconds left, dps }).
+    this.burns = new Map();
+    this.onLava = 0;      // 0..1: how much of the car is over lava right now
+    this.hazards = null;  // set by main (lava rivers / pools)
     this.setTier(0);
   }
 
@@ -111,6 +116,7 @@ export class Car {
     this.model.setTier(index);
     this.mainTurret.weapon = this.build.tier.id === 'tank' ? 'cannon' : 'gun';
     this.build.repairAll();
+    this.burns?.clear();
     this.applyBuild();
   }
 
@@ -124,6 +130,7 @@ export class Car {
     this.turrets = [];
     this.boosterFlames = [];
     this.saws = [];
+    this.fans = [];
     const up = new THREE.Vector3(0, 1, 0);
 
     // Body sections: hide the ones that fell off
@@ -154,6 +161,7 @@ export class Car {
       const objs = [g];
       if (g.userData.flame) this.boosterFlames.push(g.userData.flame);
       if (g.userData.saw) this.saws.push(g.userData.saw);
+      if (g.userData.fan) this.fans.push(g.userData.fan);
       if (def?.isGun) {
         const t = createGunTurret(def.weapon || 'gun');
         t.group.position.set(c.x + n.x * 0.12, c.y + n.y * 0.12 + 0.05, c.z + n.z * 0.12);
@@ -205,6 +213,11 @@ export class Car {
   // Something hit the car at this world position: the nearest piece takes it.
   takeDamage(amount, worldPoint) {
     if (this.wrecked) return;
+    const best = this.nearestPiece(worldPoint);
+    if (best) this.damagePiece(best, amount);
+  }
+
+  nearestPiece(worldPoint) {
     const local = this.model.body.worldToLocal(worldPoint.clone());
     let best = null, bestD = Infinity;
     for (const pc of this.pieces()) {
@@ -215,7 +228,61 @@ export class Car {
         if (d < bestD) { bestD = d; best = pc; }
       }
     }
-    if (best) this.damagePiece(best, amount);
+    return best;
+  }
+
+  // ------------------------------------------------------------ fire
+  // Set one piece burning: it takes `dps` damage per second for `seconds`.
+  ignite(pieceId, dps, seconds) {
+    if (this.wrecked || dps <= 0) return;
+    const b = this.burns.get(pieceId);
+    if (b) { b.t = Math.max(b.t, seconds); b.dps = Math.max(b.dps, dps); }
+    else this.burns.set(pieceId, { t: seconds, dps });
+  }
+
+  // Fire attack at a world point (fire imp claws, magma punches...): the
+  // nearest piece catches fire. A tougher chassis resists heat.
+  igniteAt(worldPoint, dps, seconds) {
+    const pc = this.nearestPiece(worldPoint);
+    if (pc) this.ignite(pc.id, dps * (1 - (this.build.tier.heatResist || 0)), seconds);
+  }
+
+  // How well protected from lava: 0 = not at all, 1 = immune.
+  get fanShield() { return Math.min(1, (this.stats?.fans || 0) * SETTINGS.lava.fanShield); }
+  get heatShield() { return 1 - (1 - (this.build.tier.heatResist || 0)) * (1 - this.fanShield); }
+
+  #updateFire(dt) {
+    if (this.wrecked) { this.burns.clear(); return; }
+    // On lava: everything touching the ground catches (or keeps) fire.
+    if (this.onLava > 0 && this.grounded) {
+      const heat = 1 - this.heatShield;
+      if (heat > 0) {
+        for (const pc of this.pieces()) {
+          if (pc.cells.some((c) => c.y < 0.3)) this.ignite(pc.id, SETTINGS.lava.burnDps * heat, SETTINGS.lava.afterBurn);
+        }
+      }
+    }
+    if (!this.burns.size) return;
+    const byId = new Map(this.pieces().map((pc) => [pc.id, pc]));
+    for (const [id, b] of [...this.burns]) {
+      const pc = byId.get(id);
+      b.t -= dt;
+      if (!pc || b.t <= 0) { this.burns.delete(id); continue; }
+      this.damagePiece(pc, b.dps * dt, true);
+      if (this.wrecked) { this.burns.clear(); return; }
+    }
+  }
+
+  // World positions of burning pieces (for the flames).
+  burningPoints() {
+    const out = [];
+    if (!this.burns.size) return out;
+    for (const pc of this.pieces()) {
+      if (!this.burns.has(pc.id)) continue;
+      const c = pc.cells[Math.floor(Math.random() * pc.cells.length)];
+      out.push(this.model.body.localToWorld(new THREE.Vector3(c.x, c.y + 0.1, c.z)));
+    }
+    return out;
   }
 
   // Hit from a direction (car space, pointing from the car toward what it hit):
@@ -237,9 +304,10 @@ export class Car {
     }
   }
 
-  damagePiece(pc, amount) {
+  // quiet = no red screen flash (for slow burns).
+  damagePiece(pc, amount, quiet = false) {
     if (SETTINGS.dev.noDamage) return; // dev mode: invincible
-    this.hurtTimer = 0.25;
+    if (!quiet) this.hurtTimer = 0.25;
     if (pc.kind === 'part') {
       const p = this.build.parts.get(pc.key);
       if (!p) return;
@@ -377,11 +445,15 @@ export class Car {
 
     // Are the wheels touching something? Check under the middle AND under
     // each wheel, so a car half on a rock still has grip and can drive off.
-    let hit = false;
+    let hit = false, lava = 0;
     for (const [wx, wz] of WHEEL_SPOTS) {
-      this.groundRay.origin = { x: t.x + _right.x * -wx + _fwd.x * wz, y: t.y, z: t.z + _right.z * -wx + _fwd.z * wz };
-      if (this.world.castRay(this.groundRay, CAR_DIMENSIONS.halfHeight + 0.35, true, undefined, undefined, undefined, this.body)) { hit = true; break; }
+      const ox = t.x + _right.x * -wx + _fwd.x * wz, oz = t.z + _right.z * -wx + _fwd.z * wz;
+      if (this.hazards?.lavaAt(ox, oz)) lava++;
+      if (hit) continue;
+      this.groundRay.origin = { x: ox, y: t.y, z: oz };
+      if (this.world.castRay(this.groundRay, CAR_DIMENSIONS.halfHeight + 0.35, true, undefined, undefined, undefined, this.body)) hit = true;
     }
+    this.onLava = lava / WHEEL_SPOTS.length;
     // Resting on something (not rising or falling) also counts as grounded.
     this.restingSteps = Math.abs(lv.y) < 0.4 ? (this.restingSteps || 0) + 1 : 0;
     this.grounded = hit || this.restingSteps > 20;
@@ -420,6 +492,11 @@ export class Car {
       // Rolling resistance grows with weight (heavy builds lose top speed).
       vf = approach(vf, 0, S.car.rollingResistance * g * (mass / S.steering.referenceMass) * dt);
       if (this.handbrake) vf = approach(vf, 0, Math.abs(vf) * S.grip.handbrakeDrag * dt + 2 * dt);
+      // Lava is thick: it bogs you down (Hover Fans blow it away).
+      if (this.onLava > 0) {
+        const cap = topSpeed * THREE.MathUtils.lerp(S.lava.speedFactor, 1, this.fanShield);
+        if (Math.abs(vf) > cap) vf = approach(vf, Math.sign(vf) * cap, 30 * this.onLava * dt);
+      }
 
       // ---------- Sideways grip ----------
       const T = this.build.tier; // treads grip much harder than tires
@@ -458,6 +535,7 @@ export class Car {
     this.longAccel = (vf - prevVf) / dt;
     this.yawRate = this.body.angvel().y;
     this.drifting = this.grounded && Math.abs(vs) > S.grip.driftThreshold;
+    this.#updateFire(dt);
     const after = this.body.linvel();
     this.vBefore.set(after.x, after.y, after.z); // to spot crashes after the physics step
   }
@@ -487,6 +565,7 @@ export class Car {
     this.savedBuild = this.build.snapshot();
     this.build.save();
     this.wrecked = false;
+    this.burns.clear();
     this.applyBuild();
     this.reset(true);
   }
@@ -548,6 +627,7 @@ export class Car {
 
     // --- Saw blades spin, tread rollers roll ---
     for (const s of this.saws) s.rotation.z += dt * 25;
+    for (const f of this.fans) f.rotation.y += dt * 30;
     for (const t of this.model.treads) if (t.group.visible) for (const r of t.rollers) r.rotation.x = this.wheelSpin;
 
     // --- Booster flames flicker when on the gas ---

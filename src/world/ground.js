@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeRandom } from '../core/random.js';
 
-export function createGround(scene, physics, region) {
+export function createGround(scene, physics, region, hazards = null) {
   const { RAPIER, world } = physics;
   const p = region.palette;
   const size = region.terrain.size;
@@ -48,16 +48,18 @@ export function createGround(scene, physics, region) {
   }
 
   // ---- Scenery ----
-  // Keep the boss arena free of random scenery.
+  // Keep the start, the boss arena and the lava free of random scenery.
   const arena = region.boss?.arena;
   const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 ||
-    (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2);
+    (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2) ||
+    (hazards && hazards.lavaAt(x, z, 4));
   for (const prop of region.props) {
     const builder = PROP_BUILDERS[prop.type];
     if (!builder) { console.warn('Unknown prop type', prop.type); continue; }
     placeProps(scene, physics, prop, builder(p), half, keepClear, rand);
   }
-  if (arena) createArena(scene, physics, arena, p, rand);
+  if (arena?.style === 'island') createIsland(scene, physics, arena, p, rand);
+  else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half };
 }
@@ -142,6 +144,42 @@ const PROP_BUILDERS = {
       },
       collider: null,
       colorJitter: 0.2,
+    };
+  },
+
+  // Hexagonal basalt columns, standing in clumps.
+  basaltColumn: (p) => {
+    const parts = [];
+    for (const [x, z, h] of [[0, 0, 4], [0.9, 0.3, 3], [-0.6, 0.8, 2.4], [0.2, -0.9, 3.4], [-0.8, -0.4, 1.6]]) {
+      const c = new THREE.CylinderGeometry(0.5, 0.55, h, 6);
+      c.translate(x, h / 2, z);
+      parts.push(c);
+    }
+    return {
+      geometry: mergeGeometries(parts),
+      material: new THREE.MeshStandardMaterial({ color: p.rock, flatShading: true, roughness: 0.85 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.8, 1.5), s); m.rotation.y = rand() * 6; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(2 * m.scale.y, 1.2 * m.scale.x).setTranslation(0, 2 * m.scale.y, 0),
+      colorJitter: 0.3,
+    };
+  },
+
+  // Glassy black obsidian shards jutting out of the ground.
+  obsidian: (p) => {
+    const parts = [];
+    for (const [x, z, h, rx, rz] of [[0, 0, 3.2, 0.1, -0.2], [0.6, 0.2, 2, 0.3, 0.4], [-0.5, -0.3, 1.6, -0.4, -0.3]]) {
+      const c = new THREE.ConeGeometry(0.45, h, 4);
+      c.translate(0, h / 2, 0); c.rotateX(rx); c.rotateZ(rz); c.translate(x, 0, z);
+      parts.push(c);
+    }
+    return {
+      geometry: mergeGeometries(parts),
+      material: new THREE.MeshStandardMaterial({ color: p.obsidian ?? 0x15121c, flatShading: true, roughness: 0.15, metalness: 0.6 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.y = rand() * 6; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(1.4 * m.scale.y, 0.55 * m.scale.x).setTranslation(0, 1.4 * m.scale.y, 0),
+      colorJitter: 0.4,
     };
   },
 
@@ -253,4 +291,61 @@ function createArena(scene, physics, arena, p, rand) {
     rib.castShadow = true;
     group.add(rib);
   }
+}
+
+// Island arena (Lava Rivers): a basalt island in a lake of lava, ringed by
+// basalt columns, with a smoking volcano behind the boss. The lava moat
+// itself is drawn by the hazards system.
+function createIsland(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 6, 40).rotateX(-Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x1c1818, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1 }));
+  floor.position.y = 0.05;
+  floor.receiveShadow = true;
+  group.add(floor);
+
+  const lava = new THREE.MeshBasicMaterial({ color: p.lava });
+  for (let n = 0; n < 18; n++) {
+    const a = (n / 18) * Math.PI * 2 + rand() * 0.2;
+    const len = R * (0.4 + rand() * 0.6);
+    const crack = new THREE.Mesh(new THREE.BoxGeometry(0.4 + rand() * 0.6, 0.05, len), lava);
+    crack.position.set(Math.sin(a) * len / 2, 0.08, Math.cos(a) * len / 2);
+    crack.rotation.y = a;
+    group.add(crack);
+  }
+
+  // Basalt columns around the shore (gaps to drive through)
+  const colMat = new THREE.MeshStandardMaterial({ color: p.rock, flatShading: true, roughness: 0.85 });
+  const colGeo = new THREE.CylinderGeometry(1.1, 1.3, 1, 6).translate(0, 0.5, 0);
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const count = 40;
+  for (let n = 0; n < count; n++) {
+    if (n % 10 < 3) continue; // gaps
+    const a = (n / count) * Math.PI * 2;
+    const h = 4 + rand() * 9;
+    const m = new THREE.Mesh(colGeo, colMat);
+    m.position.set(Math.sin(a) * (R + 1), 0, Math.cos(a) * (R + 1));
+    m.scale.set(1, h, 1);
+    m.castShadow = true;
+    group.add(m);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 1.2).setTranslation(m.position.x, h / 2, m.position.z), body);
+  }
+
+  // A volcano behind the boss (far side from the start), glowing at the top.
+  const away = Math.atan2(ax, az);
+  const vx = Math.sin(away) * (R - 14), vz = Math.cos(away) * (R - 14);
+  const cone = new THREE.Mesh(new THREE.CylinderGeometry(3, 13, 16, 9),
+    new THREE.MeshStandardMaterial({ color: 0x1a1414, flatShading: true, roughness: 1 }));
+  cone.position.set(vx, 8, vz);
+  cone.castShadow = true;
+  group.add(cone);
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(2.6, 2.6, 0.3, 9), new THREE.MeshBasicMaterial({ color: 0xffb030 }));
+  top.position.set(vx, 16.05, vz);
+  group.add(top);
+  world.createCollider(RAPIER.ColliderDesc.cylinder(8, 11).setTranslation(vx, 8, vz), body);
 }

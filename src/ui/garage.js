@@ -495,9 +495,9 @@ function bodyHTML(build) {
 
 // Chassis: what you drive now, and the next step toward the HELL TANK.
 const TIER_BLURB = {
-  armored: 'steel plates, tougher body, more engine',
-  halftrack: 'rear treads: grips hard, drifts less, much tougher',
-  tank: 'full treads, spins on the spot, huge armor + a big cannon',
+  armored: 'steel plates, tougher body, more engine, 40% lava resist',
+  halftrack: 'rear treads: grips hard, drifts less, much tougher, 50% lava resist',
+  tank: 'full treads, spins on the spot, huge armor + a big cannon, 60% lava resist',
 };
 function chassisHTML(progress) {
   const now = progress.tierInfo, next = progress.nextTier;

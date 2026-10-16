@@ -23,7 +23,9 @@ export function piece(geometry, color, x, y, z, rx = 0, ry = 0, rz = 0) {
   return g;
 }
 
-export function createImpGeometry() {
+// colors: optional repaint ({ RED, DARK, BONE, EYE, CLAW }); extra: more pieces.
+export function createImpGeometry(colors = {}, extra = []) {
+  const { RED, DARK, BONE, EYE, CLAW } = { ...IMP_COLORS, ...colors };
   const parts = [
     // Pot belly + chest
     piece(new THREE.IcosahedronGeometry(0.42, 0), RED, 0, 0.72, 0),
@@ -48,10 +50,26 @@ export function createImpGeometry() {
     // Pointy tail
     piece(new THREE.ConeGeometry(0.05, 0.6, 4), DARK, 0, 0.6, -0.5, -2.0),
     piece(new THREE.ConeGeometry(0.1, 0.16, 3), DARK, 0, 0.4, -0.78, -2.6),
+    ...extra,
   ];
   const g = mergeGeometries(parts);
   g.computeVertexNormals();
   return g;
+}
+
+const IMP_COLORS = { RED, DARK, BONE, EYE, CLAW };
+
+// FIRE IMP (Lava Rivers): charred black skin, glowing cracks and a head on fire.
+export const FIRE_IMP_GORE = [0x2a1210, 0xff6a10, 0xffc040, 0x1a0a08];
+export function createFireImpGeometry() {
+  const FIRE = 0xff7a10, HOT = 0xffd040;
+  return createImpGeometry({ RED: 0x2a1410, DARK: 0x160a08, BONE: 0xff8a20, EYE: 0xfff070, CLAW: 0xff5010 }, [
+    piece(new THREE.ConeGeometry(0.2, 0.5, 5), FIRE, 0, 1.7, 0.0),         // flaming hair
+    piece(new THREE.ConeGeometry(0.12, 0.38, 4), HOT, 0.12, 1.66, 0.08, 0, 0, -0.3),
+    piece(new THREE.ConeGeometry(0.12, 0.34, 4), HOT, -0.12, 1.64, 0.06, 0, 0, 0.3),
+    piece(new THREE.BoxGeometry(0.44, 0.05, 0.37), FIRE, 0, 0.8, 0),       // glowing belly crack
+    piece(new THREE.ConeGeometry(0.1, 0.25, 4), FIRE, 0, 0.32, -0.86, -2.6), // burning tail tip
+  ]);
 }
 
 // Colors used for the gore chunks when an imp splats.

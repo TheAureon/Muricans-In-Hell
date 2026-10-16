@@ -1,7 +1,7 @@
 // HELLDRIVERS — game start-up and main loop.
 import * as THREE from 'three';
 import { SETTINGS } from './settings.js';
-import { STARTING_REGION } from './regions/index.js';
+import { REGIONS, regionById, nextRegion, PLANNED_REGIONS } from './regions/index.js';
 import { createPhysics, PHYSICS_STEP } from './core/physics.js';
 import { Input } from './core/input.js';
 import { Audio } from './core/audio.js';
@@ -11,7 +11,9 @@ import { Dust, Embers, AimMarker } from './world/effects.js';
 import { Gore } from './world/gore.js';
 import { Scrap } from './world/scrap.js';
 import { Demons } from './demons/demons.js';
-import { AshTitan } from './demons/boss.js';
+import { Boss } from './demons/boss.js';
+import { Hazards } from './world/hazards.js';
+import { Hellgate } from './world/hellgate.js';
 import { Projectiles } from './demons/projectiles.js';
 import { Bullets } from './combat/bullets.js';
 import { Stats } from './combat/stats.js';
@@ -26,12 +28,25 @@ import { DevPanel, loadDevSettings } from './ui/devPanel.js';
 
 async function main() {
   loadDevSettings(); // dev/creative switches first, so "no enemies" applies from the start
-  const region = STARTING_REGION;
+  // Souls, unlocks, chassis tier, and which region you're in.
+  const progress = new Progress();
+  // A dev-panel jump in creative mode is a one-off visit (nothing saved).
+  let jump = null, creativeStash = null;
+  try {
+    jump = sessionStorage.getItem('helldrive.jump');
+    creativeStash = JSON.parse(sessionStorage.getItem('helldrive.creative') || 'null');
+    sessionStorage.removeItem('helldrive.jump');
+    sessionStorage.removeItem('helldrive.creative');
+  } catch { /* ignore */ }
+  const region = regionById(jump || progress.region);
+  const next = nextRegion(region);
   const physics = await createPhysics();
   const { renderer, scene, camera, followPlayer } = createScene(region);
-  createGround(scene, physics, region);
+  const hazards = new Hazards(scene, region);
+  createGround(scene, physics, region, hazards);
 
   const car = new Car(scene, physics, new THREE.Vector3(0, 1, 0));
+  car.hazards = hazards;
   const chase = new ChaseCamera(camera);
   const input = new Input(renderer.domElement);
   const audio = new Audio();
@@ -41,14 +56,18 @@ async function main() {
   const embers = new Embers(scene);
   const aim = new AimMarker(scene);
   const smoke = new Dust(scene, 120, 0x1a1414, 0.7);
+  const flames = new Dust(scene, 200, 0xff6a10, 0.9);
   const gore = new Gore(scene);
   const stats = new Stats();
   const sparks = new Dust(scene, 160, 0xffd040, 0.95);
   const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
-  // Souls, unlocks and your chassis tier.
-  const progress = new Progress();
+  if (SETTINGS.dev.creative && creativeStash) {
+    // Came here by a creative-mode jump: bring the creative build along.
+    car.build.load(creativeStash.build);
+    progress.tier = creativeStash.tier;
+  }
   car.setTier(progress.tier);
   const garage = new Garage({ camera, renderer, car, audio, progress });
   let lastChime = 0;
@@ -65,21 +84,60 @@ async function main() {
   };
   const scrap = new Scrap(scene);
 
+  // The Hellgate to the next region: next to the arena, on the side you
+  // come from. It opens when the boss dies (or right away if you beat it before).
+  let gate = null;
+  if (region.boss) {
+    const A = region.boss.arena;
+    const center = new THREE.Vector3(A.x, 0, A.z);
+    const towardStart = center.clone().negate().normalize();
+    const off = A.style === 'island' ? A.radius * 0.6 : A.radius + 25;
+    gate = new Hellgate(scene, center.clone().addScaledVector(towardStart, off), new THREE.Vector3(0, 0, 0), next);
+    gate.setOpen(!!progress.cleared[region.id]);
+  }
+
   // The region's boss (and what happens when you beat it).
-  const boss = region.boss ? new AshTitan(scene, physics, {
-    region, car, demons, projectiles, gore, audio, hud, chase, dust, stats,
+  const boss = region.boss ? new Boss(scene, physics, {
+    region, car, demons, projectiles, gore, audio, hud, chase, dust, stats, hazards,
     onDefeated: () => {
-      hud.victory();
-      souls.burst(boss.pos.clone().setY(4), SETTINGS.progression.souls.boss);
+      const sealedName = PLANNED_REGIONS[REGIONS.indexOf(region) + 1];
+      hud.victory(region.name.replace(/^The /, '').toUpperCase(), next
+        ? `${boss.name} is dead. A HELLGATE has opened: follow the arrow to ${next.name}!`
+        : `${boss.name} is dead. A Hellgate rose, but the way to ${sealedName || 'the next region'} is still sealed (coming soon).`);
+      souls.burst(boss.pos.clone().setY(4), boss.B.souls);
       progress.cleared[region.id] = true;
       progress.save();
+      gate?.setOpen(true);
     },
   }) : null;
   demons.boss = boss;
   demons.populate(car.currPos);
 
   // Dev / creative mode (press C): no enemies, no damage, free building.
+  // Off to another region: save everything, then reload into it.
+  let traveling = false;
+  function travelTo(target) {
+    if (traveling) return;
+    traveling = true;
+    hud.travel(target.name);
+    audio.wreck();
+    if (SETTINGS.dev.creative) {
+      try {
+        sessionStorage.setItem('helldrive.jump', target.id);
+        sessionStorage.setItem('helldrive.creative', JSON.stringify({ build: car.build.snapshot(), tier: progress.tier }));
+      } catch { /* ignore */ }
+    } else {
+      progress.region = target.id === REGIONS[0].id ? null : target.id;
+      progress.save();
+      car.build.save();
+    }
+    setTimeout(() => location.reload(), 1300);
+  }
+
   const dev = new DevPanel({
+    regions: REGIONS,
+    current: region.id,
+    onRegion: (id) => travelTo(regionById(id)),
     onChange: (which) => {
       const D = SETTINGS.dev;
       if (which === 'noEnemies') {
@@ -135,8 +193,9 @@ async function main() {
   chase.update(car, 1 / 60, 0);
   renderer.render(scene, camera);
 
-  await showStartScreen(region.name);
+  await showStartScreen(region.name, region.tagline);
   audio.start();
+  if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
 
   const timer = new THREE.Timer();
   let accumulator = 0;
@@ -215,8 +274,12 @@ async function main() {
         demons.populate(car.currPos);
         if (boss) { boss.defeated = false; boss.reset(); }
         souls.clear();
+        hazards.clearPools();
         if (!SETTINGS.progression.keepOnWreck) progress.reset();
         progress.save();
+        gate?.setOpen(!!progress.cleared[region.id]);
+        // A full restart begins back in the first region.
+        if (!SETTINGS.progression.keepOnWreck && !SETTINGS.dev.creative && region !== REGIONS[0]) travelTo(REGIONS[0]);
         hud.souls(progress.souls);
         car.setTier(progress.tier);
         stats.reset();
@@ -275,6 +338,14 @@ async function main() {
     }
     if ((damageFxTimer -= dt) <= 0) {
       damageFxTimer = 0.09;
+      // Burning pieces (lava, fire claws...)
+      for (const p of car.burningPoints()) {
+        for (let n = 0; n < 2; n++) flames.spawn(p, new THREE.Vector3((Math.random() - 0.5) * 1.2, 2.5 + Math.random() * 2, (Math.random() - 0.5) * 1.2), 0.18 + Math.random() * 0.22, 0.5);
+      }
+      // Lava splashing up from under the car
+      if (car.onLava > 0 && car.grounded && car.speed > 2) {
+        for (let n = 0; n < 3; n++) sparks.spawn(tmp.copy(car.position).add(new THREE.Vector3((Math.random() - 0.5) * 2.5, 0.2, (Math.random() - 0.5) * 3)), new THREE.Vector3((Math.random() - 0.5) * 3, 2 + Math.random() * 3, (Math.random() - 0.5) * 3), 0.1, 0.5);
+      }
       for (const p of car.smokingPoints(SETTINGS.damage.smokeBelow)) {
         if (Math.random() < 0.6) smoke.spawn(p.pos, new THREE.Vector3((Math.random() - 0.5), 2 + Math.random() * 1.5, (Math.random() - 0.5)), 0.25 + (1 - p.frac) * 0.3, 1.2);
         if (p.frac < 0.25 && Math.random() < 0.5) sparks.spawn(p.pos, new THREE.Vector3((Math.random() - 0.5) * 6, 2 + Math.random() * 4, (Math.random() - 0.5) * 6), 0.06, 0.35);
@@ -302,16 +373,31 @@ async function main() {
     scrap.update(dt);
     souls.update(dt, car.position);
     projectiles.update(dt);
+    hazards.update(dt, car.position, sparks);
+    flames.update(dt);
+    if (gate?.update(dt, car, sparks)) {
+      if (gate.leadsTo) travelTo(gate.leadsTo);
+      else if (!gate.toldSealed) { gate.toldSealed = true; hud.toast('This Hellgate is sealed... for now (next update!)', 'warn'); }
+    } else if (gate) gate.toldSealed = false;
+    // On lava: warn, and say how protected the car is.
+    if (car.onLava > 0 && car.grounded && !car.wrecked) {
+      const fans = car.stats.fans || 0;
+      const shield = Math.round(car.heatShield * 100);
+      hud.lava(shield >= 100 ? 'Fully protected: the Hover Fans keep you cool' : `Burning! Heat protection ${shield}% (chassis ${Math.round((car.build.tier.heatResist || 0) * 100)}% · Hover Fans ${fans}/4)`);
+    } else hud.lava(null);
 
-    // --- Objective arrow: points at the boss arena until it's awake ---
-    if (boss && !boss.awake && boss.state !== 'dead' && !SETTINGS.dev.noEnemies) {
-      const to = boss.arenaCenter.clone().sub(car.position).setY(0);
+    // --- Objective arrow: the Hellgate once it's open, else the boss arena ---
+    const pointAt = (target, label) => {
+      const to = target.clone().sub(car.position).setY(0);
       const camFwd = new THREE.Vector3();
       camera.getWorldDirection(camFwd);
       const angle = Math.atan2(camFwd.x * to.z - camFwd.z * to.x, camFwd.x * to.x + camFwd.z * to.z);
-      const cleared = progress.cleared[region.id] ? ' (beaten before)' : '';
-      hud.objective(`☠ ${boss.name.toUpperCase()}${cleared} · ${Math.round(to.length())} m`, angle);
-    } else hud.objective(null);
+      hud.objective(`${label} · ${Math.round(to.length())} m`, angle);
+    };
+    if (boss?.awake && !SETTINGS.dev.noEnemies) hud.objective(null);
+    else if (gate?.open) pointAt(gate.pos, gate.leadsTo ? `⛧ HELLGATE → ${gate.leadsTo.name.toUpperCase()}` : '⛧ HELLGATE (sealed)');
+    else if (boss && boss.state !== 'dead' && !SETTINGS.dev.noEnemies) pointAt(boss.arenaCenter, `☠ ${boss.name.toUpperCase()}`);
+    else hud.objective(null);
     bullets.update(dt);
     gore.update(dt);
     stats.tick(dt);
@@ -330,7 +416,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo };
 }
 
 main().catch((err) => {

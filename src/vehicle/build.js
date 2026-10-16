@@ -222,7 +222,7 @@ export class Build {
 
   // ---- What the build adds up to ----
   stats() {
-    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0;
+    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0, fans = 0;
     // Missing body sections make the car lighter (and shift its balance).
     for (const id of this.missing) {
       const m = SETTINGS.chassis[id].mass, c = sectionCenter(id);
@@ -239,6 +239,7 @@ export class Build {
       if (s.power) power += s.power;
       if (s.topSpeed) topSpeed += s.topSpeed;
       if (PART_TYPES[rec.type]?.isGun) guns++;
+      if (rec.type === 'hoverFan') fans++;
       if (s.ramBonus) {
         const side = `${rec.normal[0]},${rec.normal[2]}`;
         if (side in ramBonus) ramBonus[side] += s.ramBonus;
@@ -255,6 +256,7 @@ export class Build {
       topSpeed: SETTINGS.car.topSpeed * this.tier.topSpeed + topSpeed,
       guns: guns + (this.missing.has('cabin') ? 0 : 1), // + the built-in roof gun
       ramBonus,
+      fans,
     };
   }
 

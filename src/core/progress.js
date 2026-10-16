@@ -1,5 +1,6 @@
 // Your progress in this run: souls (the currency), unlocked parts, chassis
-// tier (car -> tank), and cleared regions. Kept in the browser.
+// tier (car -> tank), cleared regions, and which region you're in.
+// Kept in the browser.
 import { SETTINGS } from '../settings.js';
 
 const KEY = 'helldrive.progress';
@@ -13,6 +14,7 @@ export class Progress {
       this.unlocked = new Set([...this.unlocked, ...(d.unlocked || [])]);
       this.tier = Math.min(d.tier || 0, SETTINGS.chassisTiers.length - 1);
       this.cleared = d.cleared || {};
+      this.region = d.region || null;
     } catch { /* fresh start */ }
     this.listeners = [];
   }
@@ -23,6 +25,7 @@ export class Progress {
     this.unlocked = new Set(Object.entries(SETTINGS.shop).filter(([, s]) => !s.unlock).map(([t]) => t));
     this.tier = 0;
     this.cleared = {};
+    this.region = null; // null = the first region
   }
 
   get tierInfo() { return SETTINGS.chassisTiers[this.tier]; }
@@ -74,6 +77,7 @@ export class Progress {
       this.unlocked = new Set([...this.unlocked, ...(d.unlocked || [])]);
       this.tier = Math.min(d.tier || 0, SETTINGS.chassisTiers.length - 1);
       this.cleared = d.cleared || {};
+      this.region = d.region || null;
     } catch { /* fresh start */ }
     this.#emit();
   }
@@ -81,7 +85,7 @@ export class Progress {
   save() {
     if (this.creative) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ souls: this.souls, unlocked: [...this.unlocked], tier: this.tier, cleared: this.cleared }));
+      localStorage.setItem(KEY, JSON.stringify({ souls: this.souls, unlocked: [...this.unlocked], tier: this.tier, cleared: this.cleared, region: this.region }));
     } catch { /* storage blocked: fine */ }
   }
 }

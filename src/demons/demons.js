@@ -349,6 +349,8 @@ export class Demons {
             car.takeDamage(st.thornDamage * THREE.MathUtils.clamp(impact / splatSpeed, 0.5, 2), _v.copy(d.pos).setY(0.6));
             this.fx.audio.claw();
           }
+          // Magma brutes: hitting molten rock sets that side of your car on fire.
+          if (d.def.ramBurn) car.igniteAt(_v.copy(d.pos).setY(0.6), st.burnDps, st.burnTime);
           const killed = this.damage(d, dmg, 'ram', carPush);
           if (d.def.heavy) {
             if (killed) {
@@ -388,6 +390,7 @@ export class Demons {
         d.lunge = 1;
         d.yaw = Math.atan2(carPos.x - d.pos.x, carPos.z - d.pos.z);
         car.takeDamage(st.attackDamage, _v.copy(d.pos).setY(d.pos.y + 0.8)); // hits the nearest piece
+        if (st.burnDps) car.igniteAt(_v, st.burnDps, st.burnTime);           // fire claws / magma fists
         if (d.def.heavy) {
           // A brute's punch shoves the whole car.
           const ux = (carPos.x - d.pos.x) / dist, uz = (carPos.z - d.pos.z) / dist;
