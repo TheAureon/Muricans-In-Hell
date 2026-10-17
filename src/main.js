@@ -24,6 +24,11 @@ import { showTitleScreen } from './ui/titleScreen.js';
 import { Autopilot, Director } from './ui/attract.js';
 import { Lighting } from './world/lighting.js';
 import { GFX } from './core/graphics.js';
+import { Base } from './world/base.js';
+import { Teleporter } from './world/teleporter.js';
+import { Radio, speakLine } from './story/radio.js';
+import { playIntro } from './story/intro.js';
+import { BOSS_DEATH } from './story/story.js';
 import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
 import { Progress } from './core/progress.js';
@@ -35,12 +40,14 @@ async function main() {
   // Souls, unlocks, chassis tier, and which region you're in.
   const progress = new Progress();
   // A dev-panel jump in creative mode is a one-off visit (nothing saved).
-  let jump = null, creativeStash = null;
+  let jump = null, creativeStash = null, arrive = 'spawn';
   try {
     jump = sessionStorage.getItem('helldrive.jump');
     creativeStash = JSON.parse(sessionStorage.getItem('helldrive.creative') || 'null');
+    arrive = sessionStorage.getItem('helldrive.arrive') || 'spawn'; // spawn / base / teleporter
     sessionStorage.removeItem('helldrive.jump');
     sessionStorage.removeItem('helldrive.creative');
+    sessionStorage.removeItem('helldrive.arrive');
   } catch { /* ignore */ }
   const region = regionById(jump || progress.region);
   const next = nextRegion(region);
@@ -49,7 +56,19 @@ async function main() {
   const hazards = new Hazards(scene, region);
   createGround(scene, physics, region, hazards);
 
-  const car = new Car(scene, physics, new THREE.Vector3(0, 1, 0));
+  // Doc's walled base (Ash Plains) and this region's teleporter, if any.
+  const base = region.base ? new Base(scene, physics, region.base) : null;
+  const tele = region.teleporter ? new Teleporter(scene, region.teleporter) : null;
+  tele?.setEstablished(!!progress.teleporters[region.id]);
+  base?.setPadActive(REGIONS.some((r) => progress.teleporters[r.id]));
+  // Where you start / respawn: the teleporter if you've set one up here,
+  // else the base (Ash Plains), else where you came in.
+  const regionSpawn = () => (region.base ? new THREE.Vector3(region.base.x, 1, region.base.z) : new THREE.Vector3(0, 1, 0));
+  const respawnPoint = () => (tele?.established ? tele.pos.clone().add(new THREE.Vector3(0, 1, 8)) : regionSpawn());
+  const startPoint = arrive === 'teleporter' && tele?.established ? respawnPoint()
+    : arrive === 'base' && base ? base.pad.clone().add(new THREE.Vector3(-9, 1, 0)) : regionSpawn();
+
+  const car = new Car(scene, physics, startPoint);
   car.hazards = hazards;
   const chase = new ChaseCamera(camera);
   const input = new Input(renderer.domElement);
@@ -66,6 +85,8 @@ async function main() {
   const sparks = new Dust(scene, 160, 0xffd040, 0.95);
   const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
+  demons.base = base;
+  const radio = new Radio(audio);
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   if (SETTINGS.dev.creative && creativeStash) {
     // Came here by a creative-mode jump: bring the creative build along.
@@ -74,10 +95,12 @@ async function main() {
   }
   car.setTier(progress.tier);
   const garage = new Garage({ camera, renderer, car, audio, progress });
+  garage.onOpenChange = (open) => base?.showShell(!open); // see the car, not the hangar walls
   let lastChime = 0;
   const souls = new Souls(scene, (value) => {
     progress.addSouls(value);
     if (performance.now() - lastChime > 70) { audio.chime(); lastChime = performance.now(); }
+    if (mode === 'play') radio.say('firstSouls');
   });
   hud.souls(progress.souls);
   progress.onChange((p) => hud.souls(p.souls));
@@ -85,6 +108,7 @@ async function main() {
   demons.onKill = (d, source) => {
     lighting.flash(d.pos, d.def.heavy ? 1.5 : 0.6);
     if (mode === 'title') return; // the title-screen movie doesn't earn souls
+    radio.say('firstKill');
     const P = SETTINGS.progression;
     souls.burst(d.pos, (P.souls[d.type] || 1) * (source === 'ram' ? P.ramBonus : 1));
   };
@@ -105,7 +129,15 @@ async function main() {
   // The region's boss (and what happens when you beat it).
   const boss = region.boss ? new Boss(scene, physics, {
     region, car, demons, projectiles, gore, audio, hud, chase, dust, stats, hazards,
+    // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
+    onDying: () => {
+      const death = BOSS_DEATH[region.boss.type] || {};
+      if (death.roar) { audio.roar(); chase.addShake(1); }
+      if (death.line) setTimeout(() => speakLine(death.line, death.voice, audio), 500);
+    },
     onDefeated: () => {
+      setTimeout(() => radio.say(region.radio?.bossDead), 1500);
+      if (region.radio?.afterBoss) setTimeout(() => radio.say(region.radio.afterBoss), 16000);
       const sealedName = PLANNED_REGIONS[REGIONS.indexOf(region) + 1];
       hud.victory(region.name.replace(/^The /, '').toUpperCase(), next
         ? `${boss.name} is dead. A HELLGATE has opened: follow the arrow to ${next.name}!`
@@ -122,10 +154,14 @@ async function main() {
   // Dev / creative mode (press C): no enemies, no damage, free building.
   // Off to another region: save everything, then reload into it.
   let traveling = false;
-  function travelTo(target) {
+  // arriveAt: 'spawn' (the region's way in), 'base' (the home pad) or
+  // 'teleporter' (that region's teleporter).
+  function travelTo(target, arriveAt = 'spawn') {
     if (traveling) return;
     traveling = true;
-    hud.travel(target.name);
+    if (arriveAt === 'spawn') hud.travel(target.name);
+    else hud.travel(arriveAt === 'base' ? "Doc's base" : target.name, 'TELEPORTING TO');
+    try { sessionStorage.setItem('helldrive.arrive', arriveAt); } catch { /* ignore */ }
     audio.wreck();
     if (SETTINGS.dev.creative) {
       try {
@@ -143,7 +179,7 @@ async function main() {
   const dev = new DevPanel({
     regions: REGIONS,
     current: region.id,
-    onRegion: (id) => travelTo(regionById(id)),
+    onRegion: (id) => travelTo(regionById(id), 'spawn'),
     onChange: (which) => {
       const D = SETTINGS.dev;
       if (which === 'noEnemies') {
@@ -182,6 +218,7 @@ async function main() {
 
   // Pieces breaking off the car become scrap lying in the world.
   car.onDetach = (pieces) => {
+    if (mode === 'play') radio.say('firstLoss');
     for (const p of pieces) {
       scrap.spawn(p.objects, p.item, p.push);
       hud.toast(`LOST: ${p.item.label}`, 'bad');
@@ -197,7 +234,10 @@ async function main() {
   // camera crew films it. Nothing that happens in it counts.
   let mode = 'title';
   car.invulnerable = true;
-  const autopilot = new Autopilot(car, demons);
+  const attractAt = region.attractCenter || { x: 0, z: 0 };
+  const autopilot = new Autopilot(car, demons, attractAt, base);
+  car.body.setTranslation({ x: attractAt.x, y: 1, z: attractAt.z }, true); // (film outside the walls)
+  car.capture(); car.capture();
   const cutEl = document.getElementById('cut');
   const flashCut = () => { cutEl.className = ''; void cutEl.offsetWidth; cutEl.className = 'flash'; };
   const director = new Director(camera, car, flashCut);
@@ -236,6 +276,7 @@ async function main() {
       intro = { t: 0, pos: car.currPos.clone().add(new THREE.Vector3(0, 16, -22)), look: car.currPos.clone() };
       cutEl.className = 'fadeout';
       if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
+      setTimeout(() => radio.say(region.radio?.arrive), 1200);
     }, 320);
   }
 
@@ -246,6 +287,7 @@ async function main() {
   let wreckTimer = 0;
   let damageFxTimer = 0;
   let smokeTimer = 0;
+  let regionTime = 0;
   const tmp = new THREE.Vector3();
   const tmpAim = new THREE.Vector3();
 
@@ -264,12 +306,23 @@ async function main() {
       if (input.wasPressed('KeyH')) hud.toggleHelp();
       if (input.wasPressed('KeyM')) audio.toggleMute();
       if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
-        const near = demons.nearestDistance(car.currPos);
+        // The garage is a real place now: Doc's base in the Ash Plains.
         if (garage.open) garage.close();
         else if (car.wrecked) { /* wait for respawn */ }
-        else if (near < SETTINGS.damage.garageSafeRadius) hud.toast(`Demons too close! Get ${Math.ceil(SETTINGS.damage.garageSafeRadius - near)} m further away to open the garage.`, 'warn');
-        else garage.openGarage();
+        else if (SETTINGS.dev.creative || base?.contains(car.currPos)) garage.openGarage();
+        else if (base) hud.toast('The garage is back at base. Drive home!', 'warn');
+        else if (tele?.established) hud.toast('No garage out here. Teleport home from the pad (F).', 'warn');
+        else hud.toast('No garage out here. Find the hell-magic source (purple light) to set up a teleporter.', 'warn');
         input.mouse.down = false;
+      }
+      // Teleport: from a region's pad home to base, or from the base pad out.
+      if (input.wasPressed('KeyF') && !car.wrecked) {
+        if (tele?.onPad(car.currPos)) travelTo(REGIONS[0], 'base');
+        else if (base?.onPad(car.currPos)) {
+          const linked = REGIONS.filter((r) => progress.teleporters[r.id]);
+          if (linked.length) travelTo(linked[linked.length - 1], 'teleporter');
+          else hud.toast('No teleporters linked yet. Doc needs a hell-magic source out there first.', 'warn');
+        }
       }
       if (garage.open) {
         // Paused: only the garage camera moves.
@@ -281,7 +334,7 @@ async function main() {
         return;
       }
       if (input.wasPressed('KeyR')) car.reset(false);
-      if (input.wasPressed('Backspace')) { car.reset(true); demons.clearAround(car.currPos, 60); }
+      if (input.wasPressed('Backspace')) { car.reset(true); demons.clearAround(car.currPos, 60); } // back to the start / teleporter
     }
 
     // --- Physics at a fixed rate ---
@@ -312,8 +365,11 @@ async function main() {
       }
       if (wreckTimer > SETTINGS.damage.respawnDelay) {
         wreckTimer = 0;
-        // Full restart: stock car + starting kit, scrap gone, fresh demons,
-        // the Titan asleep again, and the region no longer counts as cleared.
+        // Full restart of the RUN (stock car + starting kit, no souls, no
+        // unlocks), back at this region's teleporter if it has one, else at
+        // the start. Where you've been (regions, bosses beaten, teleporters)
+        // is remembered.
+        car.spawn.copy(respawnPoint());
         car.respawn();
         scrap.clear();
         projectiles.clear();
@@ -325,8 +381,7 @@ async function main() {
         if (!SETTINGS.progression.keepOnWreck) progress.reset();
         progress.save();
         gate?.setOpen(!!progress.cleared[region.id]);
-        // A full restart begins back in the first region.
-        if (!SETTINGS.progression.keepOnWreck && !SETTINGS.dev.creative && region !== REGIONS[0]) travelTo(REGIONS[0]);
+        setTimeout(() => radio.say('wrecked'), 1500);
         hud.souls(progress.souls);
         car.setTier(progress.tier);
         stats.reset();
@@ -423,6 +478,36 @@ async function main() {
       }
     }
 
+    // --- Teleporter field: set it up the first time, heal while inside ---
+    let healing = false;
+    if (tele) {
+      tele.update(dt, sparks);
+      if (playing && !car.wrecked && tele.inField(car.currPos)) {
+        if (!tele.established) {
+          tele.setEstablished(true);
+          progress.teleporters[region.id] = true;
+          progress.save();
+          audio.chime();
+          hud.banner('TELEPORTER ONLINE', 'Stay in the field to heal. Press F on the pad to teleport home to the garage.', 7);
+          radio.say('teleporterFound', { force: true });
+        }
+        healing = car.healStep(dt);
+      }
+    }
+    base?.update(dt);
+
+    // --- Radio: the story's big (and small) moments ---
+    if (playing) {
+      radio.update(dt);
+      if (base && !base.contains(car.currPos)) radio.say('leaveBase');
+      if (car.onLava > 0 && car.grounded) radio.say('firstLava');
+      if (boss && !SETTINGS.dev.noEnemies) {
+        if (boss.awake) radio.say(region.radio?.bossAwake);
+        else if (boss.state !== 'dead' && boss.arenaCenter.distanceTo(car.currPos) < 260) radio.say(region.radio?.nearBoss);
+      }
+      if (tele && !tele.established && (regionTime += dt) > 75) radio.say('teleporterHint');
+    }
+
     // --- Scrap: press E to grab what's in reach ---
     const reach = scrap.inReach(car.position, SETTINGS.damage.pickupRadius);
     if (reach.length && !car.wrecked && playing) {
@@ -436,6 +521,16 @@ async function main() {
         car.build.save();
         audio.hit();
       }
+    } else if (playing && !car.wrecked) {
+      // Other prompts: teleporter pads, the hangar, healing
+      let prompt = '';
+      if (tele?.onPad(car.currPos)) prompt = "[F] Teleport home to Doc's garage";
+      else if (base?.onPad(car.currPos)) {
+        const linked = REGIONS.filter((r) => progress.teleporters[r.id]);
+        prompt = linked.length ? `[F] Teleport to ${linked[linked.length - 1].name}` : 'Teleporter pad (no teleporters linked yet)';
+      } else if (base?.inHangar(car.currPos)) prompt = '[G] Open the garage';
+      else if (healing) prompt = 'Healing… (hell magic)';
+      hud.setPrompt(prompt);
     } else hud.setPrompt('');
 
     dust.update(dt);
@@ -447,7 +542,7 @@ async function main() {
     hazards.update(dt, car.position, sparks);
     flames.update(dt);
     if (gate?.update(dt, car, sparks) && playing) {
-      if (gate.leadsTo) travelTo(gate.leadsTo);
+      if (gate.leadsTo) travelTo(gate.leadsTo, 'spawn');
       else if (!gate.toldSealed) { gate.toldSealed = true; hud.toast('This Hellgate is sealed... for now (next update!)', 'warn'); }
     } else if (gate) gate.toldSealed = false;
     // On lava: warn, and say how protected the car is.
@@ -487,10 +582,14 @@ async function main() {
   }
   await lighting.precompile(); // build every shader now, not mid-game
   requestAnimationFrame(frame);
-  showTitleScreen({ region, progress, onMenu: () => audio.start() }).then(startPlaying);
+  showTitleScreen({ region, progress, onMenu: () => audio.start(), onStory: () => playIntro() }).then(async () => {
+    // A brand new game starts with the story.
+    if (progress.fresh && !radio.hasSeen('intro')) { radio.markSeen('intro'); await playIntro(); }
+    startPlaying();
+  });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio };
 }
 
 main().catch((err) => {

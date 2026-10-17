@@ -5,6 +5,26 @@
 An open-world, low-poly 3D browser game: invade Hell in a car you build
 yourself (and never, ever get out of).
 
+**The story:** gas hit fifteen bucks a gallon. Hank "Redline" Mercer (retired
+F1 champion, ex-military) and his genius friend Dr. Wendell "Doc" Pike figure
+the biggest untapped oil field has to be in Hell. Doc builds a machine that
+rips holes in reality, they drive through, and set up a walled base with a
+garage in the Ash Plains. A new game opens with the story (rewatch it from
+**STORY** in the menu), and Doc talks to you over the radio as you play. All
+the words are in `src/story/story.js` (names are placeholders: change them
+there).
+
+- **The base:** you start inside Doc's walls. Drive into the hangar and press
+  **G** to build. Demons can't get past the walls and gate wards.
+- **Teleporters** need hell magic, so they only exist at a source (look for a
+  purple light in the sky). The Ash Plains has none; the Lava Rivers has one
+  somewhere. Reach it to set it up: its field heals you completely, and **F**
+  on the pad teleports you home to the garage (and back from the base pad).
+  Away from base, the garage is only reachable that way.
+- **Wrecked?** The run starts over (souls, unlocks, chassis, build), but you
+  respawn at the region's teleporter if you've set one up, or at its start.
+  Regions reached, bosses beaten and teleporters are remembered.
+
 **Current stage: Milestone 7 — regions (part 1: the Lava Rivers).** Beat the
 Ash Titan and a **Hellgate** opens next to its arena: drive through it to
 reach region 2, **the Lava Rivers**: black basalt plains cut by rivers of
@@ -71,7 +91,8 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | E | Grab scrap that fell off your car |
 | R (in garage) | Turn a loose car piece before placing it |
 | Ctrl/⌘ + Z (in garage) | Undo the last change |
-| G | Garage: build + repair (pauses; not with demons close) |
+| G | Garage: build + repair (only at the base) |
+| F | Teleport (standing on a teleporter pad) |
 | C | Dev / creative panel: no enemies, no damage, free building, jump to any region |
 | T | Live tuning panel |
 | M | Mute |
@@ -93,6 +114,7 @@ src/
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
   regions/            one data file per region (Ash Plains, Lava Rivers) + the travel order
+  story/              the story text (story.js), the radio, the intro panels
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap
   vehicle/            the car's driving physics, 3D model, parts + build grid
   demons/             demon types (data), 3D models, spawning + AI, the boss, fireballs

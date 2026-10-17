@@ -662,6 +662,27 @@ export class Car {
     }
   }
 
+  // Teleporter field: mend every piece a bit (rate = fraction of full hp
+  // per second) and put out fires. Returns true while still mending.
+  healStep(dt, rate = 0.4) {
+    let mending = false;
+    for (const [id, hp] of Object.entries(this.build.sectionHp)) {
+      const max = this.build.sectionMaxHp(id);
+      if (this.build.missing.has(id) || hp >= max) continue;
+      this.build.sectionHp[id] = Math.min(max, hp + max * rate * dt);
+      mending = true;
+    }
+    for (const p of this.build.list()) {
+      const max = pieceStats(p.type).hp;
+      if (p.hp >= max) continue;
+      p.hp = Math.min(max, p.hp + max * rate * dt);
+      mending = true;
+    }
+    this.burns.clear();
+    if (mending) this.#refreshAllTints();
+    return mending;
+  }
+
   // World positions of the exhaust pipes (none if the tail fell off).
   exhaustPoints() {
     if (this.build.missing.has('tail')) return [];

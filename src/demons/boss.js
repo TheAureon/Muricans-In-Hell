@@ -285,6 +285,7 @@ export class Boss {
   }
 
   #die() {
+    this.ctx.onDying?.(); // (last roar / last words)
     this.state = 'dying';
     this.dieTimer = 0;
     this.exploded = false;

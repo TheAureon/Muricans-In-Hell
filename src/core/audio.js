@@ -150,6 +150,40 @@ export class Audio {
     o.stop(t + 0.2);
   }
 
+  // A huge monster roar: rumbling noise plus a low growl that falls away.
+  roar() {
+    if (!this.ctx || this.muted) return;
+    const ctx = this.ctx, t = ctx.currentTime;
+    const noise = ctx.createBufferSource();
+    noise.buffer = this.noiseBuffer;
+    noise.loop = true;
+    const lp = ctx.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(900, t);
+    lp.frequency.exponentialRampToValueAtTime(120, t + 2.8);
+    const ng = ctx.createGain();
+    ng.gain.setValueAtTime(0.0001, t);
+    ng.gain.exponentialRampToValueAtTime(0.9, t + 0.25);
+    ng.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+    noise.connect(lp).connect(ng).connect(this.master);
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(110, t);
+    osc.frequency.exponentialRampToValueAtTime(38, t + 2.8);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(0.0001, t);
+    og.gain.exponentialRampToValueAtTime(0.5, t + 0.2);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+    const shake = ctx.createOscillator(); // throaty wobble
+    shake.frequency.value = 18;
+    const sg = ctx.createGain();
+    sg.gain.value = 20;
+    shake.connect(sg).connect(osc.frequency);
+    osc.connect(og).connect(this.master);
+    noise.start(t); osc.start(t); shake.start(t);
+    noise.stop(t + 3.1); osc.stop(t + 3.1); shake.stop(t + 3.1);
+  }
+
   gunshot() {
     if (!this.ctx || this.muted) return;
     const ctx = this.ctx;

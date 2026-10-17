@@ -51,9 +51,11 @@ export function createGround(scene, physics, region, hazards = null) {
   // ---- Scenery ----
   // Keep the start, the boss arena and the lava free of random scenery.
   const arena = region.boss?.arena;
+  const tele = region.teleporter;
   const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 ||
     (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2) ||
-    (hazards && hazards.lavaAt(x, z, 4));
+    (hazards && hazards.lavaAt(x, z, 4)) ||
+    (tele && (x - tele.x) ** 2 + (z - tele.z) ** 2 < (tele.radius + 12) ** 2);
   for (const prop of region.props) {
     const builder = PROP_BUILDERS[prop.type];
     if (!builder) { console.warn('Unknown prop type', prop.type); continue; }

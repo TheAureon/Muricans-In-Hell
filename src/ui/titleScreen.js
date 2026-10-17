@@ -35,12 +35,12 @@ const HOW_TO = `
   </table>
   <p class="dim">Pieces of your car break off as they take damage. Lose the cabin and the whole run starts over.</p>`;
 
-export function showTitleScreen({ region, progress, onMenu }) {
+export function showTitleScreen({ region, progress, onMenu, onStory }) {
   const el = document.getElementById('start');
   document.body.classList.add('title-open');
   const regionNo = REGIONS.indexOf(region) + 1;
   const tier = progress.tierInfo;
-  const fresh = progress.souls < 1 && progress.tier === 0 && !progress.region && !Object.keys(progress.cleared).length;
+  const fresh = progress.fresh;
 
   el.querySelector('.t-run').innerHTML = `
     <div class="t-run-label">REGION ${regionNo} / ${PLANNED_REGIONS.length}</div>
@@ -54,6 +54,7 @@ export function showTitleScreen({ region, progress, onMenu }) {
 
   const items = [
     { id: 'drive', label: fresh ? 'DRIVE INTO HELL' : 'CONTINUE', sub: fresh ? 'Start your engine' : `Back to ${region.name}`, primary: true },
+    { id: 'story', label: 'STORY', sub: 'How it all started' },
     { id: 'how', label: 'HOW TO PLAY', sub: 'Controls & the basics' },
     { id: 'gfx', label: `GRAPHICS: ${GFX.label}`, sub: GFX_SUB[GFX.name] },
   ];
@@ -95,6 +96,9 @@ export function showTitleScreen({ region, progress, onMenu }) {
         document.body.classList.remove('title-open');
         setTimeout(() => el.remove(), 700);
         resolve();
+      } else if (it.id === 'story') {
+        panel.classList.remove('on'); el.classList.remove('panel-open');
+        onStory?.();
       } else if (it.id === 'how') {
         panel.innerHTML = HOW_TO;
         el.classList.toggle('panel-open', panel.classList.toggle('on'));
@@ -116,6 +120,7 @@ export function showTitleScreen({ region, progress, onMenu }) {
         try {
           localStorage.removeItem('helldrive.progress');
           localStorage.removeItem('helldrive.build');
+          localStorage.removeItem('helldrive.story'); // so the intro and radio play again
         } catch { /* ignore */ }
         location.reload();
       }
@@ -129,6 +134,7 @@ export function showTitleScreen({ region, progress, onMenu }) {
       if (b) select(Number(b.dataset.i));
     };
     const onKey = (e) => {
+      if (document.getElementById('intro')) return; // the story is playing
       if (e.code === 'ArrowDown' || e.code === 'KeyS') select(sel + 1);
       else if (e.code === 'ArrowUp' || e.code === 'KeyW') select(sel - 1);
       else if (e.code === 'Enter' || e.code === 'Space') { e.preventDefault(); choose(sel); }

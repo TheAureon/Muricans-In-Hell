@@ -1,5 +1,8 @@
-// Your progress in this run: souls (the currency), unlocked parts, chassis
-// tier (car -> tank), cleared regions, and which region you're in.
+// Your progress. Two kinds:
+//  RUN   souls (the currency), unlocked parts and the chassis tier. A wreck
+//        wipes these (unless settings.progression.keepOnWreck).
+//  WORLD where you are: the region you're in, bosses beaten, teleporters
+//        set up. A wreck never wipes these: Hell remembers where you've been.
 // Kept in the browser.
 import { SETTINGS } from '../settings.js';
 
@@ -7,7 +10,15 @@ const KEY = 'helldrive.progress';
 
 export class Progress {
   constructor() {
+    this.listeners = [];
+    this.#load();
+  }
+
+  #load() {
     this.reset();
+    this.region = null;     // null = the first region
+    this.cleared = {};      // region id -> true
+    this.teleporters = {};  // region id -> true (set up)
     try {
       const d = JSON.parse(localStorage.getItem(KEY) || '{}');
       this.souls = d.souls || 0;
@@ -15,17 +26,18 @@ export class Progress {
       this.tier = Math.min(d.tier || 0, SETTINGS.chassisTiers.length - 1);
       this.cleared = d.cleared || {};
       this.region = d.region || null;
+      this.teleporters = d.teleporters || {};
     } catch { /* fresh start */ }
-    this.listeners = [];
   }
 
-  // Back to square one (what a wreck does, unless keepOnWreck is on).
+  // A brand new game (nothing saved yet)?
+  get fresh() { return this.souls < 1 && this.tier === 0 && !this.region && !Object.keys(this.cleared).length; }
+
+  // Back to square one for the RUN (what a wreck does).
   reset() {
     this.souls = 0;
     this.unlocked = new Set(Object.entries(SETTINGS.shop).filter(([, s]) => !s.unlock).map(([t]) => t));
     this.tier = 0;
-    this.cleared = {};
-    this.region = null; // null = the first region
   }
 
   get tierInfo() { return SETTINGS.chassisTiers[this.tier]; }
@@ -69,23 +81,15 @@ export class Progress {
   #emit() { for (const fn of this.listeners) fn(this); }
 
   // Throw away creative-mode changes: reload the real saved progress.
-  reloadSaved() {
-    this.reset();
-    try {
-      const d = JSON.parse(localStorage.getItem(KEY) || '{}');
-      this.souls = d.souls || 0;
-      this.unlocked = new Set([...this.unlocked, ...(d.unlocked || [])]);
-      this.tier = Math.min(d.tier || 0, SETTINGS.chassisTiers.length - 1);
-      this.cleared = d.cleared || {};
-      this.region = d.region || null;
-    } catch { /* fresh start */ }
-    this.#emit();
-  }
+  reloadSaved() { this.#load(); this.#emit(); }
 
   save() {
     if (this.creative) return;
     try {
-      localStorage.setItem(KEY, JSON.stringify({ souls: this.souls, unlocked: [...this.unlocked], tier: this.tier, cleared: this.cleared, region: this.region }));
+      localStorage.setItem(KEY, JSON.stringify({
+        souls: this.souls, unlocked: [...this.unlocked], tier: this.tier,
+        cleared: this.cleared, region: this.region, teleporters: this.teleporters,
+      }));
     } catch { /* storage blocked: fine */ }
   }
 }

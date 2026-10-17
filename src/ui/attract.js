@@ -5,35 +5,37 @@
 import * as THREE from 'three';
 
 const UP = new THREE.Vector3(0, 1, 0);
-const ROAM = 320; // stay this close to the start (well away from the boss)
+const ROAM = 300; // stay this close to the movie's center (well away from the boss)
 
 // ------------------------------------------------------------------ autopilot
 export class Autopilot {
-  constructor(car, demons) {
+  constructor(car, demons, center = { x: 0, z: 0 }, base = null) {
+    this.center = center;
+    this.base = base;
     this.car = car;
     this.demons = demons;
     this.input = { throttle: 1, steer: 0, handbrake: false };
     this.fire = false;
     this.aim = new THREE.Vector3();
-    this.wander = new THREE.Vector3(60, 0, 60);
+    this.wander = new THREE.Vector3(center.x + 60, 0, center.z + 60);
     this.stuck = 0;
     this.reverse = 0;
   }
 
   update(dt) {
-    const car = this.car, p = car.currPos;
+    const car = this.car, p = car.currPos, C = this.center;
     // Target: the nearest demon (not too far), else roam around.
     let best = null, bestD = 160;
     for (const d of this.demons.all) {
       if (!d.alive) continue;
       const dist = Math.hypot(d.pos.x - p.x, d.pos.z - p.z);
-      if (dist < bestD && Math.hypot(d.pos.x, d.pos.z) < ROAM) { bestD = dist; best = d; }
+      if (dist < bestD && Math.hypot(d.pos.x - C.x, d.pos.z - C.z) < ROAM) { bestD = dist; best = d; }
     }
-    if (Math.hypot(this.wander.x - p.x, this.wander.z - p.z) < 25 || Math.hypot(this.wander.x, this.wander.z) > ROAM) {
+    if (Math.hypot(this.wander.x - p.x, this.wander.z - p.z) < 25 || Math.hypot(this.wander.x - C.x, this.wander.z - C.z) > ROAM || this.base?.contains(this.wander, 15)) {
       const a = Math.random() * Math.PI * 2, r = 80 + Math.random() * 180;
-      this.wander.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+      this.wander.set(C.x + Math.cos(a) * r, 0, C.z + Math.sin(a) * r);
     }
-    const goal = best && Math.hypot(p.x, p.z) < ROAM ? best.pos : this.wander;
+    const goal = best && Math.hypot(p.x - C.x, p.z - C.z) < ROAM ? best.pos : this.wander;
 
     // Steer toward it; pull the handbrake on sharp turns (drifts look great).
     const h = car.heading;

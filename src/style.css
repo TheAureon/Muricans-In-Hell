@@ -292,3 +292,84 @@ body #devpanel { cursor: default; }
   background: radial-gradient(circle, #ff8a20 0%, #a01008 45%, #100000 100%); opacity: 0; transition: opacity 1s; }
 #travel.on { opacity: 1; pointer-events: all; }
 #travel span { font: 40px 'Arial Black', Impact, sans-serif; color: #fff2c0; letter-spacing: 4px; text-shadow: 0 0 20px #f60, 0 4px 0 #400; }
+
+/* ---- Story: radio, boss lines, intro ---- */
+#radio { position: absolute; top: 64px; left: 12px; width: min(380px, 70vw); background: #0a0d14d8; border: 1px solid #7fd8ff40;
+  border-left: 3px solid #7fd8ff; padding: 8px 12px 10px; opacity: 0; transform: translateX(-20px); transition: opacity 0.3s, transform 0.3s; }
+#radio.you { border-left-color: #ffb070; border-color: #ffb07040; }
+#radio.on { opacity: 1; transform: none; }
+#radio .r-who { display: flex; align-items: center; gap: 8px; font: 13px 'Arial Black', Impact, sans-serif; letter-spacing: 2px; }
+#radio .r-who small { font: 10px system-ui; letter-spacing: 2px; color: #fff6; margin-left: auto; }
+#radio .r-dot { width: 8px; height: 8px; border-radius: 50%; background: #ff3a2a; box-shadow: 0 0 6px #f00; animation: pulse 0.8s infinite; }
+#radio .r-text { font: 14px/1.45 system-ui, sans-serif; color: #f2ece4; margin-top: 4px; min-height: 20px; }
+.boss-line { position: absolute; left: 50%; top: 24%; transform: translateX(-50%); font: italic 34px Georgia, serif; color: #ffd8a0;
+  text-shadow: 0 0 16px #f40, 0 3px 4px #000; animation: bossline 4s ease-out forwards; white-space: nowrap; }
+@keyframes bossline { 0% { opacity: 0; letter-spacing: 8px; } 15% { opacity: 1; letter-spacing: 2px; } 80% { opacity: 1; } 100% { opacity: 0; } }
+
+#intro { position: fixed; inset: 0; z-index: 30; background: #0b0303; display: flex; align-items: center; justify-content: center; flex-direction: column;
+  opacity: 0; transition: opacity 0.5s; cursor: pointer; color: #f0e0d0; font-family: system-ui, sans-serif; }
+#intro.on { opacity: 1; }
+#intro.out { opacity: 0; }
+#intro .i-panel { width: min(900px, 92vw); display: flex; gap: 28px; align-items: center; background: #160606; border: 3px solid #2a0c08;
+  box-shadow: 0 0 0 6px #0b0303, 0 0 0 8px #ff502040, 0 30px 80px #000; padding: 26px; }
+#intro .i-panel.in { animation: panelin 0.45s ease-out; }
+@keyframes panelin { from { opacity: 0; transform: translateY(16px) rotate(-0.6deg); } to { opacity: 1; transform: none; } }
+#intro .i-art { flex: 0 0 300px; height: 240px; position: relative; overflow: hidden; background: #2a0a06; border: 2px solid #000; }
+#intro .i-cap { flex: 1; }
+#intro h2 { margin: 0 0 12px; font: 26px 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 2px; transform: skew(-6deg);
+  text-shadow: 0 3px 0 #400; }
+#intro p { font-size: 17px; line-height: 1.55; margin: 0; min-height: 80px; }
+#intro .i-quote { margin-top: 14px; font: italic 16px Georgia, serif; color: #ffe6c0; min-height: 22px; }
+#intro .i-quote b { font: 13px 'Arial Black', Impact, sans-serif; font-style: normal; letter-spacing: 1px; }
+#intro .i-nav { margin-top: 22px; display: flex; gap: 24px; align-items: center; font-size: 12px; letter-spacing: 2px; color: #fff7; }
+#intro .i-dots { display: flex; gap: 6px; }
+#intro .i-dots i { width: 9px; height: 9px; border-radius: 50%; background: #ffffff30; }
+#intro .i-dots i.on { background: #ff5020; box-shadow: 0 0 6px #f40; }
+@media (max-width: 700px) { #intro .i-panel { flex-direction: column; } #intro .i-art { flex-basis: auto; width: 100%; height: 180px; } }
+
+/* intro art */
+.a-gas { position: absolute; inset: 0; background: linear-gradient(#3a1008, #120404); }
+.a-sign { position: absolute; left: 40px; top: 24px; width: 200px; background: #111; border: 4px solid #c8202a; padding: 8px 10px; }
+.a-sign b { display: block; text-align: center; font: 22px 'Arial Black', Impact, sans-serif; color: #fff; background: #c8202a; margin: -8px -10px 8px; }
+.a-row { display: flex; justify-content: space-between; align-items: center; font: 11px 'Arial Black', sans-serif; color: #ccc; margin: 6px 0; }
+.a-row em { font: 26px 'Courier New', monospace; font-weight: bold; color: #ff9a20; text-shadow: 0 0 8px #f60; font-style: normal; }
+.a-row em.roll { animation: roll 0.25s steps(2) 6; }
+@keyframes roll { 50% { opacity: 0.3; transform: translateY(-3px); } }
+.a-pole { position: absolute; left: 135px; top: 168px; width: 10px; height: 80px; background: #555; }
+.a-blueprint { position: absolute; inset: 0; background: #0c3a7a; background-image: linear-gradient(#ffffff18 1px, transparent 1px), linear-gradient(90deg, #ffffff18 1px, transparent 1px);
+  background-size: 20px 20px; color: #dff; font: 14px 'Courier New', monospace; text-align: center; padding-top: 12px; }
+.a-bp-title { font-weight: bold; letter-spacing: 2px; border-bottom: 1px dashed #dff8; margin: 0 20px 10px; padding-bottom: 6px; }
+.a-earth { border: 2px solid #dff; border-radius: 50%; width: 70px; margin: 0 auto; padding: 6px 0; }
+.a-arrow { font-size: 22px; margin: 4px 0; animation: pulse 1s infinite; }
+.a-hell { border: 2px solid #ff8a60; color: #ff8a60; width: 90px; margin: 0 auto; padding: 4px 0; }
+.a-note { position: absolute; right: 12px; bottom: 10px; transform: rotate(-8deg); color: #ffe080; font-size: 12px; text-align: right; }
+.a-tear { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, #2a0a04, #050101); }
+.a-rip { position: absolute; left: 50%; top: 12%; width: 46px; height: 72%; transform: translateX(-50%) rotate(8deg); border-radius: 50%;
+  background: radial-gradient(ellipse, #fff6c0 0%, #ff9a20 25%, #ff2a00 55%, #ff2a0000 72%); animation: rip 0.15s infinite alternate; filter: blur(1px); }
+.a-rip.b { width: 90px; opacity: 0.4; filter: blur(8px); }
+@keyframes rip { to { transform: translateX(-50%) rotate(7deg) scaleX(1.25); } }
+.a-machine { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 70px; }
+.a-machine i { width: 14px; height: 40px; background: #777; border-top: 6px solid #7fd8ff; box-shadow: 0 0 10px #7fd8ff80; }
+.a-road { position: absolute; inset: 0; background: linear-gradient(#5a1a10 0%, #2a0a06 60%, #3a2a24 60%, #1e1614 100%); }
+.a-tear.small { left: auto; right: 10px; width: 100px; background: none; }
+.a-car { position: absolute; left: 20px; bottom: 30px; width: 150px; height: 56px; animation: drive 2.4s ease-in infinite; }
+@keyframes drive { 0% { transform: translateX(-40px); } 80% { transform: translateX(170px); opacity: 1; } 100% { transform: translateX(200px) scale(0.6); opacity: 0; } }
+.a-body { position: absolute; bottom: 12px; width: 150px; height: 26px; background: #3a66d0; border-radius: 6px 14px 4px 4px; }
+.a-body span { position: absolute; top: 9px; left: 6px; right: 6px; height: 4px; background: #f2f0ea; }
+.a-cab { position: absolute; bottom: 36px; left: 40px; width: 64px; height: 20px; background: #0d1015; border-radius: 10px 14px 0 0; border: 3px solid #3a66d0; }
+.a-car i { position: absolute; bottom: 0; width: 26px; height: 26px; border-radius: 50%; background: #161616; border: 4px solid #5a5d63; }
+.a-car .w1 { left: 14px; } .a-car .w2 { right: 14px; }
+.a-dust { position: absolute; left: -30px; bottom: 4px; width: 40px; height: 16px; border-radius: 50%; background: #b8aaa060; filter: blur(4px); }
+.a-base { position: absolute; inset: 0; }
+.a-sky { position: absolute; inset: 0; background: linear-gradient(#7a1a10, #3a0a06 70%, #4a4340 70%); }
+.a-wall { position: absolute; bottom: 30%; width: 70px; height: 50px; background: repeating-linear-gradient(90deg, #555 0 18px, #444 18px 20px); border-top: 6px solid #333; }
+.a-wall.l { left: 0; } .a-wall.r { right: 0; }
+.a-hangar { position: absolute; left: 80px; bottom: 30%; width: 140px; height: 90px; background: repeating-linear-gradient(90deg, #6a6e75 0 10px, #5a5d63 10px 12px);
+  border-radius: 70px 70px 0 0; text-align: center; }
+.a-hangar b { display: inline-block; margin-top: 20px; font: 12px 'Arial Black', sans-serif; color: #ffd040; letter-spacing: 2px; }
+.a-door { position: absolute; left: 35px; bottom: 0; width: 70px; height: 44px; background: #1a1a1c; border-top: 4px solid #ffd040; }
+.a-flag { position: absolute; left: 228px; bottom: 54%; color: #fff; font-size: 16px; background: #c8202a; padding: 0 6px; animation: flap 0.6s infinite alternate; }
+@keyframes flap { to { transform: skewY(6deg); } }
+.a-pad { position: absolute; left: 236px; bottom: 26%; width: 44px; height: 10px; border-radius: 50%; background: #b060ff; box-shadow: 0 0 16px #b060ff; }
+.a-logo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 38px 'Arial Black', Impact, sans-serif;
+  color: #ff5020; letter-spacing: 3px; transform: skew(-8deg); text-shadow: 0 0 20px #ff2000, 0 4px 0 #600; background: radial-gradient(#3a0a06, #0b0303); }

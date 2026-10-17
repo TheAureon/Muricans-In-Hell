@@ -39,8 +39,15 @@ export default {
     { type: 'lavaPool',  count: 220,  minScale: 2.0, maxScale: 7.0, solid: false },
     { type: 'pebble',    count: 7000, minScale: 0.15, maxScale: 0.45, solid: false },
   ],
-  // Keep this area around the start empty so you can warm up (m).
-  clearRadiusAtStart: 40,
+  // Keep this area around the start empty (the base sits here) (m).
+  clearRadiusAtStart: 75,
+
+  // Doc's walled base with the garage. You start (and respawn) inside it.
+  base: { x: 0, z: 0, half: 44, gate: 16 },
+  // Where the title-screen movie happens (outside the walls).
+  attractCenter: { x: 0, z: 230 },
+  // Radio conversations (see story/story.js) for this region's big moments.
+  radio: { arrive: 'start', nearBoss: 'nearTitan', bossAwake: 'titanAwake', bossDead: 'titanDead' },
 
   // Which demons live here.
   //   weight:      how common (bigger = more often)

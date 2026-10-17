@@ -49,6 +49,11 @@ export default {
     ],
   },
 
+  // The hell-magic source: set up a teleporter here (heals you, links to base).
+  teleporter: { x: -350, z: 450, radius: 14 },
+  // Radio conversations (see story/story.js) for this region's big moments.
+  radio: { arrive: 'lavaArrive', nearBoss: 'nearColossus', bossDead: 'colossusDead', afterBoss: 'noOil' },
+
   demons: [
     { type: 'fireImp',    weight: 10 },
     { type: 'hound',      weight: 4, minDistance: 120 },

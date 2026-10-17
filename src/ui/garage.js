@@ -92,6 +92,7 @@ export class Garage {
 
   openGarage() {
     this.open = true;
+    this.onOpenChange?.(true);
     document.body.classList.add('garage-open');
     this.ui.style.display = 'block';
     this.car.model.body.rotation.set(0, 0, 0); // stop the body wobble
@@ -115,6 +116,7 @@ export class Garage {
 
   close() {
     this.open = false;
+    this.onOpenChange?.(false);
     document.body.classList.remove('garage-open');
     this.ui.style.display = 'none';
     this.controls.enabled = false;

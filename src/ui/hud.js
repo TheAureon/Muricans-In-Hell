@@ -19,7 +19,8 @@ export class Hud {
         <b>RAM</b> demons at 40+ km/h to splat them<br>
         <b>E</b> grab scrap that fell off your car<br>
         <b>WHEEL</b> zoom &nbsp; <b>R</b> unstick &nbsp; <b>BACKSPACE</b> back to start<br>
-        <b>G</b> garage (build!) &nbsp; <b>C</b> dev/creative &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
+        <b>G</b> garage (at base) &nbsp; <b>F</b> teleport (on a pad)<br>
+        <b>C</b> dev/creative &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
       </div>
       <div id="fps"></div>
       <div id="crosshair"></div>
@@ -118,9 +119,9 @@ export class Hud {
   }
 
   // Screen fades to fire while traveling to another region.
-  travel(name) {
+  travel(name, verb = 'ENTERING') {
     const el = document.getElementById('travel');
-    el.querySelector('span').textContent = `ENTERING ${name.toUpperCase()}…`;
+    el.querySelector('span').textContent = `${verb} ${name.toUpperCase()}…`;
     el.classList.add('on');
   }
 

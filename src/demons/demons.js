@@ -37,6 +37,7 @@ export class Demons {
     this.spawnTimer = 0;
     this.kills = 0;
     this.boss = null; // set by main once the boss exists
+    this.base = null; // the walled base (demons stay out), if this region has one
 
     // One instanced mesh per demon type that lives in this region.
     this.types = {};
@@ -150,6 +151,7 @@ export class Demons {
       c.z = THREE.MathUtils.clamp(c.z, -this.mapHalf, this.mapHalf);
       if (c.distanceTo(carPos) < 50) continue;
       if (this.boss && c.distanceTo(this.boss.arenaCenter) < this.boss.arenaRadius + 20) continue; // keep the arena clear
+      if (this.base?.contains(c, 25)) continue; // and the base
       const type = this.#pickType(Math.hypot(c.x - this.start.x, c.z - this.start.z));
       const st = this.types[type].def.stats();
       const n = Math.min(max - this.aliveCount, Math.round(st.packMin + Math.random() * (st.packMax - st.packMin)));
@@ -319,6 +321,7 @@ export class Demons {
           this.projectiles.throwAt('fireball', mouth, st.attackDamage, st.splash, THREE.MathUtils.clamp(dist / 22, 0.7, 2));
         }
       }
+      if (this.base?.pushOut(d.pos, r)) { d.vel.x *= 0.2; d.vel.z *= 0.2; } // Doc's walls + wards
       if (d.body) d.body.setNextKinematicTranslation({ x: d.pos.x, y: d.pos.y, z: d.pos.z });
 
       // ---- Touching the car? ----
