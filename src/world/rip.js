@@ -6,7 +6,8 @@
 import * as THREE from 'three';
 import { makeRandom } from '../core/random.js';
 
-export function createRip({ height = 10, width = 2.4, seed = 7, sealed = false } = {}) {
+// hellView: brighter, fiery inside (seen from Earth: Hell burning on the other side).
+export function createRip({ height = 10, width = 2.4, seed = 7, sealed = false, hellView = false } = {}) {
   const rand = makeRandom(seed);
   const group = new THREE.Group();
 
@@ -55,7 +56,7 @@ export function createRip({ height = 10, width = 2.4, seed = 7, sealed = false }
   const voidGeo = new THREE.ShapeGeometry(outline(1.0 * s, 0, 0.05));
   const pos = voidGeo.attributes.position;
   const col = new Float32Array(pos.count * 3);
-  const hot = new THREE.Color(sealed ? 0x200404 : 0xa01a04), cold = new THREE.Color(0x050000), c = new THREE.Color();
+  const hot = new THREE.Color(sealed ? 0x200404 : hellView ? 0xff5a10 : 0xa01a04), cold = new THREE.Color(hellView ? 0x300402 : 0x050000), c = new THREE.Color();
   for (let i = 0; i < pos.count; i++) {
     const t = THREE.MathUtils.clamp(pos.getY(i) / height, 0, 1);
     const k = Math.round(t * N);

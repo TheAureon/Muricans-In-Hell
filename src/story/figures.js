@@ -28,10 +28,12 @@ function r6Body(colors) {
   group.add(body);
   const legH = 2 * U, torsoY = legH + U;
   for (const s of [-1, 1]) part(body, U * 0.98, legH, U, colors.legs, s * U / 2, legH / 2, 0);
-  const torso = part(body, 2 * U, 2 * U, U, colors.torso, 0, torsoY, 0);
-  // Head: a rounded cylinder sitting on the torso
-  const head = new THREE.Mesh(new THREE.CapsuleGeometry(U * 0.62, U * 0.45, 6, 16), colors.skin);
-  head.position.set(0, legH + 2 * U + U * 0.7, 0);
+  // Torso (a long coat can make it reach down over the thighs)
+  const drop = colors.coatDrop || 0;
+  const torso = part(body, 2 * U, 2 * U + drop, U + (drop ? 0.02 : 0), colors.torso, 0, torsoY - drop / 2, 0);
+  // Head: a squarish block with soft, rounded corners
+  const head = new THREE.Mesh(new RoundedBoxGeometry(U * 1.15, U * 1.0, U * 1.1, 4, U * 0.26), colors.skin);
+  head.position.set(0, legH + 2 * U + U * 0.52, 0);
   head.castShadow = true;
   body.add(head);
   // Arms hinge at the top of the shoulder
@@ -54,6 +56,21 @@ export function createHank() {
   part(f.body, U * 0.55, 2 * U - 0.08, 0.02, mat(0xe8e2d8), 0, f.torsoY, U / 2 + 0.005, 0.005);
   part(f.body, 2 * U + 0.02, U * 0.16, U + 0.02, mat(0x1e120c, { roughness: 0.4 }), 0, f.torsoY - U * 0.92, 0, 0.03); // waistband
   part(f.body, 0.02, 2 * U - 0.1, 0.02, mat(0x8a8070, { metalness: 0.8, roughness: 0.3 }), -U * 0.3, f.torsoY, U / 2 + 0.012, 0.005);
+  // Racing helmet: glossy blue shell (matches the car) with white/red stripes, dark visor, little spoiler
+  const helmet = new THREE.Group();
+  helmet.position.copy(f.head.position);
+  f.body.add(helmet);
+  const shell = new THREE.Mesh(new RoundedBoxGeometry(U * 1.35, U * 1.25, U * 1.35, 5, U * 0.5), mat(0x2a56c8, { roughness: 0.2, metalness: 0.3 }));
+  shell.position.y = U * 0.08;
+  shell.castShadow = true;
+  helmet.add(shell);
+  part(helmet, U * 0.22, U * 1.27, U * 1.37, mat(0xf4f4f0, { roughness: 0.25 }), 0, U * 0.08, 0, U * 0.1);   // white stripe over the top
+  part(helmet, U * 0.08, U * 1.28, U * 1.38, mat(0xc8202a, { roughness: 0.25 }), U * 0.17, U * 0.08, 0, U * 0.04); // red pinstripes
+  part(helmet, U * 0.08, U * 1.28, U * 1.38, mat(0xc8202a, { roughness: 0.25 }), -U * 0.17, U * 0.08, 0, U * 0.04);
+  part(helmet, U * 1.1, U * 0.36, 0.04, mat(0x0d1015, { roughness: 0.1, metalness: 0.6 }), 0, U * 0.15, U * 0.66, 0.02); // visor
+  part(helmet, U * 0.9, 0.06, U * 0.3, mat(0x1a1a1c), 0, U * 0.72, -U * 0.5, 0.02);                      // spoiler lip
+  part(helmet, U * 1.2, U * 0.2, U * 1.2, mat(0x1a1a1c), 0, -U * 0.5, 0, 0.04);                          // neck roll
+  f.head.visible = false; // (the helmet covers it)
   const [R, L] = f.arms;
   L.rotation.z = 0.12; R.rotation.z = -0.12;
   return {
@@ -69,14 +86,16 @@ export function createHank() {
 
 export function createDoc() {
   const coat = mat(0xf2f2ee);
-  const C = { skin: mat(0xe0b090), torso: coat, arms: coat, legs: mat(0x3a3a40) };
+  // One long lab coat from the shoulders to mid-thigh
+  const C = { skin: mat(0xe0b090), torso: coat, arms: coat, legs: mat(0x3a3a40), coatDrop: U * 0.85 };
   const f = r6Body(C);
-  // Lab coat flaps down over the thighs, pocket, and a hard hat
-  part(f.body, 2 * U + 0.03, U * 0.8, U + 0.03, coat, 0, f.legH - U * 0.35, 0, 0.02);
-  part(f.body, 0.01, U * 0.8, 0.012, mat(0xcfcfca), 0, f.legH - U * 0.35, U / 2 + 0.02, 0.004);
-  part(f.body, U * 0.4, U * 0.3, 0.02, mat(0xdcdcd6), U * 0.5, f.torsoY + U * 0.35, U / 2 + 0.01, 0.005);
+  const seam = mat(0xc8c8c2);
+  const bottom = f.torsoY - U - U * 0.85;
+  part(f.body, 0.015, U * 0.9, 0.012, seam, 0, bottom + U * 0.45, -U / 2 - 0.012, 0.004);  // back vent
+  part(f.body, 0.015, 2 * U + U * 0.8, 0.012, seam, 0, f.torsoY - U * 0.4, U / 2 + 0.012, 0.004); // front opening
+  part(f.body, U * 0.42, U * 0.3, 0.02, mat(0xdcdcd6), U * 0.5, f.torsoY + U * 0.35, U / 2 + 0.012, 0.005); // pocket
   const hat = new THREE.Group();
-  hat.position.copy(f.head.position).add(new THREE.Vector3(0, U * 0.45, 0));
+  hat.position.copy(f.head.position).add(new THREE.Vector3(0, U * 0.38, 0));
   f.body.add(hat);
   const yellow = mat(0xf0c020, { roughness: 0.35 });
   const dome = new THREE.Mesh(new THREE.SphereGeometry(U * 0.72, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), yellow);

@@ -83,6 +83,22 @@ function embers(scene, n = 200, area = 30, color = 0xff7a30) {
   };
 }
 
+// Doc's garage on Earth: concrete walls, a roll-up door, shelves of junk.
+function garageRoom(scene) {
+  const wall = new THREE.MeshStandardMaterial({ color: 0x4a4644, roughness: 1 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0x5a5d63, roughness: 0.6, metalness: 0.4 });
+  const add = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.receiveShadow = true; o.castShadow = true; scene.add(o); return o; };
+  add(24, 8, 0.4, wall, 0, 4, -11);               // back wall
+  add(0.4, 8, 20, wall, -9, 4, -2);               // side wall
+  for (let k = 0; k < 8; k++) add(5.8, 0.5, 0.1, metal, 5, 0.6 + k * 0.6, -10.75); // roll-up door slats
+  for (const y of [1.2, 2.4, 3.6]) add(0.8, 0.08, 5, metal, -8.5, y, -4);           // shelves
+  const junk = [0xc8202a, 0x3a66d0, 0xf0c020, 0x5a5d63];
+  for (let k = 0; k < 9; k++) add(0.4, 0.4, 0.4, new THREE.MeshStandardMaterial({ color: junk[k % 4] }), -8.5, 1.45 + (k % 3) * 1.2, -6 + Math.floor(k / 3) * 1.5);
+  const flag = add(2.4, 1.3, 0.02, new THREE.MeshStandardMaterial({ color: 0xb02020 }), -3, 5.5, -10.75);
+  add(1, 0.7, 0.03, new THREE.MeshStandardMaterial({ color: 0x24408a }), -3.7, 5.8, -10.73);
+  return flag;
+}
+
 // ------------------------------------------------------------------ scenes
 const SCENES = {
   // 1. Gas at $14.99: Hank stares at the price sign.
@@ -195,16 +211,21 @@ const SCENES = {
     };
   },
 
-  // 3. The Reality Ripper tears a hole in the world.
+  // 3. The Reality Ripper tears a hole in the world, right in Doc's garage
+  // (on Earth). Hell glows through it.
   tear() {
-    const scene = stage({ bg: 0x0c0404, fog: [0x0c0404, 8, 45], ground: 0x161212 });
-    const rip = createRip({ height: 7.5, width: 2.6, seed: 5 });
-    rip.group.position.set(0.6, 0.4, -7);
+    const scene = stage({ bg: 0x0a0806, fog: [0x0a0806, 8, 40], ground: 0x3a3836, groundRough: 0.95 });
+    garageRoom(scene);
+    const rip = createRip({ height: 6.5, width: 2.6, seed: 5, hellView: true });
+    rip.group.position.set(0.6, 0.3, -6.5);
     scene.add(rip.group);
     const ripLight = new THREE.PointLight(0xff5a10, 80, 30, 1.3);
-    ripLight.position.set(0.6, 3.5, -6);
+    ripLight.position.set(0.6, 3.2, -5.5);
     ripLight.castShadow = true;
     scene.add(ripLight);
+    const bulb = new THREE.PointLight(0xfff0d0, 6, 14, 1.5); // the garage's one sad light bulb
+    bulb.position.set(-3, 4.5, -1);
+    scene.add(bulb);
     // The machine: a base, two pylons and a dish firing a beam at the rip
     const steel = new THREE.MeshStandardMaterial({ color: 0x5a5d63, metalness: 0.6, roughness: 0.4, flatShading: true });
     const machine = new THREE.Group();
@@ -222,18 +243,17 @@ const SCENES = {
     scene.add(machine);
     machine.updateMatrixWorld(true);
     const from = new THREE.Vector3(0, 1.5, 0.7).applyMatrix4(machine.matrixWorld);
-    const to = new THREE.Vector3(0.6, 3.6, -7);
-    const beamLen = from.distanceTo(to);
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, beamLen, 6, 1, true),
+    const to = new THREE.Vector3(0.6, 3.3, -6.5);
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.12, from.distanceTo(to), 6, 1, true),
       new THREE.MeshBasicMaterial({ color: 0x9fe8ff, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
     beam.position.copy(from).lerp(to, 0.5);
     beam.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
     scene.add(beam);
     const hank = createHank(), doc = createDoc();
-    hank.group.position.set(-1.2, 0, -1); hank.group.rotation.y = Math.PI + 0.1;
-    doc.group.position.set(-2.4, 0, -1.6); doc.group.rotation.y = Math.PI - 0.5;
+    hank.group.position.set(-1.0, 0, -1); hank.group.rotation.y = Math.PI + 0.1;
+    doc.group.position.set(-2.3, 0, -1.6); doc.group.rotation.y = Math.PI - 0.5;
     scene.add(hank.group, doc.group);
-    const em = embers(scene, 160, 14, 0xffa040);
+    const em = embers(scene, 140, 10, 0xffa040);
     const cam = camera(50);
     return {
       scene, camera: cam,
@@ -242,46 +262,99 @@ const SCENES = {
         hank.update(t); doc.update(t * 1.5);
         em(dt);
         ripLight.intensity = 70 + Math.random() * 30;
+        bulb.intensity = Math.random() < 0.08 ? 1 : 6; // flickering
         beam.material.opacity = 0.5 + Math.random() * 0.5;
         const shake = 0.03;
-        cam.position.set(0.8 + (Math.random() - 0.5) * shake, 1.6 + (Math.random() - 0.5) * shake, 4.6 - t * 0.3);
-        cam.lookAt(-0.4, 2.8, -6);
+        cam.position.set(0.8 + (Math.random() - 0.5) * shake, 1.9 + (Math.random() - 0.5) * shake, 5.2 - t * 0.3);
+        cam.lookAt(-0.4, 2.4, -6);
       },
     };
   },
 
-  // 4. The muscle car floors it straight into the rip.
+  // 4. On Earth, at night: the muscle car floors it down a desert highway
+  // straight into a rip, with Hell burning on the other side.
   car() {
-    const scene = stage({ bg: 0x3a1208, fog: [0x3a1208, 20, 160], ground: 0x4a4340 });
-    mountains(scene);
-    sunLight(scene, 0xffa060, 2.2, new THREE.Vector3(-30, 40, 20));
-    const rip = createRip({ height: 16, width: 5, seed: 11 });
+    const scene = stage({ bg: 0x0b0a14, fog: [0x120c16, 25, 170], ground: 0x2a2620 });
+    // Night sky with stars, glowing red low down where the rip is
+    const sky = new THREE.Mesh(new THREE.SphereGeometry(300, 24, 12), new THREE.MeshBasicMaterial({ side: THREE.BackSide, vertexColors: true, fog: false }));
+    const sc = [], sp = sky.geometry.attributes.position;
+    for (let i = 0; i < sp.count; i++) {
+      const y = sp.getY(i) / 300, z = sp.getZ(i) / 300;
+      const c = new THREE.Color(0x07060f).lerp(new THREE.Color(0x3a0c08), Math.max(0, 1 - y * 3) * Math.max(0, -z) * 0.9);
+      sc.push(c.r, c.g, c.b);
+    }
+    sky.geometry.setAttribute('color', new THREE.Float32BufferAttribute(sc, 3));
+    scene.add(sky);
+    const stars = new THREE.BufferGeometry();
+    const st = [];
+    for (let i = 0; i < 600; i++) { const a = Math.random() * Math.PI * 2, e = 0.15 + Math.random() * 1.3; st.push(Math.cos(a) * Math.cos(e) * 280, Math.sin(e) * 280, Math.sin(a) * Math.cos(e) * 280); }
+    stars.setAttribute('position', new THREE.Float32BufferAttribute(st, 3));
+    scene.add(new THREE.Points(stars, new THREE.PointsMaterial({ color: 0xffffff, size: 0.8, fog: false })));
+    // Desert mesas on the horizon (Earth, not Hell)
+    const mesaMat = new THREE.MeshBasicMaterial({ color: 0x0a0910, fog: false });
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2, r = 200;
+      const w = 25 + (i % 3) * 18, h = 10 + (i % 4) * 6;
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(w * 0.8, w, h, 6), mesaMat);
+      m.position.set(Math.cos(a) * r, h / 2 - 1, Math.sin(a) * r);
+      scene.add(m);
+    }
+    // The highway: asphalt, a dashed yellow line, telephone poles
+    const road = new THREE.Mesh(new THREE.PlaneGeometry(9, 400).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x1a1a1c, roughness: 0.6 }));
+    road.position.set(0, 0.02, -120);
+    road.receiveShadow = true;
+    scene.add(road);
+    const dash = new THREE.MeshBasicMaterial({ color: 0xe0b020 });
+    for (let k = 0; k < 60; k++) {
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 2.5).rotateX(-Math.PI / 2), dash);
+      d.position.set(0, 0.03, 20 - k * 6);
+      scene.add(d);
+    }
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a1e16 });
+    for (let k = 0; k < 14; k++) {
+      const p = new THREE.Mesh(new THREE.BoxGeometry(0.25, 8, 0.25), poleMat);
+      p.position.set(7, 4, 10 - k * 22);
+      p.castShadow = true;
+      scene.add(p);
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.15, 0.15), poleMat);
+      bar.position.set(7, 7.4, 10 - k * 22);
+      scene.add(bar);
+    }
+    const moon = new THREE.DirectionalLight(0x8090c0, 0.8);
+    moon.position.set(30, 50, 40);
+    scene.add(moon);
+    // The rip, Hell burning inside it
+    const rip = createRip({ height: 16, width: 5.5, seed: 11, hellView: true });
     rip.group.position.set(0, 0.3, -60);
     scene.add(rip.group);
-    const ripLight = new THREE.PointLight(0xff5a10, 300, 80, 1.2);
-    ripLight.position.set(0, 6, -56);
+    const ripLight = new THREE.PointLight(0xff4a10, 400, 90, 1.2);
+    ripLight.position.set(0, 6, -55);
+    ripLight.castShadow = true;
     scene.add(ripLight);
     const car = createCarModel();
     car.root.position.y = 0.45;
     car.root.rotation.y = Math.PI; // driving away from us, toward the rip
     car.root.traverse((o) => { if (o.isMesh) o.castShadow = true; });
     scene.add(car.root);
-    const em = embers(scene, 200, 40);
+    for (const x of [-0.65, 0.65]) {
+      const spot = new THREE.SpotLight(0xfff0c8, 40, 60, 0.4, 0.6, 1.3);
+      spot.position.set(x, 0.55, 2.15); spot.target.position.set(x * 1.6, -0.6, 18);
+      car.root.add(spot, spot.target);
+    }
     const cam = camera(55);
     let z = 6;
     return {
       scene, camera: cam,
       update(t, dt) {
         rip.update(dt);
-        em(dt);
         z -= dt * (8 + t * 4);
         if (z < -56) { z = 6; flash(); }
         car.root.position.z = z;
         for (const w of car.wheels) w.spin.rotation.x += dt * 25;
         car.body.position.y = Math.sin(t * 40) * 0.01;
         cam.position.set(2.2, 1.4, z + 7.5);
-        cam.lookAt(0, 1.5, z - 20);
-        ripLight.intensity = 260 + Math.random() * 80;
+        cam.lookAt(0, 1.8, z - 20);
+        ripLight.intensity = 340 + Math.random() * 120;
       },
     };
   },
