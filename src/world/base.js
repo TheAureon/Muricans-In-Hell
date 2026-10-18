@@ -60,12 +60,13 @@ export class Base {
 
   // ---------------------------------------------------------------- model
   #build(scene, physics) {
-    const { RAPIER, world } = physics;
+    // (physics = null: just the looks, e.g. for the intro scenes)
+    const { RAPIER, world } = physics || {};
     const g = new THREE.Group();
     g.position.copy(this.c);
     scene.add(g);
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(this.c.x, 0, this.c.z));
-    const solid = (x, y, z, hx, hy, hz) => world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setTranslation(x, y, z).setFriction(0.3).setRestitution(0.2), body);
+    const body = world?.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(this.c.x, 0, this.c.z));
+    const solid = (x, y, z, hx, hy, hz) => world?.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz).setTranslation(x, y, z).setFriction(0.3).setRestitution(0.2), body);
     const box = (w, h, d, mat, x, y, z, shadow = true) => {
       const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
       m.position.set(x, y, z);

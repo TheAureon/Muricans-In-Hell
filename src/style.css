@@ -306,70 +306,32 @@ body #devpanel { cursor: default; }
   text-shadow: 0 0 16px #f40, 0 3px 4px #000; animation: bossline 4s ease-out forwards; white-space: nowrap; }
 @keyframes bossline { 0% { opacity: 0; letter-spacing: 8px; } 15% { opacity: 1; letter-spacing: 2px; } 80% { opacity: 1; } 100% { opacity: 0; } }
 
-#intro { position: fixed; inset: 0; z-index: 30; background: #0b0303; display: flex; align-items: center; justify-content: center; flex-direction: column;
-  opacity: 0; transition: opacity 0.5s; cursor: pointer; color: #f0e0d0; font-family: system-ui, sans-serif; }
+#intro { position: fixed; inset: 0; z-index: 30; background: #000; opacity: 0; transition: opacity 0.5s; cursor: pointer; color: #f0e0d0;
+  font-family: system-ui, sans-serif; overflow: hidden; }
 #intro.on { opacity: 1; }
 #intro.out { opacity: 0; }
-#intro .i-panel { width: min(900px, 92vw); display: flex; gap: 28px; align-items: center; background: #160606; border: 3px solid #2a0c08;
-  box-shadow: 0 0 0 6px #0b0303, 0 0 0 8px #ff502040, 0 30px 80px #000; padding: 26px; }
-#intro .i-panel.in { animation: panelin 0.45s ease-out; }
-@keyframes panelin { from { opacity: 0; transform: translateY(16px) rotate(-0.6deg); } to { opacity: 1; transform: none; } }
-#intro .i-art { flex: 0 0 300px; height: 240px; position: relative; overflow: hidden; background: #2a0a06; border: 2px solid #000; }
-#intro .i-cap { flex: 1; }
-#intro h2 { margin: 0 0 12px; font: 26px 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 2px; transform: skew(-6deg);
-  text-shadow: 0 3px 0 #400; }
-#intro p { font-size: 17px; line-height: 1.55; margin: 0; min-height: 80px; }
-#intro .i-quote { margin-top: 14px; font: italic 16px Georgia, serif; color: #ffe6c0; min-height: 22px; }
+#intro canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+/* scene changes fade through black; the car hitting the rip flashes white */
+#intro .i-fade { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: #000; }
+#intro .i-fade.black { animation: ifade 0.7s ease-out; }
+#intro .i-fade.white { background: #fff2c0; animation: ifade 0.5s ease-out; }
+@keyframes ifade { 0% { opacity: 1; } 100% { opacity: 0; } }
+/* letterbox + captions along the bottom, like a movie */
+#intro::before, #intro::after { content: ''; position: absolute; left: 0; right: 0; height: 7vh; background: #000; z-index: 1; pointer-events: none; }
+#intro::before { top: 0; } #intro::after { bottom: 0; }
+#intro .i-cap { position: absolute; left: 0; right: 0; bottom: 7vh; z-index: 2; padding: 60px clamp(20px, 8vw, 140px) 20px;
+  background: linear-gradient(0deg, #000000e0 0%, #000000a0 55%, #00000000 100%); pointer-events: none; }
+#intro h2 { margin: 0 0 10px; font: clamp(22px, 2.6vw, 34px) 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 2px;
+  transform: skew(-6deg); transform-origin: left; text-shadow: 0 0 18px #ff200080, 0 3px 0 #400; }
+#intro p { font-size: clamp(15px, 1.4vw, 19px); line-height: 1.55; margin: 0; max-width: 900px; min-height: 2.6em; text-shadow: 0 2px 4px #000; }
+#intro .i-quote { margin-top: 10px; font: italic clamp(15px, 1.3vw, 18px) Georgia, serif; color: #ffe6c0; min-height: 1.4em; text-shadow: 0 2px 4px #000; }
 #intro .i-quote b { font: 13px 'Arial Black', Impact, sans-serif; font-style: normal; letter-spacing: 1px; }
-#intro .i-nav { margin-top: 22px; display: flex; gap: 24px; align-items: center; font-size: 12px; letter-spacing: 2px; color: #fff7; }
+#intro .i-nav { position: absolute; left: 0; right: 0; bottom: 0; height: 7vh; z-index: 3; display: flex; gap: 24px; align-items: center; justify-content: center;
+  font-size: 12px; letter-spacing: 2px; color: #fff8; pointer-events: none; }
 #intro .i-dots { display: flex; gap: 6px; }
 #intro .i-dots i { width: 9px; height: 9px; border-radius: 50%; background: #ffffff30; }
 #intro .i-dots i.on { background: #ff5020; box-shadow: 0 0 6px #f40; }
-@media (max-width: 700px) { #intro .i-panel { flex-direction: column; } #intro .i-art { flex-basis: auto; width: 100%; height: 180px; } }
-
-/* intro art */
-.a-gas { position: absolute; inset: 0; background: linear-gradient(#3a1008, #120404); }
-.a-sign { position: absolute; left: 40px; top: 24px; width: 200px; background: #111; border: 4px solid #c8202a; padding: 8px 10px; }
-.a-sign b { display: block; text-align: center; font: 22px 'Arial Black', Impact, sans-serif; color: #fff; background: #c8202a; margin: -8px -10px 8px; }
-.a-row { display: flex; justify-content: space-between; align-items: center; font: 11px 'Arial Black', sans-serif; color: #ccc; margin: 6px 0; }
-.a-row em { font: 26px 'Courier New', monospace; font-weight: bold; color: #ff9a20; text-shadow: 0 0 8px #f60; font-style: normal; }
-.a-row em.roll { animation: roll 0.25s steps(2) 6; }
-@keyframes roll { 50% { opacity: 0.3; transform: translateY(-3px); } }
-.a-pole { position: absolute; left: 135px; top: 168px; width: 10px; height: 80px; background: #555; }
-.a-blueprint { position: absolute; inset: 0; background: #0c3a7a; background-image: linear-gradient(#ffffff18 1px, transparent 1px), linear-gradient(90deg, #ffffff18 1px, transparent 1px);
-  background-size: 20px 20px; color: #dff; font: 14px 'Courier New', monospace; text-align: center; padding-top: 12px; }
-.a-bp-title { font-weight: bold; letter-spacing: 2px; border-bottom: 1px dashed #dff8; margin: 0 20px 10px; padding-bottom: 6px; }
-.a-earth { border: 2px solid #dff; border-radius: 50%; width: 70px; margin: 0 auto; padding: 6px 0; }
-.a-arrow { font-size: 22px; margin: 4px 0; animation: pulse 1s infinite; }
-.a-hell { border: 2px solid #ff8a60; color: #ff8a60; width: 90px; margin: 0 auto; padding: 4px 0; }
-.a-note { position: absolute; right: 12px; bottom: 10px; transform: rotate(-8deg); color: #ffe080; font-size: 12px; text-align: right; }
-.a-tear { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, #2a0a04, #050101); }
-.a-rip { position: absolute; left: 50%; top: 12%; width: 46px; height: 72%; transform: translateX(-50%) rotate(8deg); border-radius: 50%;
-  background: radial-gradient(ellipse, #fff6c0 0%, #ff9a20 25%, #ff2a00 55%, #ff2a0000 72%); animation: rip 0.15s infinite alternate; filter: blur(1px); }
-.a-rip.b { width: 90px; opacity: 0.4; filter: blur(8px); }
-@keyframes rip { to { transform: translateX(-50%) rotate(7deg) scaleX(1.25); } }
-.a-machine { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; gap: 70px; }
-.a-machine i { width: 14px; height: 40px; background: #777; border-top: 6px solid #7fd8ff; box-shadow: 0 0 10px #7fd8ff80; }
-.a-road { position: absolute; inset: 0; background: linear-gradient(#5a1a10 0%, #2a0a06 60%, #3a2a24 60%, #1e1614 100%); }
-.a-tear.small { left: auto; right: 10px; width: 100px; background: none; }
-.a-car { position: absolute; left: 20px; bottom: 30px; width: 150px; height: 56px; animation: drive 2.4s ease-in infinite; }
-@keyframes drive { 0% { transform: translateX(-40px); } 80% { transform: translateX(170px); opacity: 1; } 100% { transform: translateX(200px) scale(0.6); opacity: 0; } }
-.a-body { position: absolute; bottom: 12px; width: 150px; height: 26px; background: #3a66d0; border-radius: 6px 14px 4px 4px; }
-.a-body span { position: absolute; top: 9px; left: 6px; right: 6px; height: 4px; background: #f2f0ea; }
-.a-cab { position: absolute; bottom: 36px; left: 40px; width: 64px; height: 20px; background: #0d1015; border-radius: 10px 14px 0 0; border: 3px solid #3a66d0; }
-.a-car i { position: absolute; bottom: 0; width: 26px; height: 26px; border-radius: 50%; background: #161616; border: 4px solid #5a5d63; }
-.a-car .w1 { left: 14px; } .a-car .w2 { right: 14px; }
-.a-dust { position: absolute; left: -30px; bottom: 4px; width: 40px; height: 16px; border-radius: 50%; background: #b8aaa060; filter: blur(4px); }
-.a-base { position: absolute; inset: 0; }
-.a-sky { position: absolute; inset: 0; background: linear-gradient(#7a1a10, #3a0a06 70%, #4a4340 70%); }
-.a-wall { position: absolute; bottom: 30%; width: 70px; height: 50px; background: repeating-linear-gradient(90deg, #555 0 18px, #444 18px 20px); border-top: 6px solid #333; }
-.a-wall.l { left: 0; } .a-wall.r { right: 0; }
-.a-hangar { position: absolute; left: 80px; bottom: 30%; width: 140px; height: 90px; background: repeating-linear-gradient(90deg, #6a6e75 0 10px, #5a5d63 10px 12px);
-  border-radius: 70px 70px 0 0; text-align: center; }
-.a-hangar b { display: inline-block; margin-top: 20px; font: 12px 'Arial Black', sans-serif; color: #ffd040; letter-spacing: 2px; }
-.a-door { position: absolute; left: 35px; bottom: 0; width: 70px; height: 44px; background: #1a1a1c; border-top: 4px solid #ffd040; }
-.a-flag { position: absolute; left: 228px; bottom: 54%; color: #fff; font-size: 16px; background: #c8202a; padding: 0 6px; animation: flap 0.6s infinite alternate; }
-@keyframes flap { to { transform: skewY(6deg); } }
-.a-pad { position: absolute; left: 236px; bottom: 26%; width: 44px; height: 10px; border-radius: 50%; background: #b060ff; box-shadow: 0 0 16px #b060ff; }
-.a-logo { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 38px 'Arial Black', Impact, sans-serif;
-  color: #ff5020; letter-spacing: 3px; transform: skew(-8deg); text-shadow: 0 0 20px #ff2000, 0 4px 0 #600; background: radial-gradient(#3a0a06, #0b0303); }
+#intro .i-logo { position: absolute; left: 50%; top: 30%; transform: translate(-50%, -50%) skew(-8deg); z-index: 2; pointer-events: none;
+  font: clamp(48px, 10vw, 140px) 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 6px; white-space: nowrap;
+  text-shadow: 0 0 30px #ff2000, 0 6px 0 #600; opacity: 0; transition: opacity 1.5s 1s; }
+#intro.last .i-logo { opacity: 1; }
