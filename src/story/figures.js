@@ -1,13 +1,18 @@
-// The two heroes as chunky low-poly figures (for the story scenes):
-//   HANK: retired F1 champion, ex-military. Leather jacket (his one accessory).
+// The two heroes as R6-style block figures (for the story scenes): a
+// rounded head, a square torso, block arms (one piece, swinging at the
+// shoulder) and block legs, with softened edges.
+//   HANK: retired F1 champion, ex-military. Leather jacket (his only accessory).
 //   DOC:  genius engineer. Lab coat and a hard hat.
-// Built facing +Z; the story scenes show them from behind.
+// Built facing +Z. Turn them with figure.group.rotation.y; the idle
+// animation moves an inner group, so it never undoes that turn.
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 
-const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.8, ...extra });
+const U = 0.37; // one "stud": arms/legs are 1x2x1 studs, the torso 2x2x1
+const mat = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
 
-function box(parent, w, h, d, material, x, y, z) {
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), material);
+function part(parent, w, h, d, material, x, y, z, r = 0.035) {
+  const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 3, r), material);
   m.position.set(x, y, z);
   m.castShadow = true;
   m.receiveShadow = true;
@@ -15,73 +20,81 @@ function box(parent, w, h, d, material, x, y, z) {
   return m;
 }
 
-// An arm hinged at the shoulder: upper arm + forearm (bent) + hand.
-function arm(parent, side, M, sleeve, { up = 0, out = 0.5, bend = 1.2 } = {}) {
-  const shoulder = new THREE.Group();
-  shoulder.position.set(side * 0.36, 1.52, 0);
-  parent.add(shoulder);
-  shoulder.rotation.z = side * out;
-  shoulder.rotation.x = -up;
-  box(shoulder, 0.2, 0.42, 0.22, sleeve, 0, -0.2, 0);
-  const elbow = new THREE.Group();
-  elbow.position.set(0, -0.4, 0);
-  elbow.rotation.z = -side * bend;
-  shoulder.add(elbow);
-  box(elbow, 0.18, 0.38, 0.2, sleeve, 0, -0.18, 0);
-  box(elbow, 0.15, 0.14, 0.16, M.skin, 0, -0.42, 0);
-  return { shoulder, elbow };
+// The shared body. colors: { skin, torso, arms, legs }. Returns the pieces
+// so each character can add clothes and pose the arms.
+function r6Body(colors) {
+  const group = new THREE.Group();
+  const body = new THREE.Group(); // (idle animation moves this)
+  group.add(body);
+  const legH = 2 * U, torsoY = legH + U;
+  for (const s of [-1, 1]) part(body, U * 0.98, legH, U, colors.legs, s * U / 2, legH / 2, 0);
+  const torso = part(body, 2 * U, 2 * U, U, colors.torso, 0, torsoY, 0);
+  // Head: a rounded cylinder sitting on the torso
+  const head = new THREE.Mesh(new THREE.CapsuleGeometry(U * 0.62, U * 0.45, 6, 16), colors.skin);
+  head.position.set(0, legH + 2 * U + U * 0.7, 0);
+  head.castShadow = true;
+  body.add(head);
+  // Arms hinge at the top of the shoulder
+  const arms = [-1, 1].map((s) => {
+    const shoulder = new THREE.Group();
+    shoulder.position.set(s * 1.5 * U, legH + 2 * U - 0.02, 0);
+    body.add(shoulder);
+    part(shoulder, U * 0.98, 2 * U, U, colors.arms, 0, -U, 0);
+    part(shoulder, U * 0.9, U * 0.35, U * 0.9, colors.skin, 0, -2 * U + U * 0.1, 0, 0.05); // hand
+    return shoulder;
+  });
+  return { group, body, torso, head, arms, legH, torsoY };
 }
 
 export function createHank() {
-  const M = { skin: mat(0xd8a080), jacket: mat(0x2a1a12, { roughness: 0.45 }), jeans: mat(0x2a3a5a), hair: mat(0x1a1210), boot: mat(0x111111), shirt: mat(0xe8e2d8) };
-  const g = new THREE.Group();
-  box(g, 0.2, 0.82, 0.24, M.jeans, -0.13, 0.43, 0); // legs
-  box(g, 0.2, 0.82, 0.24, M.jeans, 0.13, 0.43, 0);
-  box(g, 0.24, 0.1, 0.32, M.boot, -0.13, 0.05, 0.04);
-  box(g, 0.24, 0.1, 0.32, M.boot, 0.13, 0.05, 0.04);
-  box(g, 0.66, 0.74, 0.36, M.jacket, 0, 1.22, 0); // leather jacket
-  box(g, 0.68, 0.12, 0.38, M.jacket, 0, 0.88, 0);  // waistband
-  box(g, 0.5, 0.12, 0.3, M.jacket, 0, 1.62, -0.02); // collar
-  box(g, 0.2, 0.5, 0.02, M.shirt, 0, 1.32, 0.19);   // shirt under the open jacket
-  box(g, 0.14, 0.12, 0.14, M.skin, 0, 1.68, 0);     // neck
-  box(g, 0.36, 0.38, 0.36, M.skin, 0, 1.92, 0);     // head
-  box(g, 0.38, 0.14, 0.38, M.hair, 0, 2.08, -0.02); // hair
-  box(g, 0.38, 0.22, 0.1, M.hair, 0, 1.95, -0.16);
-  // Hands on hips, elbows out (like the sketch)
-  const L = arm(g, 1, M, M.jacket, { out: 0.75, bend: 1.9 });
-  const R = arm(g, -1, M, M.jacket, { out: 0.75, bend: 1.9 });
-  return { group: g, arms: [L, R], update: (t) => { g.position.y = Math.sin(t * 2) * 0.008; g.rotation.y = Math.sin(t * 0.5) * 0.05; } };
+  const C = { skin: mat(0xd8a080), torso: mat(0x2a1a12, { roughness: 0.4 }), arms: mat(0x2a1a12, { roughness: 0.4 }), legs: mat(0x2a3a5a) };
+  const f = r6Body(C);
+  // Leather jacket details: collar, open front over a white shirt, zip line
+  part(f.body, 2 * U + 0.02, U * 0.22, U + 0.04, mat(0x1e120c, { roughness: 0.4 }), 0, f.torsoY + U * 0.92, 0, 0.03);
+  part(f.body, U * 0.55, 2 * U - 0.08, 0.02, mat(0xe8e2d8), 0, f.torsoY, U / 2 + 0.005, 0.005);
+  part(f.body, 2 * U + 0.02, U * 0.16, U + 0.02, mat(0x1e120c, { roughness: 0.4 }), 0, f.torsoY - U * 0.92, 0, 0.03); // waistband
+  part(f.body, 0.02, 2 * U - 0.1, 0.02, mat(0x8a8070, { metalness: 0.8, roughness: 0.3 }), -U * 0.3, f.torsoY, U / 2 + 0.012, 0.005);
+  const [R, L] = f.arms;
+  L.rotation.z = 0.12; R.rotation.z = -0.12;
+  return {
+    group: f.group,
+    update: (t) => {
+      f.body.position.y = Math.sin(t * 2) * 0.006;
+      f.body.rotation.y = Math.sin(t * 0.5) * 0.04;
+      L.rotation.x = Math.sin(t * 1.1) * 0.04;
+      R.rotation.x = -Math.sin(t * 1.1) * 0.04;
+    },
+  };
 }
 
 export function createDoc() {
-  const M = { skin: mat(0xe0b090), coat: mat(0xf2f2ee), pants: mat(0x3a3a40), hat: mat(0xf0c020, { roughness: 0.4 }), shoe: mat(0x222222), hair: mat(0x8a8a88) };
-  const g = new THREE.Group();
-  box(g, 0.18, 0.8, 0.22, M.pants, -0.12, 0.42, 0);
-  box(g, 0.18, 0.8, 0.22, M.pants, 0.12, 0.42, 0);
-  box(g, 0.22, 0.1, 0.3, M.shoe, -0.12, 0.05, 0.04);
-  box(g, 0.22, 0.1, 0.3, M.shoe, 0.12, 0.05, 0.04);
-  box(g, 0.62, 0.8, 0.34, M.coat, 0, 1.2, 0);       // lab coat
-  box(g, 0.64, 0.42, 0.36, M.coat, 0, 0.66, 0);     // coat tails down to the knees
-  box(g, 0.02, 0.6, 0.01, mat(0xcccccc), 0, 0.8, -0.181); // back seam
-  box(g, 0.14, 0.12, 0.14, M.skin, 0, 1.66, 0);
-  box(g, 0.34, 0.36, 0.34, M.skin, 0, 1.9, 0);
-  box(g, 0.36, 0.12, 0.2, M.hair, 0, 1.8, -0.12);   // grey hair at the back
-  // Hard hat: dome + brim
-  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.24, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.hat);
-  dome.position.set(0, 2.05, 0);
+  const coat = mat(0xf2f2ee);
+  const C = { skin: mat(0xe0b090), torso: coat, arms: coat, legs: mat(0x3a3a40) };
+  const f = r6Body(C);
+  // Lab coat flaps down over the thighs, pocket, and a hard hat
+  part(f.body, 2 * U + 0.03, U * 0.8, U + 0.03, coat, 0, f.legH - U * 0.35, 0, 0.02);
+  part(f.body, 0.01, U * 0.8, 0.012, mat(0xcfcfca), 0, f.legH - U * 0.35, U / 2 + 0.02, 0.004);
+  part(f.body, U * 0.4, U * 0.3, 0.02, mat(0xdcdcd6), U * 0.5, f.torsoY + U * 0.35, U / 2 + 0.01, 0.005);
+  const hat = new THREE.Group();
+  hat.position.copy(f.head.position).add(new THREE.Vector3(0, U * 0.45, 0));
+  f.body.add(hat);
+  const yellow = mat(0xf0c020, { roughness: 0.35 });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(U * 0.72, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), yellow);
   dome.castShadow = true;
-  g.add(dome);
-  box(g, 0.56, 0.04, 0.56, M.hat, 0, 2.06, 0.02);
-  box(g, 0.06, 0.06, 0.5, M.hat, 0, 2.27, 0);       // ridge
-  // One hand on the hip, the other pointing up at the plan
-  const L = arm(g, 1, M, M.coat, { out: 0.75, bend: 1.9 });
-  const R = arm(g, -1, M, M.coat, { up: 0, out: 2.5, bend: -0.5 });
+  hat.add(dome);
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(U * 0.95, U * 0.95, 0.03, 20), yellow);
+  hat.add(brim);
+  part(hat, 0.07, 0.07, U * 1.3, yellow, 0, U * 0.68, 0, 0.02); // ridge
+  const [R, L] = f.arms;
+  L.rotation.z = 0.1;
   return {
-    group: g, arms: [L, R],
+    group: f.group,
     update: (t) => {
-      g.position.y = Math.sin(t * 2.3) * 0.008;
-      R.shoulder.rotation.z = -2.5 + Math.sin(t * 3) * 0.12; // jabbing at the plan
-      R.elbow.rotation.z = 0.5 + Math.sin(t * 3 + 1) * 0.15;
+      f.body.position.y = Math.sin(t * 2.3) * 0.006;
+      // Right arm up, jabbing at the plan
+      R.rotation.x = -2.5 + Math.sin(t * 3) * 0.12;
+      R.rotation.z = -0.25;
+      L.rotation.x = Math.sin(t * 1.3) * 0.04;
     },
   };
 }

@@ -123,7 +123,7 @@ const SCENES = {
     rim.position.set(4, 6, -8); rim.target.position.set(1.5, 1, -1.5);
     rim.castShadow = true;
     scene.add(rim, rim.target);
-    const fill = new THREE.PointLight(0xffb080, 6, 12, 1.5); // warm light on Hank's back
+    const fill = new THREE.PointLight(0xffb080, 16, 12, 1.5); // warm light on Hank's back
     fill.position.set(2.6, 2.6, 2);
     scene.add(fill);
     const hank = createHank();
