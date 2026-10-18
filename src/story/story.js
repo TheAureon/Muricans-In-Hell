@@ -72,7 +72,7 @@ export const RADIO = {
   nearTitan: [['doc', 'Huge heat signature dead ahead. Something big is sleeping in that ring of bones.']],
   titanAwake: [['you', 'It\'s awake.'], ['doc', 'Then put it back to sleep. Permanently.']],
   titanDead: [
-    ['doc', 'It\'s down! And... whoa. The readings around the arena just went crazy. There\'s a tear opening. That leads deeper.'],
+    ['doc', 'It\'s down! And... whoa. The readings around the arena just went crazy. A portal just opened. That leads deeper.'],
     ['you', 'Deeper is where the oil is.'],
   ],
   wrecked: [['doc', 'Hank? You there? Weird. I could have sworn I just heard you explode. Anyway, the car\'s ready.']],
