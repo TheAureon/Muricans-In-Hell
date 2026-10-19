@@ -2,11 +2,13 @@
 // Drive through it to travel to the next region. If the next region isn't
 // built yet, the gate stands there sealed (dark, no swirl).
 import * as THREE from 'three';
+import { terrain } from './terrain.js';
 import { litMaterial } from '../core/graphics.js';
 
 export class Hellgate {
   constructor(scene, position, faceToward, leadsTo) {
-    this.pos = position.clone().setY(0);
+    this.pos = position.clone();
+    this.pos.y = terrain.height(this.pos.x, this.pos.z);
     this.leadsTo = leadsTo; // region data, or null = sealed
     this.open = false;
     this.t = 0;

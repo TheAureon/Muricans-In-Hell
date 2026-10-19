@@ -25,6 +25,7 @@ import { Autopilot, Director } from './ui/attract.js';
 import { Lighting } from './world/lighting.js';
 import { GFX } from './core/graphics.js';
 import { Base } from './world/base.js';
+import { setupTerrain, terrain } from './world/terrain.js';
 import { Teleporter } from './world/teleporter.js';
 import { Radio, speakLine } from './story/radio.js';
 import { playIntro } from './story/intro.js';
@@ -51,6 +52,7 @@ async function main() {
   } catch { /* ignore */ }
   const region = regionById(jump || progress.region);
   const next = nextRegion(region);
+  setupTerrain(region); // hills (or flat ground) for this region
   const physics = await createPhysics();
   const { renderer, scene, camera, followPlayer, lights } = createScene(region);
   const hazards = new Hazards(scene, region);
@@ -63,10 +65,11 @@ async function main() {
   base?.setPadActive(REGIONS.some((r) => progress.teleporters[r.id]));
   // Where you start / respawn: the teleporter if you've set one up here,
   // else the base (Ash Plains), else where you came in.
-  const regionSpawn = () => (region.base ? new THREE.Vector3(region.base.x, 1, region.base.z) : new THREE.Vector3(0, 1, 0));
-  const respawnPoint = () => (tele?.established ? tele.pos.clone().add(new THREE.Vector3(0, 1, 8)) : regionSpawn());
+  const onGround = (v) => { v.y = terrain.height(v.x, v.z) + 1; return v; };
+  const regionSpawn = () => onGround(region.base ? new THREE.Vector3(region.base.x, 0, region.base.z) : new THREE.Vector3(0, 0, 0));
+  const respawnPoint = () => (tele?.established ? onGround(tele.pos.clone().add(new THREE.Vector3(0, 0, 8))) : regionSpawn());
   const startPoint = arrive === 'teleporter' && tele?.established ? respawnPoint()
-    : arrive === 'base' && base ? base.pad.clone().add(new THREE.Vector3(-9, 1, 0)) : regionSpawn();
+    : arrive === 'base' && base ? onGround(base.pad.clone().add(new THREE.Vector3(-9, 0, 0))) : regionSpawn();
 
   const car = new Car(scene, physics, startPoint);
   car.hazards = hazards;
@@ -95,6 +98,19 @@ async function main() {
   }
   car.setTier(progress.tier);
   const garage = new Garage({ camera, renderer, car, audio, progress });
+  // The garage is a real place now: Doc's base in the Ash Plains. G or the
+  // corner button opens it there (or anywhere in creative mode).
+  const canGarage = () => SETTINGS.dev.creative || !!base?.contains(car.currPos);
+  function toggleGarage() {
+    if (garage.open) garage.close();
+    else if (car.wrecked) { /* wait for respawn */ }
+    else if (canGarage()) garage.openGarage();
+    else if (base) hud.toast('The garage is back at base. Drive home!', 'warn');
+    else if (tele?.established) hud.toast('No garage out here. Teleport home from the pad (F).', 'warn');
+    else hud.toast('No garage out here. Find the hell-magic source (purple light) to set up a teleporter.', 'warn');
+  }
+  let garageClicked = false;
+  document.getElementById('garage-btn').addEventListener('click', (e) => { garageClicked = true; e.currentTarget.blur(); });
   garage.onOpenChange = (open) => base?.showShell(!open); // see the car, not the hangar walls
   let lastChime = 0;
   const souls = new Souls(scene, (value) => {
@@ -236,7 +252,7 @@ async function main() {
   car.invulnerable = true;
   const attractAt = region.attractCenter || { x: 0, z: 0 };
   const autopilot = new Autopilot(car, demons, attractAt, base);
-  car.body.setTranslation({ x: attractAt.x, y: 1, z: attractAt.z }, true); // (film outside the walls)
+  car.body.setTranslation({ x: attractAt.x, y: terrain.height(attractAt.x, attractAt.z) + 1, z: attractAt.z }, true); // (film outside the walls)
   car.capture(); car.capture();
   const cutEl = document.getElementById('cut');
   const flashCut = () => { cutEl.className = ''; void cutEl.offsetWidth; cutEl.className = 'flash'; };
@@ -305,14 +321,9 @@ async function main() {
       if (input.wasPressed('KeyC')) dev.toggle();
       if (input.wasPressed('KeyH')) hud.toggleHelp();
       if (input.wasPressed('KeyM')) audio.toggleMute();
-      if (input.wasPressed('KeyG') || (garage.open && input.wasPressed('Escape'))) {
-        // The garage is a real place now: Doc's base in the Ash Plains.
-        if (garage.open) garage.close();
-        else if (car.wrecked) { /* wait for respawn */ }
-        else if (SETTINGS.dev.creative || base?.contains(car.currPos)) garage.openGarage();
-        else if (base) hud.toast('The garage is back at base. Drive home!', 'warn');
-        else if (tele?.established) hud.toast('No garage out here. Teleport home from the pad (F).', 'warn');
-        else hud.toast('No garage out here. Find the hell-magic source (purple light) to set up a teleporter.', 'warn');
+      if (input.wasPressed('KeyG') || garageClicked || (garage.open && input.wasPressed('Escape'))) {
+        garageClicked = false;
+        toggleGarage();
         input.mouse.down = false;
       }
       // Teleport: from a region's pad home to base, or from the base pad out.
@@ -437,7 +448,7 @@ async function main() {
       for (const w of car.model.wheels) {
         if (w.front) continue;
         w.steer.getWorldPosition(tmp);
-        tmp.y = 0.2;
+        tmp.y = terrain.height(tmp.x, tmp.z) + 0.2;
         const vel = new THREE.Vector3((Math.random() - 0.5) * 2, 0.5 + Math.random(), (Math.random() - 0.5) * 2);
         dust.spawn(tmp, vel, 0.3 + Math.random() * 0.3, 0.6 + Math.random() * 0.5);
       }
@@ -501,6 +512,8 @@ async function main() {
       radio.update(dt);
       if (base && !base.contains(car.currPos)) radio.say('leaveBase');
       if (car.onLava > 0 && car.grounded) radio.say('firstLava');
+      if (car.slipping > 0.5) radio.say('firstSlip');
+      hud.garageButton(canGarage() && !car.wrecked, canGarage() ? 'Open the garage (G)' : base ? 'The garage is at base (drive home)' : 'The garage is at base (teleport home from a teleporter pad)');
       if (boss && !SETTINGS.dev.noEnemies) {
         if (boss.awake) radio.say(region.radio?.bossAwake);
         else if (boss.state !== 'dead' && boss.arenaCenter.distanceTo(car.currPos) < 260) radio.say(region.radio?.nearBoss);

@@ -170,3 +170,66 @@ export function createMagmaBruteGeometry() {
     ],
   });
 }
+
+// BONE RAM (Bone Mountains): a skeletal goat-thing with huge curled horns.
+// It lowers its head and CHARGES.
+export const BONE_RAM_GORE = [0xe0d6bc, 0xb8ad98, 0x6a5a4a, 0x9a0a0a];
+export function createBoneRamGeometry() {
+  const BONE = 0xe0d6bc, OLD = 0xb8ad98, DARK = 0x3a2e24, EYE = glow(0x9affc0), HORN = 0x5a4a3a;
+  const leg = (part, x, z, front) => limb(part, [x, 0.95, z], [
+    piece(box(0.13, 0.5, 0.13), BONE, x, 0.7, z),
+    piece(box(0.1, 0.48, 0.1), OLD, x, 0.25, z + (front ? 0.04 : -0.04)),
+    piece(box(0.16, 0.08, 0.2), DARK, x, 0.04, z + 0.03),                   // hooves
+  ]);
+  const ribs = [];
+  for (let k = 0; k < 5; k++) ribs.push(piece(new THREE.TorusGeometry(0.34, 0.035, 4, 8, Math.PI), BONE, 0, 1.05, -0.45 + k * 0.2, Math.PI, Math.PI / 2, 0));
+  const curl = (s) => {
+    const t = new THREE.TorusGeometry(0.28, 0.08, 5, 9, Math.PI * 1.5);
+    return piece(t, HORN, s * 0.3, 1.55, 0.72, 0, Math.PI / 2, s > 0 ? 0 : Math.PI);
+  };
+  return merged([
+    piece(box(0.12, 0.12, 1.3), BONE, 0, 1.35, -0.05),                       // spine
+    ...ribs,
+    piece(box(0.55, 0.35, 0.4), OLD, 0, 1.15, -0.65),                        // pelvis
+    ...leg(PART.legL, 0.22, -0.6, false), ...leg(PART.legR, -0.22, -0.6, false),
+    ...leg(PART.armL, 0.22, 0.45, true), ...leg(PART.armR, -0.22, 0.45, true),
+    ...limb(PART.head, [0, 1.35, 0.55], [
+      piece(box(0.4, 0.38, 0.5), BONE, 0, 1.4, 0.82),                        // skull
+      piece(box(0.28, 0.2, 0.36), OLD, 0, 1.22, 1.08),                       // snout
+      piece(box(0.1, 0.08, 0.04), EYE, 0.12, 1.47, 1.08), piece(box(0.1, 0.08, 0.04), EYE, -0.12, 1.47, 1.08),
+      curl(1), curl(-1),
+    ]),
+    ...limb(PART.tail, [0, 1.3, -0.75], [piece(cone(0.05, 0.4), BONE, 0, 1.25, -0.95, -2.0)]),
+  ]);
+}
+
+// BONE ARCHER (Bone Mountains): a tall skeleton that hurls bone spears
+// from a distance and backs off if you get close.
+export const BONE_ARCHER_GORE = [0xe0d6bc, 0xb8ad98, 0x3a2e24, 0x60ffa0];
+export function createBoneArcherGeometry() {
+  const BONE = 0xe0d6bc, OLD = 0xc8bca4, DARK = 0x2a221c, EYE = glow(0x9affc0), RAG = 0x4a2a2a;
+  const ribs = [];
+  for (let k = 0; k < 4; k++) ribs.push(piece(new THREE.TorusGeometry(0.24, 0.03, 4, 8, Math.PI), BONE, 0, 1.35 + k * 0.13, 0, 0, 0, Math.PI));
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.14, 1.0, 0], [
+      piece(box(0.08, 0.5, 0.08), BONE, s * 0.14, 0.74, 0),
+      piece(box(0.07, 0.5, 0.07), OLD, s * 0.14, 0.26, 0),
+      piece(box(0.12, 0.05, 0.2), BONE, s * 0.14, 0.03, 0.05),
+    ])),
+    piece(box(0.4, 0.14, 0.2), OLD, 0, 1.05, 0),                             // pelvis
+    piece(box(0.06, 0.8, 0.06), BONE, 0, 1.45, -0.08),                       // spine
+    ...ribs,
+    piece(box(0.5, 0.35, 0.05), RAG, 0, 1.25, -0.14),                        // tattered rag
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.armL : PART.armR, [s * 0.28, 1.82, 0], [
+      piece(box(0.07, 0.42, 0.07), BONE, s * 0.3, 1.6, 0.02),
+      piece(box(0.06, 0.38, 0.06), OLD, s * 0.31, 1.22, 0.06),
+      ...(s > 0 ? [piece(box(0.04, 0.04, 1.3), OLD, s * 0.31, 1.05, 0.2)] : []), // bone spear in hand
+    ])),
+    ...limb(PART.head, [0, 1.88, 0], [
+      piece(box(0.3, 0.32, 0.32), BONE, 0, 2.06, 0.02),                      // skull
+      piece(box(0.22, 0.1, 0.2), OLD, 0, 1.88, 0.08),                        // jaw
+      piece(box(0.07, 0.07, 0.04), EYE, 0.07, 2.08, 0.18), piece(box(0.07, 0.07, 0.04), EYE, -0.07, 2.08, 0.18),
+      piece(box(0.08, 0.04, 0.03), DARK, 0, 1.97, 0.18),                     // nose hole
+    ]),
+  ]);
+}

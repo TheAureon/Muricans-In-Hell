@@ -1,6 +1,7 @@
 // Scrap: pieces that broke off your car. They fly off, tumble, land, and
 // glow with a beacon until you drive close and press E to grab them.
 import * as THREE from 'three';
+import { terrain } from './terrain.js';
 
 const GRAVITY = 22;
 const MAX_SCRAP = 60;
@@ -71,23 +72,24 @@ export class Scrap {
         s.vel.y -= GRAVITY * dt;
         g.position.addScaledVector(s.vel, dt);
         g.rotation.x += s.spin.x * dt; g.rotation.y += s.spin.y * dt; g.rotation.z += s.spin.z * dt;
-        if (g.position.y < 0.3) {
-          g.position.y = 0.3;
+        const floor = terrain.height(g.position.x, g.position.z) + 0.3;
+        if (g.position.y < floor) {
+          g.position.y = floor;
           s.vel.y = Math.abs(s.vel.y) * 0.35;
           s.vel.x *= 0.5; s.vel.z *= 0.5;
           s.spin.multiplyScalar(0.5);
           if (s.vel.length() < 1.5) {
             s.landed = true;
             s.beam.visible = s.ring.visible = true;
-            s.beam.position.copy(g.position).setY(0);
-            s.ring.position.copy(g.position).setY(0.1);
+            s.beam.position.copy(g.position).setY(floor - 0.3);
+            s.ring.position.copy(g.position).setY(floor - 0.2);
           }
         }
       } else {
         // Gentle pulse so it catches your eye
         const p = 1 + Math.sin(this.time * 4 + g.id) * 0.15;
         s.ring.scale.setScalar(p);
-        g.position.y = 0.3 + Math.sin(this.time * 2 + g.id) * 0.08;
+        g.position.y = terrain.height(g.position.x, g.position.z) + 0.3 + Math.sin(this.time * 2 + g.id) * 0.08;
         g.rotation.y += dt * 0.8;
       }
     }

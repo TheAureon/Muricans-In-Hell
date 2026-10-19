@@ -335,3 +335,15 @@ body #devpanel { cursor: default; }
   font: clamp(48px, 10vw, 140px) 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 6px; white-space: nowrap;
   text-shadow: 0 0 30px #ff2000, 0 6px 0 #600; opacity: 0; transition: opacity 1.5s 1s; }
 #intro.last .i-logo { opacity: 1; }
+
+/* ---- Garage button (bottom right, above the speedometer) ---- */
+#garage-btn { position: absolute; right: 24px; bottom: 140px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px 8px 12px; background: #1a0806cc; border: 2px solid #ff502050; border-radius: 8px; color: #f0d8c890;
+  font: 16px 'Arial Black', Impact, sans-serif; letter-spacing: 2px; transition: all 0.2s; opacity: 0.55; }
+#garage-btn .gb-ico { font-size: 22px; filter: grayscale(1); }
+#garage-btn small { display: block; font: 10px system-ui, sans-serif; letter-spacing: 1px; color: #fff6; text-align: left; }
+#garage-btn.ready { opacity: 1; color: #ffe6c0; border-color: #ff5020; background: #3a0e06e6; box-shadow: 0 0 14px #ff502060; animation: gbpulse 1.6s infinite; }
+#garage-btn.ready .gb-ico { filter: none; }
+#garage-btn:hover { transform: translateY(-2px); opacity: 1; }
+@keyframes gbpulse { 50% { box-shadow: 0 0 22px #ff5020a0; } }
+body.garage-open #garage-btn { display: none; }

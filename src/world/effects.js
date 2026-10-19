@@ -1,6 +1,7 @@
 // Cheap visual effects. Everything uses fixed-size pools (no new objects
 // created during play) so it stays fast.
 import * as THREE from 'three';
+import { terrain } from './terrain.js';
 
 // ---------------- Dust puffs kicked up by the tires ----------------
 export class Dust {
@@ -104,14 +105,15 @@ export class AimMarker {
   // Finds where the mouse points on the ground. Returns the aim point.
   update(camera, ndcX, ndcY, t) {
     this.raycaster.setFromCamera({ x: ndcX, y: ndcY }, camera);
-    const hit = this.raycaster.ray.intersectPlane(this.plane, this.point);
+    const hit = terrain.raycast(this.raycaster.ray.origin, this.raycaster.ray.direction, 300);
+    if (hit) this.point.copy(hit);
     if (!hit || hit.distanceTo(camera.position) > 300) {
       // Aiming at the sky: pick a point far along the mouse ray.
       this.raycaster.ray.at(300, this.point);
       this.mesh.visible = false;
     } else {
       this.mesh.visible = true;
-      this.mesh.position.copy(this.point).setY(0.08);
+      this.mesh.position.copy(this.point).setY(this.point.y + 0.08);
       this.mesh.rotation.y = t * 2;
     }
     return this.point;

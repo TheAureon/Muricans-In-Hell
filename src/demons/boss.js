@@ -19,6 +19,7 @@ import * as THREE from 'three';
 import { litMaterial } from '../core/graphics.js';
 import { SETTINGS } from '../settings.js';
 import { raySphere } from './demons.js';
+import { terrain } from '../world/terrain.js';
 
 const KMH = 1 / 3.6;
 const UP = new THREE.Vector3(0, 1, 0);
@@ -32,7 +33,7 @@ export class Boss {
     this.B = SETTINGS.bosses[cfg.type];
     this.ctx = ctx; // { car, demons, projectiles, gore, audio, hud, chase, dust, stats, hazards, onDefeated }
     const A = cfg.arena;
-    this.arenaCenter = new THREE.Vector3(A.x, 0, A.z);
+    this.arenaCenter = new THREE.Vector3(A.x, terrain.height(A.x, A.z), A.z);
     this.arenaRadius = A.radius;
     this.radius = 2.6;
 
@@ -70,7 +71,7 @@ export class Boss {
     this.ring.visible = false;
     this.root.visible = !this.defeated;
     this.root.rotation.set(0, 0, 0);
-    this.body.setNextKinematicTranslation(this.defeated ? { x: 0, y: -200, z: 0 } : { x: this.pos.x, y: 0, z: this.pos.z });
+    this.body.setNextKinematicTranslation(this.defeated ? { x: 0, y: -200, z: 0 } : { x: this.pos.x, y: this.pos.y, z: this.pos.z });
     this.ctx.hud?.bossBar(null);
   }
 
@@ -91,7 +92,7 @@ export class Boss {
     if (this.state === 'dead') return null;
     let best = null;
     for (const [y, r] of [[4.6, 2.9], [7.4, 1.4]]) {
-      const c = new THREE.Vector3(this.pos.x, y, this.pos.z);
+      const c = new THREE.Vector3(this.pos.x, this.pos.y + y, this.pos.z);
       const t = raySphere(o, dir, c, r);
       if (t !== null && (!best || t < best.t)) best = { t, point: o.clone().addScaledVector(dir, t) };
     }
@@ -192,7 +193,7 @@ export class Boss {
       this.wave.r += 22 * dt;
       if (!this.wave.hit && Math.abs(dist - this.wave.r) < 2 && car.grounded) {
         this.wave.hit = true;
-        const toward = this.pos.clone().setY(0.3).sub(carPos).setY(0).normalize().multiplyScalar(1.5).add(carPos);
+        const toward = this.pos.clone().sub(carPos).setY(0).normalize().multiplyScalar(1.5).add(carPos);
         car.takeDamage(B.stompDamage, toward);
         car.nudge((toCar.x / dist) * 7, (toCar.z / dist) * 7);
         this.ctx.chase.addShake(0.8);
@@ -223,7 +224,8 @@ export class Boss {
       const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
       if (a.type === 'slam') {
         this.cd.slam = 2.6;
-        const at = this.pos.clone().addScaledVector(fwd, 6.5).setY(0.5);
+        const at = this.pos.clone().addScaledVector(fwd, 6.5);
+        at.y = terrain.height(at.x, at.z) + 0.5;
         const d = Math.hypot(car.currPos.x - at.x, car.currPos.z - at.z);
         if (d < B.slamRadius + 2 && !car.wrecked) {
           car.takeDamage(B.slamDamage, at);
@@ -237,9 +239,9 @@ export class Boss {
       } else if (a.type === 'stomp') {
         this.cd.stomp = 8;
         this.wave = { r: 3, hit: false };
-        this.ring.position.set(this.pos.x, 0.15, this.pos.z);
+        this.ring.position.set(this.pos.x, this.pos.y + 0.15, this.pos.z);
         this.ring.visible = true;
-        this.#dustBurst(this.pos.clone().setY(0.5), 16, 1.2);
+        this.#dustBurst(this.pos.clone().setY(this.pos.y + 0.5), 16, 1.2);
         this.ctx.audio.wreck();
         this.ctx.chase.addShake(Math.max(0.3, 1.0 - dist / 50));
       } else if (a.type === 'throw') {
@@ -304,9 +306,9 @@ export class Boss {
     const L = this.cfg.look || {};
     const colors = [L.skin ?? 0x5a5450, L.dark ?? 0x3a3432, L.glow ?? 0xff6a20, 0x9a0a0a, L.horn ?? 0xe0d6bc];
     for (const y of [1, 4, 7]) {
-      this.ctx.gore.explode(this.pos.clone().setY(y), new THREE.Vector3((Math.random() - 0.5) * 10, 6, (Math.random() - 0.5) * 10), colors, 4);
+      this.ctx.gore.explode(this.pos.clone().setY(this.pos.y + y), new THREE.Vector3((Math.random() - 0.5) * 10, 6, (Math.random() - 0.5) * 10), colors, 4);
     }
-    this.#dustBurst(this.pos.clone().setY(1), 40, 2);
+    this.#dustBurst(this.pos.clone().setY(this.pos.y + 1), 40, 2);
     this.ctx.audio.wreck();
     this.ctx.chase.addShake(1.2);
     this.root.visible = false;
@@ -321,7 +323,10 @@ export class Boss {
     }
   }
 
-  #syncBody() { this.body.setNextKinematicTranslation({ x: this.pos.x, y: 0, z: this.pos.z }); }
+  #syncBody() {
+    this.pos.y = terrain.height(this.pos.x, this.pos.z); // walk on the ground
+    this.body.setNextKinematicTranslation({ x: this.pos.x, y: this.pos.y, z: this.pos.z });
+  }
 
   // ------------------------------------------------------------------ drawing
   render(alpha, dt) {
@@ -419,6 +424,20 @@ export class Boss {
       add(sh, box(1.9, 1.6, 1.9), dark, 0, -3.8, 0.2); // fist
       upper.add(sh);
       arms[name] = sh;
+    }
+    // Bone King: a golden crown and a ribcage on its chest.
+    if (L.crown) {
+      const gold = litMaterial({ color: 0xf0c040, flatShading: true, roughness: 0.3, metalness: 0.8 });
+      add(upper, new THREE.CylinderGeometry(1.05, 1.0, 0.45, 8, 1, true), gold, 0, 8.55, 0.5).material.side = THREE.DoubleSide;
+      for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        add(upper, new THREE.ConeGeometry(0.16, 0.7, 4), gold, Math.sin(a) * 1.0, 9.05, 0.5 + Math.cos(a) * 1.0);
+      }
+      for (let k = 0; k < 4; k++) {
+        const rib = add(upper, new THREE.TorusGeometry(1.5, 0.12, 4, 10, Math.PI), bone, 0, 4.2 + k * 0.6, 1.0);
+        rib.rotation.set(0, 0, Math.PI);
+        rib.scale.z = 0.4;
+      }
     }
     // Magma Colossus: volcanoes on its shoulders and molten fists.
     if (L.vents) {

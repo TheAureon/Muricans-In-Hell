@@ -219,7 +219,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -247,12 +247,21 @@ export const SETTINGS = {
   //   hp: body toughness   power/topSpeed: engine   grip: less sliding
   //   turn: steering       turnInPlace: can spin on the spot (treads)
   //   heatResist: how much less lava burns you (0.4 = 40% less)
+  //   maxClimb: steepest slope (degrees) it can drive up; steeper = slides back
   chassisTiers: [
-    { id: 'car',      name: 'Muscle Car',   cost: 0,    massAdd: 0,    hp: 1.0, power: 1.0,  topSpeed: 1.0,  grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0 },
-    { id: 'armored',  name: 'Armored Car',  cost: 400,  massAdd: 350,  hp: 1.6, power: 1.3,  topSpeed: 0.97, grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0.4 },
-    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false, heatResist: 0.5 },
-    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true,  heatResist: 0.6 },
+    { id: 'car',      name: 'Muscle Car',   cost: 0,    massAdd: 0,    hp: 1.0, power: 1.0,  topSpeed: 1.0,  grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0,   maxClimb: 20 },
+    { id: 'armored',  name: 'Armored Car',  cost: 400,  massAdd: 350,  hp: 1.6, power: 1.3,  topSpeed: 0.97, grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0.4, maxClimb: 23 },
+    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false, heatResist: 0.5, maxClimb: 33 },
+    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true,  heatResist: 0.6, maxClimb: 42 },
   ],
+
+  // ---------------------------------------------------------------
+  //  HILLS (Bone Mountains and later)
+  // ---------------------------------------------------------------
+  slopes: {
+    pull: 0.8,   // how much hills slow you going up / speed you up going down
+    slide: 0.9,  // how hard you slide back down a slope too steep for your tires
+  },
 
   // ---------------------------------------------------------------
   //  LAVA (rivers in the Lava Rivers, and pools the Magma Colossus spits)
@@ -330,6 +339,13 @@ export const SETTINGS = {
     fireImp: { health: 35,  mass: 55,  chaseSpeed: 9,   noticeRange: 80, attackDamage: 2,  attackInterval: 1.0, packMin: 6, packMax: 12, burnDps: 6, burnTime: 3 },
     // A walking volcano: burning punches, and ramming it sets your front on fire.
     magmaBrute: { health: 600, mass: 900, chaseSpeed: 4.2, noticeRange: 60, attackDamage: 24, attackInterval: 2.4, packMin: 1, packMax: 2, burnDps: 10, burnTime: 4 },
+    // BONE MOUNTAINS
+    // Charges when it gets close: chargeBoost x speed for ~1 s, then a hard shove.
+    boneRam: { health: 110, mass: 220, chaseSpeed: 9, noticeRange: 90, attackDamage: 14, attackInterval: 1.6, packMin: 2, packMax: 4,
+               chargeBoost: 2.4, chargeCooldown: 4, chargeShove: 9 },
+    // Throws bone spears (flat and fast) from range, backs off if you get close.
+    boneArcher: { health: 45, mass: 50, chaseSpeed: 6, noticeRange: 110, attackDamage: 14, attackInterval: 2.2, packMin: 2, packMax: 4,
+                  shootRange: 70, preferredRange: 40, fleeRange: 18, splash: 1.5, projectile: 'boneSpear' },
   },
 
   // ---------------------------------------------------------------
@@ -368,6 +384,21 @@ export const SETTINGS = {
       poolTime: 10,           // for this many seconds
       leash: 170,
       souls: 1000,
+    },
+    // Bone Mountains: a skeleton giant on the highest plateau.
+    boneKing: {
+      health: 5200,
+      walkSpeed: 4.6,
+      enragedSpeed: 7,
+      slamDamage: 60,
+      slamRadius: 6,
+      slamBurn: 0,
+      stompDamage: 32,
+      stompRadius: 38,
+      throwDamage: 40,        // throws giant bone boulders
+      throwSplash: 5,
+      leash: 180,
+      souls: 1500,
     },
   },
 };

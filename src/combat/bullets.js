@@ -3,6 +3,7 @@
 // weapon 'gun' = machine-gun rounds (settings.turret)
 // weapon 'cannon' = big slow shells that explode (settings.cannonShell)
 import * as THREE from 'three';
+import { terrain } from '../world/terrain.js';
 import { SETTINGS } from '../settings.js';
 
 const MAX = 500;
@@ -69,8 +70,10 @@ export class Bullets {
         continue;
       }
       // Hit the ground?
-      if (b.dir.y < 0 && b.pos.y + b.dir.y * step <= 0) {
-        step = -b.pos.y / b.dir.y;
+      const gy = terrain.height(b.pos.x + b.dir.x * step, b.pos.z + b.dir.z * step);
+      if (b.pos.y + b.dir.y * step <= gy) {
+        const g0 = terrain.height(b.pos.x, b.pos.z);
+        step = b.dir.y < -1e-3 ? Math.max(0, (b.pos.y - g0) / -b.dir.y) : 0;
         b.pos.addScaledVector(b.dir, step);
         if (Math.random() < 0.5) {
           this.dust.spawn(b.pos, new THREE.Vector3((Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3), 0.25, 0.5);

@@ -11,6 +11,7 @@
 import * as THREE from 'three';
 import { SETTINGS } from '../settings.js';
 import { DEMON_TYPES } from './demonTypes.js';
+import { terrain } from '../world/terrain.js';
 import { createDemonMaterials, demonTime } from './demonShader.js';
 import { GFX } from '../core/graphics.js';
 
@@ -114,6 +115,7 @@ export class Demons {
       const a = Math.random() * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * (2 + count * 0.6 * t.def.radius);
       d.pos.set(center.x + Math.cos(a) * r, 0, center.z + Math.sin(a) * r);
+      d.pos.y = terrain.height(d.pos.x, d.pos.z);
       d.prev.copy(d.pos);
       d.vel.set(0, 0, 0);
       d.hp = stats.health;
@@ -122,7 +124,7 @@ export class Demons {
       d.yaw = Math.random() * 6;
       d.wander.copy(dir);
       d.alive = true;
-      if (d.body) d.body.setTranslation({ x: d.pos.x, y: 0, z: d.pos.z }, true);
+      if (d.body) d.body.setTranslation({ x: d.pos.x, y: d.pos.y, z: d.pos.z }, true);
     }
   }
 
@@ -263,11 +265,14 @@ export class Demons {
       d.flash = Math.max(0, d.flash - dt * 6);
 
       // ---- Flying through the air after a hit ----
-      if (d.pos.y > 0 || d.vel.y > 0) {
+      const gy = terrain.height(d.pos.x, d.pos.z);
+      d.airborne = d.pos.y > gy + 0.01 || d.vel.y > 0;
+      if (d.airborne) {
         d.vel.y -= GRAVITY * dt;
         d.pos.addScaledVector(d.vel, dt);
-        if (d.pos.y <= 0) {
-          d.pos.y = 0;
+        const gy2 = terrain.height(d.pos.x, d.pos.z);
+        if (d.pos.y <= gy2) {
+          d.pos.y = gy2;
           d.vel.y = 0;
           d.vel.x *= 0.4; d.vel.z *= 0.4;
         }
@@ -276,7 +281,13 @@ export class Demons {
         let tx = 0, tz = 0;
         const awake = !car.wrecked && dist < st.noticeRange;
         if (d.stun <= 0 && awake) {
-          const sp = st.chaseSpeed * d.speedJitter;
+          let sp = st.chaseSpeed * d.speedJitter;
+          // Chargers (Bone Rams): lower the head and charge when close.
+          if (d.def.charger) {
+            d.chargeCd = (d.chargeCd || 0) - dt;
+            if (d.charging > 0) { d.charging -= dt; sp *= st.chargeBoost; }
+            else if (d.chargeCd <= 0 && dist < 26 && dist > 6) { d.charging = 1.1; d.chargeCd = st.chargeCooldown; d.lunge = 1; }
+          }
           const ux = toCar.x / dist, uz = toCar.z / dist;
           if (d.def.behavior === 'ranged') {
             // Keep a comfortable distance: flee, close in, or circle.
@@ -309,6 +320,7 @@ export class Demons {
         d.vel.z += THREE.MathUtils.clamp(tz - d.vel.z, -accel, accel);
         d.pos.x += d.vel.x * dt;
         d.pos.z += d.vel.z * dt;
+        d.pos.y = terrain.height(d.pos.x, d.pos.z); // walk on the ground (hills too)
         const faceCar = awake && d.def.behavior === 'ranged';
         const wantYaw = faceCar ? Math.atan2(toCar.x, toCar.z) : Math.atan2(d.vel.x, d.vel.z);
         if (faceCar || Math.hypot(d.vel.x, d.vel.z) > 0.5) d.yaw = lerpAngle(d.yaw, wantYaw, 1 - Math.exp(-10 * dt));
@@ -318,14 +330,15 @@ export class Demons {
           d.attackCd = st.attackInterval * (0.8 + Math.random() * 0.4);
           d.lunge = 1;
           const mouth = d.pos.clone().add(new THREE.Vector3(Math.sin(d.yaw) * 0.6, 2.1, Math.cos(d.yaw) * 0.6));
-          this.projectiles.throwAt('fireball', mouth, st.attackDamage, st.splash, THREE.MathUtils.clamp(dist / 22, 0.7, 2));
+          const fast = st.projectile === 'boneSpear'; // spears fly flat and fast
+          this.projectiles.throwAt(st.projectile || 'fireball', mouth, st.attackDamage, st.splash, THREE.MathUtils.clamp(dist / (fast ? 45 : 22), fast ? 0.45 : 0.7, 2));
         }
       }
       if (this.base?.pushOut(d.pos, r)) { d.vel.x *= 0.2; d.vel.z *= 0.2; } // Doc's walls + wards
       if (d.body) d.body.setNextKinematicTranslation({ x: d.pos.x, y: d.pos.y, z: d.pos.z });
 
       // ---- Touching the car? ----
-      if (dist > 16 || d.pos.y > B.maxY + 0.3 || car.wrecked) continue;
+      if (dist > 16 || d.pos.y - (carPos.y - 0.45) > B.maxY + 0.3 || car.wrecked) continue;
       _local.subVectors(d.pos, carPos).setY(0).applyQuaternion(_qi);
       // How deep into the car's footprint is the demon, from the nearest side?
       // (Heavy demons are solid, so the car stops just short of them.)
@@ -360,11 +373,11 @@ export class Demons {
           const carPush = new THREE.Vector3(cvx, 0, cvz);
           // Pincushions: their spikes stab whatever hit them.
           if (d.def.thorns) {
-            car.takeDamage(st.thornDamage * THREE.MathUtils.clamp(impact / splatSpeed, 0.5, 2), _v.copy(d.pos).setY(0.6));
+            car.takeDamage(st.thornDamage * THREE.MathUtils.clamp(impact / splatSpeed, 0.5, 2), _v.copy(d.pos).setY(d.pos.y + 0.6));
             this.fx.audio.claw();
           }
           // Magma brutes: hitting molten rock sets that side of your car on fire.
-          if (d.def.ramBurn) car.igniteAt(_v.copy(d.pos).setY(0.6), st.burnDps, st.burnTime);
+          if (d.def.ramBurn) car.igniteAt(_v.copy(d.pos).setY(d.pos.y + 0.6), st.burnDps, st.burnTime);
           const killed = this.damage(d, dmg, 'ram', carPush);
           if (d.def.heavy) {
             if (killed) {
@@ -387,7 +400,7 @@ export class Demons {
             // Knocked flying! Off to the side a bit so you don't just bulldoze it along.
             const side = (Math.random() < 0.5 ? -1 : 1) * (2 + impact * 0.5);
             d.vel.set(_n.x * (impact * 1.2 + 3) - _n.z * side, 3 + impact * 0.35, _n.z * (impact * 1.2 + 3) + _n.x * side);
-            d.pos.y = 0.01;
+            d.pos.y += 0.02;
             d.stun = 0.9;
             this.fx.audio.thump();
           }
@@ -405,7 +418,15 @@ export class Demons {
         d.yaw = Math.atan2(carPos.x - d.pos.x, carPos.z - d.pos.z);
         car.takeDamage(st.attackDamage, _v.copy(d.pos).setY(d.pos.y + 0.8)); // hits the nearest piece
         if (st.burnDps) car.igniteAt(_v, st.burnDps, st.burnTime);           // fire claws / magma fists
-        if (d.def.heavy) {
+        if (d.charging > 0) {
+          // A charging Bone Ram slams into you: double damage and a big shove.
+          car.takeDamage(st.attackDamage, _v.copy(d.pos).setY(d.pos.y + 0.8));
+          const ux = (carPos.x - d.pos.x) / dist, uz = (carPos.z - d.pos.z) / dist;
+          car.nudge(ux * st.chargeShove, uz * st.chargeShove);
+          d.charging = 0;
+          this.fx.chase.addShake(0.6);
+          this.fx.audio.thump();
+        } else if (d.def.heavy) {
           // A brute's punch shoves the whole car.
           const ux = (carPos.x - d.pos.x) / dist, uz = (carPos.z - d.pos.z) / dist;
           car.nudge(ux * 4, uz * 4);
@@ -433,7 +454,7 @@ export class Demons {
         d.phase += dt * (speed * stride + 0.3);
         d.moveAmt = (d.moveAmt || 0) + (Math.min(speed / 3, 1) - (d.moveAmt || 0)) * Math.min(1, dt * 6);
         const m = d.moveAmt;
-        const airborne = d.pos.y > 0.01;
+        const airborne = !!d.airborne;
         _dummy.position.lerpVectors(d.prev, d.pos, alpha);
         // Whole-body motion: lean into the run, bob with each step, sway.
         let rx = 0.12 * m + d.lunge * 0.25, rz = 0, bob = 0;

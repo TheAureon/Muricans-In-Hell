@@ -2,8 +2,9 @@
 // and a Hellgate opens to the next one.
 import ashPlains from './ashPlains.js';
 import lavaRivers from './lavaRivers.js';
+import boneMountains from './boneMountains.js';
 
-export const REGIONS = [ashPlains, lavaRivers];
+export const REGIONS = [ashPlains, lavaRivers, boneMountains];
 export const STARTING_REGION = REGIONS[0];
 export const regionById = (id) => REGIONS.find((r) => r.id === id) || STARTING_REGION;
 export const nextRegion = (r) => REGIONS[REGIONS.indexOf(r) + 1] || null;

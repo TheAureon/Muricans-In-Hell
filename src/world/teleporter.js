@@ -5,12 +5,13 @@
 //   - Stay in the field: your car is completely healed.
 //   - Press F on it: teleport home to the base (and back from the base pad).
 import * as THREE from 'three';
+import { terrain } from './terrain.js';
 import { litMaterial } from '../core/graphics.js';
 
 export class Teleporter {
   // cfg: { x, z, radius }
   constructor(scene, cfg) {
-    this.pos = new THREE.Vector3(cfg.x, 0, cfg.z);
+    this.pos = new THREE.Vector3(cfg.x, terrain.height(cfg.x, cfg.z), cfg.z);
     this.radius = cfg.radius || 14;
     this.established = false;
     this.t = 0;
@@ -87,7 +88,7 @@ export class Teleporter {
     this.ring.rotation.y += dt * 1.5;
     if (sparks && Math.random() < 0.4) {
       const a = Math.random() * Math.PI * 2, r = Math.random() * this.radius;
-      sparks.spawn(new THREE.Vector3(this.pos.x + Math.cos(a) * r, 0.2, this.pos.z + Math.sin(a) * r), new THREE.Vector3(0, 1.5 + Math.random() * 2, 0), 0.08, 1.2);
+      sparks.spawn(new THREE.Vector3(this.pos.x + Math.cos(a) * r, this.pos.y + 0.2, this.pos.z + Math.sin(a) * r), new THREE.Vector3(0, 1.5 + Math.random() * 2, 0), 0.08, 1.2);
     }
   }
 }

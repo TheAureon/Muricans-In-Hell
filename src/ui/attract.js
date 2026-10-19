@@ -3,6 +3,7 @@
 // blazing, filmed like a trailer: camera cuts between low chase shots,
 // fly-bys and crane shots. (The moody lighting is in world/lighting.js.)
 import * as THREE from 'three';
+import { terrain } from '../world/terrain.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const ROAM = 300; // stay this close to the movie's center (well away from the boss)
@@ -113,7 +114,7 @@ export class Director {
     if (!s.fixed) this.pos.lerp(s.pos(c, h, r, this.t), s.crane ? 1 : k);
     else this.pos.y += dt * 0.15; // slow rise
     this.look.lerp(s.look(c, h, r, this.t), 1 - Math.exp(-8 * dt));
-    this.pos.y = Math.max(this.pos.y, 0.35);
+    this.pos.y = Math.max(this.pos.y, terrain.height(this.pos.x, this.pos.z) + 0.6);
     this.camera.position.copy(this.pos);
     this.camera.lookAt(this.look);
     // If a fixed camera has lost the car, move on.

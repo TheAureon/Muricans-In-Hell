@@ -2,9 +2,11 @@
 // Ash Titan) and lava bombs (the Magma Colossus: they leave a lava pool). They fly in an arc and explode where they land; any piece of
 // your car caught in the blast takes damage.
 import * as THREE from 'three';
+import { terrain } from '../world/terrain.js';
 import { litMaterial } from '../core/graphics.js';
 
 const GRAVITY = 22;
+const _ahead = new THREE.Vector3();
 
 export class Projectiles {
   constructor(scene, { car, dust, sparks, audio, chase }) {
@@ -22,6 +24,17 @@ export class Projectiles {
         mat: litMaterial({ color: 0x4a4440, flatShading: true }),
         trail: 0x6a6460,
       },
+      boneSpear: {
+        geo: new THREE.CylinderGeometry(0.06, 0.1, 1.6, 5).rotateX(Math.PI / 2),
+        mat: litMaterial({ color: 0xe0d6bc, flatShading: true }),
+        trail: 0xcfc6b0,
+        aligned: true, // points where it flies instead of tumbling
+      },
+      boneBoulder: {
+        geo: new THREE.IcosahedronGeometry(1.3, 0),
+        mat: litMaterial({ color: 0xd8cfb8, flatShading: true }),
+        trail: 0x8a8070,
+      },
       lavaBomb: {
         geo: new THREE.IcosahedronGeometry(0.9, 0),
         mat: new THREE.MeshBasicMaterial({ color: 0xff8a20 }),
@@ -37,7 +50,7 @@ export class Projectiles {
     const car = this.car;
     const lv = car.body.linvel();
     const target = car.currPos.clone().add(new THREE.Vector3(lv.x, 0, lv.z).multiplyScalar(flightTime * 0.85));
-    target.y = 0.4;
+    target.y = terrain.height(target.x, target.z) + 0.4;
     const vel = target.clone().sub(from).divideScalar(flightTime);
     vel.y += 0.5 * GRAVITY * flightTime;
     const k = this.kinds[kind];
@@ -52,17 +65,18 @@ export class Projectiles {
     for (const p of [...this.list]) {
       p.vel.y -= GRAVITY * dt;
       p.mesh.position.addScaledVector(p.vel, dt);
-      p.mesh.rotation.x += dt * 5;
-      p.mesh.rotation.z += dt * 3;
+      if (this.kinds[p.kind].aligned) p.mesh.lookAt(_ahead.copy(p.mesh.position).add(p.vel));
+      else { p.mesh.rotation.x += dt * 5; p.mesh.rotation.z += dt * 3; }
       if ((p.trailTimer -= dt) <= 0) {
         p.trailTimer = 0.04;
-        const fiery = p.kind !== 'boulder';
+        const fiery = p.kind === 'fireball' || p.kind === 'lavaBomb';
         const trail = fiery ? this.fx.sparks : this.fx.dust;
         trail.spawn(p.mesh.position, new THREE.Vector3((Math.random() - 0.5), 0.5, (Math.random() - 0.5)), p.kind === 'fireball' ? 0.15 : 0.35, 0.5);
       }
       // Direct hit on the car, or landed?
-      const nearCar = p.mesh.position.distanceTo(this.car.position) < 2.4 && p.mesh.position.y < 2.5;
-      if (nearCar || p.mesh.position.y <= 0.2) this.#explode(p);
+      const nearCar = p.mesh.position.distanceTo(this.car.position) < 2.4;
+      const mp = p.mesh.position;
+      if (nearCar || mp.y <= terrain.height(mp.x, mp.z) + 0.2) this.#explode(p);
     }
   }
 
@@ -76,12 +90,12 @@ export class Projectiles {
     if (d < p.splash + 2 && !car.wrecked) {
       const falloff = Math.max(0.3, 1 - Math.max(0, d - 2) / p.splash);
       car.takeDamage(p.damage * falloff, at);
-      this.fx.chase.addShake(p.kind === 'fireball' ? 0.25 : 0.6);
+      this.fx.chase.addShake(p.kind === 'fireball' || p.kind === 'boneSpear' ? 0.25 : 0.6);
     }
-    const n = p.kind === 'fireball' ? 8 : 14;
+    const n = p.kind === 'fireball' || p.kind === 'boneSpear' ? 8 : 14;
     for (let i = 0; i < n; i++) {
       const v = new THREE.Vector3((Math.random() - 0.5) * 8, 2 + Math.random() * 5, (Math.random() - 0.5) * 8);
-      (p.kind === 'boulder' ? this.fx.dust : this.fx.sparks).spawn(at, v, p.kind === 'fireball' ? 0.2 : 0.6, 0.7);
+      (p.kind === 'fireball' || p.kind === 'lavaBomb' ? this.fx.sparks : this.fx.dust).spawn(at, v, p.kind === 'fireball' ? 0.2 : 0.6, 0.7);
     }
     p.onLand?.(at);
     this.fx.audio.thump();

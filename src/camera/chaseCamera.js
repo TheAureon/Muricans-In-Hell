@@ -1,6 +1,7 @@
 // Third-person camera that sits behind the car and swings around lazily.
 import * as THREE from 'three';
 import { SETTINGS } from '../settings.js';
+import { terrain } from '../world/terrain.js';
 
 export class ChaseCamera {
   constructor(camera) {
@@ -34,6 +35,8 @@ export class ChaseCamera {
     const target = car.position;
     this.camera.position.copy(target).addScaledVector(dir, -dist);
     this.camera.position.y = target.y + height;
+    // Don't dig into a hill behind the car.
+    this.camera.position.y = Math.max(this.camera.position.y, terrain.height(this.camera.position.x, this.camera.position.z) + 1.2);
 
     // Look a little ahead of the car so you can see where you're going.
     this.lookAt.copy(target).addScaledVector(dir, 5).setY(target.y + 1.2);

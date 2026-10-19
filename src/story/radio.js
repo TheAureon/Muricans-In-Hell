@@ -6,7 +6,7 @@ import { CAST, RADIO } from './story.js';
 
 const SEEN_KEY = 'helldrive.story';
 // Conversations that interrupt whatever is being said.
-const IMPORTANT = new Set(['start', 'lavaArrive', 'titanAwake', 'titanDead', 'colossusDead', 'teleporterFound', 'wrecked']);
+const IMPORTANT = new Set(['start', 'lavaArrive', 'boneArrive', 'titanAwake', 'titanDead', 'colossusDead', 'boneKingAwake', 'boneKingDead', 'teleporterFound', 'wrecked']);
 
 export class Radio {
   constructor(audio) {

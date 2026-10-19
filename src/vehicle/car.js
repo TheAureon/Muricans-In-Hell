@@ -16,6 +16,7 @@ import { createCarModel, CAR_DIMENSIONS, carLightMaterials } from './carModel.js
 import { Build, cellCenter, SECTION_CELLS, sectionCenter, pieceInfo, pieceStats, isSectionPiece } from './build.js';
 import { makePieceModel } from './pieceModel.js';
 import { PART_TYPES, createGunTurret } from './parts.js';
+import { terrain } from '../world/terrain.js';
 
 const UP = new THREE.Vector3(0, 1, 0);
 const _aim = new THREE.Vector3();
@@ -73,6 +74,8 @@ export class Car {
     this.currPos = new THREE.Vector3().copy(spawn);
     this.prevRot = new THREE.Quaternion();
     this.currRot = new THREE.Quaternion();
+    this.tilt = new THREE.Quaternion(); // leans the model with the hills (looks only)
+    this.slipping = 0;                  // 0..1: sliding back down a too-steep slope
 
     // Visual wobble springs
     this.roll = { x: 0, v: 0 };
@@ -387,6 +390,7 @@ export class Car {
 
   // After each physics step: a big sudden loss of speed means we hit something.
   afterStep() {
+    this.#followGround();
     const v = this.body.linvel();
     const dx = this.vBefore.x - v.x, dz = this.vBefore.z - v.z;
     const lost = Math.hypot(dx, dz);
@@ -396,6 +400,21 @@ export class Car {
       const dir = new THREE.Vector3(dx, 0, dz).normalize().applyQuaternion(this.currRot.clone().invert());
       this.lastCrash = { lost, localDir: dir, soften: 1 };
     }
+  }
+
+  // Hills are a height map, not a physics shape: keep the car on top of
+  // them. Going over a crest fast, the ground drops away faster than you
+  // fall, so you fly. (On flat ground this changes nothing.)
+  #followGround() {
+    const t = this.body.translation();
+    const rest = terrain.height(t.x, t.z) + CAR_DIMENSIONS.halfHeight;
+    if (t.y >= rest) return;
+    const lv = this.body.linvel();
+    const g = terrain.gradient(t.x, t.z);
+    const climb = g.x * lv.x + g.z * lv.z; // moving uphill = rising
+    this.body.setTranslation({ x: t.x, y: rest, z: t.z }, true);
+    this.body.setLinvel({ x: lv.x, y: Math.max(lv.y, climb), z: lv.z }, true);
+    this.currPos.y = rest;
   }
 
   // Apply crash damage AFTER demons had a chance to score the ram (so your
@@ -462,7 +481,8 @@ export class Car {
     this.onLava = lava / WHEEL_SPOTS.length;
     // Resting on something (not rising or falling) also counts as grounded.
     this.restingSteps = Math.abs(lv.y) < 0.4 ? (this.restingSteps || 0) + 1 : 0;
-    this.grounded = hit || this.restingSteps > 20;
+    const onHill = t.y - CAR_DIMENSIONS.halfHeight <= terrain.height(t.x, t.z) + 0.15;
+    this.grounded = hit || onHill || this.restingSteps > 20;
 
     // Smooth steering input (no instant full lock)
     const steerTarget = input.steer;
@@ -498,6 +518,24 @@ export class Car {
       // Rolling resistance grows with weight (heavy builds lose top speed).
       vf = approach(vf, 0, S.car.rollingResistance * g * (mass / S.steering.referenceMass) * dt);
       if (this.handbrake) vf = approach(vf, 0, Math.abs(vf) * S.grip.handbrakeDrag * dt + 2 * dt);
+      // Hills: uphill slows you down, downhill speeds you up. Too steep for
+      // your tires (treads climb much steeper) and you slide back down.
+      let slideX = 0, slideZ = 0;
+      this.slipping = 0;
+      if (!terrain.flat) {
+        const g = terrain.gradient(t.x, t.z);
+        const along = g.x * _fwd.x + g.z * _fwd.z; // rise per meter, going forward
+        vf -= S.car.gravity * (along / Math.sqrt(1 + along * along)) * S.slopes.pull * dt;
+        const gl = Math.hypot(g.x, g.z);
+        const steep = Math.atan(gl);
+        const maxClimb = THREE.MathUtils.degToRad(this.build.tier.maxClimb ?? 20);
+        if (steep > maxClimb && gl > 1e-4) {
+          this.slipping = Math.min(1, (steep - maxClimb) / 0.12);
+          if (along > 0 && vf > 0) vf = approach(vf, 0, (power / mass) * 1.3 * this.slipping * dt); // wheels spin
+          const k = S.car.gravity * Math.sin(steep) * S.slopes.slide * this.slipping * dt;
+          slideX = (-g.x / gl) * k; slideZ = (-g.z / gl) * k;
+        }
+      }
       // Lava is thick: it bogs you down (Hover Fans blow it away).
       if (this.onLava > 0) {
         const cap = topSpeed * THREE.MathUtils.lerp(S.lava.speedFactor, 1, this.fanShield);
@@ -532,7 +570,7 @@ export class Car {
       this.body.setAngvel({ x: 0, y: yaw, z: 0 }, true);
 
       _v.copy(_fwd).multiplyScalar(vf).addScaledVector(_right, vs);
-      this.body.setLinvel({ x: _v.x, y: lv.y, z: _v.z }, true);
+      this.body.setLinvel({ x: _v.x + slideX, y: lv.y, z: _v.z + slideZ }, true);
     }
 
     this.forwardSpeed = vf;
@@ -579,7 +617,7 @@ export class Car {
   // Put the car back upright at the start (or where it is), stopped.
   reset(toSpawn = false) {
     const p = toSpawn ? this.spawn : this.currPos;
-    this.body.setTranslation({ x: p.x, y: this.spawn.y + 0.5, z: p.z }, true);
+    this.body.setTranslation({ x: p.x, y: terrain.height(p.x, p.z) + 1, z: p.z }, true);
     this.body.setLinvel({ x: 0, y: 0, z: 0 }, true);
     this.body.setAngvel({ x: 0, y: 0, z: 0 }, true);
     if (toSpawn) this.body.setRotation({ x: 0, y: 0, z: 0, w: 1 }, true);
@@ -594,6 +632,14 @@ export class Car {
     const root = this.model.root;
     root.position.lerpVectors(this.prevPos, this.currPos, alpha);
     root.quaternion.slerpQuaternions(this.prevRot, this.currRot, alpha);
+    // Lean the whole model with the hill under it (physics stays level).
+    if (!terrain.flat) {
+      const g = terrain.gradient(root.position.x, root.position.z);
+      _v.set(-g.x, 1, -g.z).normalize();
+      _q.setFromUnitVectors(UP, this.grounded ? _v : UP);
+      this.tilt.slerp(_q, 1 - Math.exp(-10 * dt));
+      root.quaternion.premultiply(this.tilt);
+    }
 
     // --- Body lean (spring) ---
     const corner = THREE.MathUtils.clamp(this.yawRate * this.forwardSpeed / 30, -1, 1);

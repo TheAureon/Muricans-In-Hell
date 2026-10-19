@@ -28,6 +28,7 @@ export class Hud {
       <div id="prompt"></div>
       <div id="toasts"></div>
       <div id="souls"><span class="ico">✦</span> <b>0</b> <small>SOULS</small></div>
+      <button id="garage-btn" title="Garage (G)"><span class="gb-ico">🔧</span><span class="gb-txt">GARAGE<small>G</small></span></button>
       <div id="compass"><span class="arrow">▲</span><span class="label"></span></div>
       <div id="bossbar"><div class="name"></div><div class="bar"><div class="fill"></div></div></div>
       <div id="victory"></div>
@@ -65,6 +66,7 @@ export class Hud {
     this.compass = document.getElementById('compass');
     this.bossEl = document.getElementById('bossbar');
     this.victoryEl = document.getElementById('victory');
+    this.garageBtn = document.getElementById('garage-btn');
   }
 
   // Soul counter (top left). Pulses when it goes up.
@@ -182,4 +184,11 @@ export class Hud {
   }
 
   toggleHelp() { this.help.classList.toggle('hidden'); }
+
+  // The corner garage button: lit up when you can use it (at the base).
+  garageButton(available, hint) {
+    const b = this.garageBtn;
+    b.classList.toggle('ready', available);
+    if (b.title !== hint) b.title = hint;
+  }
 }

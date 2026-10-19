@@ -6,6 +6,7 @@
 //   heavy:    true = a solid obstacle: your car bounces off it
 //   thorns:   true = ramming it hurts your car too
 //   ramBurn:  true = ramming it sets the side you hit it with on fire
+//   charger:  true = lowers its head and charges at you (double speed, big hit)
 //   (stats with burnDps/burnTime = its attacks set your car on fire)
 //   anim:     how it moves ('waddle', 'gallop', 'stomp', 'sway', 'roll'):
 //             the demon shader swings its legs/arms/head/tail to match
@@ -16,6 +17,7 @@ import {
   createHoundGeometry, HOUND_GORE, createSpikerGeometry, SPIKER_GORE,
   createSpitterGeometry, SPITTER_GORE, createBruteGeometry, BRUTE_GORE,
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
+  createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
 } from './demonModels.js';
 
 export const DEMON_TYPES = {
@@ -61,6 +63,19 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.magmaBrute,
     createGeometry: createMagmaBruteGeometry, goreColors: MAGMA_BRUTE_GORE,
     radius: 1.1, height: 3.0, poolSize: 10,
+  },
+  // ---- Bone Mountains ----
+  boneRam: {
+    name: 'Bone Ram', behavior: 'melee', anim: 'gallop', charger: true,
+    stats: () => SETTINGS.demons.boneRam,
+    createGeometry: createBoneRamGeometry, goreColors: BONE_RAM_GORE,
+    radius: 0.7, height: 1.6, poolSize: 40,
+  },
+  boneArcher: {
+    name: 'Bone Archer', behavior: 'ranged', anim: 'sway',
+    stats: () => SETTINGS.demons.boneArcher,
+    createGeometry: createBoneArcherGeometry, goreColors: BONE_ARCHER_GORE,
+    radius: 0.45, height: 2.2, poolSize: 30,
   },
 };
 for (const t of Object.values(DEMON_TYPES)) t.style = STYLE[t.anim];

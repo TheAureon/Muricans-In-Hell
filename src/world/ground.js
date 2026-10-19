@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { litMaterial } from '../core/graphics.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeRandom } from '../core/random.js';
+import { terrain } from './terrain.js';
 
 export function createGround(scene, physics, region, hazards = null) {
   const { RAPIER, world } = physics;
@@ -15,16 +16,30 @@ export function createGround(scene, physics, region, hazards = null) {
   const geo = new THREE.PlaneGeometry(size, size, segs, segs).toNonIndexed();
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
-  // Tiny height wobble so the flat shading catches the light (visual only).
+  // Hills (if the region has any), plus a tiny wobble so the flat shading
+  // catches the light.
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i);
-    pos.setY(i, (Math.sin(x * 0.37 + z * 0.11) + Math.cos(z * 0.29 - x * 0.07)) * 0.04);
+    pos.setY(i, terrain.height(x, z) + (Math.sin(x * 0.37 + z * 0.11) + Math.cos(z * 0.29 - x * 0.07)) * 0.04);
   }
   const palette = [new THREE.Color(p.groundA), new THREE.Color(p.groundB), new THREE.Color(p.groundC)];
+  const cliff = new THREE.Color(p.cliff ?? p.rock), peak = new THREE.Color(p.peak ?? p.groundA);
   const colors = new Float32Array(pos.count * 3);
   const c = new THREE.Color();
+  const e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
   for (let tri = 0; tri < pos.count / 3; tri++) {
-    c.copy(palette[Math.floor(rand() * palette.length)]).multiplyScalar(0.9 + rand() * 0.2);
+    c.copy(palette[Math.floor(rand() * palette.length)]);
+    if (!terrain.flat) {
+      // Steep faces are bare rock, high ground is pale.
+      const i0 = tri * 3;
+      e1.set(pos.getX(i0 + 1) - pos.getX(i0), pos.getY(i0 + 1) - pos.getY(i0), pos.getZ(i0 + 1) - pos.getZ(i0));
+      e2.set(pos.getX(i0 + 2) - pos.getX(i0), pos.getY(i0 + 2) - pos.getY(i0), pos.getZ(i0 + 2) - pos.getZ(i0));
+      const ny = Math.abs(e1.cross(e2).normalize().y);
+      const h = (pos.getY(i0) + pos.getY(i0 + 1) + pos.getY(i0 + 2)) / 3;
+      if (ny < 0.82) c.lerp(cliff, Math.min(1, (0.82 - ny) * 5));
+      c.lerp(peak, Math.min(0.7, Math.max(0, (h - 35) / 60)));
+    }
+    c.multiplyScalar(0.9 + rand() * 0.2);
     for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (tri * 3 + k) * 3);
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
@@ -186,6 +201,58 @@ const PROP_BUILDERS = {
     };
   },
 
+  // Giant rib bones arching out of the ground (drive under them!).
+  ribArch: (p) => {
+    const parts = [];
+    for (const z of [-1.5, 0, 1.5]) {
+      const rib = new THREE.TorusGeometry(4.5, 0.32, 5, 10, Math.PI);
+      rib.translate(0, 0, z);
+      parts.push(rib);
+    }
+    const spine = new THREE.CylinderGeometry(0.4, 0.4, 4.2, 6).rotateX(Math.PI / 2);
+    spine.translate(0, 4.5, 0);
+    parts.push(spine);
+    return {
+      geometry: mergeGeometries(parts.map((g) => g.index ? g.toNonIndexed() : g)),
+      material: litMaterial({ color: p.bone, flatShading: true, roughness: 0.8 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.y = rand() * 6; m.position.y = -0.3; },
+      // Only the two feet of the arch are solid (the middle is a tunnel).
+      collider: (RAPIER, m) => {
+        const s = m.scale.x, a = m.rotation.y;
+        const dx = Math.cos(a) * 4.5 * s, dz = -Math.sin(a) * 4.5 * s;
+        const d = RAPIER.ColliderDesc.cuboid(0.5 * s, 1.5 * s, 2.3 * s);
+        d.setTranslation(dx, 1.5 * s, dz);
+        d.setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
+        return d;
+      },
+      colorJitter: 0.15,
+    };
+  },
+
+  // Huge horned skulls half-buried in the dust.
+  skull: (p) => {
+    const cranium = new THREE.SphereGeometry(1, 7, 5);
+    cranium.scale(1, 0.85, 1.15);
+    cranium.translate(0, 0.9, 0);
+    const jaw = new THREE.BoxGeometry(1.2, 0.4, 1.0);
+    jaw.translate(0, 0.25, 0.75);
+    const hornL = new THREE.ConeGeometry(0.22, 1.6, 5);
+    hornL.rotateZ(-1.0); hornL.translate(1.3, 1.5, -0.1);
+    const hornR = new THREE.ConeGeometry(0.22, 1.6, 5);
+    hornR.rotateZ(1.0); hornR.translate(-1.3, 1.5, -0.1);
+    const geo = mergeGeometries([cranium, jaw, hornL, hornR].map((g) => g.index ? g.toNonIndexed() : g));
+    geo.deleteAttribute('uv');
+    return {
+      geometry: geo,
+      material: litMaterial({ color: p.bone, flatShading: true, roughness: 0.75 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.set(rand.range(-0.2, 0.2), rand() * 6, rand.range(-0.2, 0.2)); m.position.y = -0.2 * s; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.ball(1.0 * m.scale.x).setTranslation(0, 0.8 * m.scale.x, 0),
+      colorJitter: 0.2,
+    };
+  },
+
   pebble: (p) => ({
     geometry: new THREE.IcosahedronGeometry(1, 0),
     material: litMaterial({ color: p.rock, flatShading: true }),
@@ -223,6 +290,7 @@ function placeProps(scene, physics, prop, b, half, keepClear, rand) {
     dummy.rotation.set(0, 0, 0);
     dummy.scale.setScalar(1);
     b.place(dummy, rand.range(prop.minScale, prop.maxScale), rand);
+    dummy.position.y += terrain.height(x, z); // sit on the hills
     dummy.updateMatrix();
     mesh.setMatrixAt(i, dummy.matrix);
     mesh.setColorAt(i, col.copy(base).multiplyScalar(1 - b.colorJitter / 2 + rand() * b.colorJitter));
@@ -245,7 +313,8 @@ function createArena(scene, physics, arena, p, rand) {
   const { RAPIER, world } = physics;
   const { x: ax, z: az, radius: R } = arena;
   const group = new THREE.Group();
-  group.position.set(ax, 0, az);
+  const ay = terrain.height(ax, az);
+  group.position.set(ax, ay, az);
   scene.add(group);
 
   // Scorched floor
@@ -269,7 +338,7 @@ function createArena(scene, physics, arena, p, rand) {
   // Ring of giant bone spikes, with four gaps to get in
   const boneMat = litMaterial({ color: p.bone, flatShading: true, roughness: 0.8 });
   const spikeGeo = new THREE.ConeGeometry(1.4, 14, 6).translate(0, 7, 0);
-  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, ay, az));
   const count = 36;
   for (let n = 0; n < count; n++) {
     if (n % 9 === 0 || n % 9 === 1) continue; // gaps
@@ -303,7 +372,8 @@ function createIsland(scene, physics, arena, p, rand) {
   const { RAPIER, world } = physics;
   const { x: ax, z: az, radius: R } = arena;
   const group = new THREE.Group();
-  group.position.set(ax, 0, az);
+  const ay = terrain.height(ax, az);
+  group.position.set(ax, ay, az);
   scene.add(group);
 
   const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 6, 40).rotateX(-Math.PI / 2),
@@ -325,7 +395,7 @@ function createIsland(scene, physics, arena, p, rand) {
   // Basalt columns around the shore (gaps to drive through)
   const colMat = litMaterial({ color: p.rock, flatShading: true, roughness: 0.85 });
   const colGeo = new THREE.CylinderGeometry(1.1, 1.3, 1, 6).translate(0, 0.5, 0);
-  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, ay, az));
   const count = 40;
   for (let n = 0; n < count; n++) {
     if (n % 10 < 3) continue; // gaps

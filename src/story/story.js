@@ -90,6 +90,14 @@ export const RADIO = {
   nearColossus: [['doc', 'Big one on the island. Lava moat all the way around. No bridges. Fun.']],
   colossusDead: [['doc', 'Did... did it just talk?'], ['you', 'Sounded tired.'], ['doc', 'Same, buddy. Same.']],
   noOil: [['you', 'Still no oil.'], ['doc', 'Deeper. It\'s always deeper.']],
+  boneArrive: [
+    ['doc', 'Bone Mountains. Real hills, finally. Uphill slows you, downhill... does not.'],
+    ['doc', 'Wheels slide back down the steep stuff. Treads can climb it. Keep that in mind.'],
+  ],
+  firstSlip: [['you', 'We\'re sliding backwards!'], ['doc', 'Too steep for tires. Treads, Hank. TREADS.']],
+  nearBoneKing: [['doc', 'Big reading on that plateau. Something up there is... assembling itself.']],
+  boneKingAwake: [['you', 'It\'s a skeleton. A huge one. With a crown.'], ['doc', 'Aim for the crown. Or the everything.']],
+  boneKingDead: [['you', 'Still no oil.'], ['doc', 'I\'m starting to think Hell has a very deep oil field.']],
 };
 
 // What bosses do when they die.
@@ -97,4 +105,5 @@ export const RADIO = {
 export const BOSS_DEATH = {
   ashTitan: { roar: true },
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
+  boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
 };

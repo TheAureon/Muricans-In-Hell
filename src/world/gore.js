@@ -1,6 +1,7 @@
 // Cartoon gore: chunks that fly and bounce, goo splats left on the ground,
 // and a red mist puff. Fixed-size pools so it never slows the game down.
 import * as THREE from 'three';
+import { terrain } from './terrain.js';
 import { litMaterial } from '../core/graphics.js';
 import { Dust } from './effects.js';
 
@@ -86,7 +87,7 @@ export class Gore {
     }
     for (let i = 0; i < 8; i++) {
       const v = new THREE.Vector3((Math.random() - 0.5) * 6, 1 + Math.random() * 3, (Math.random() - 0.5) * 6).addScaledVector(push, 0.3);
-      this.mist.spawn(pos.clone().setY(0.9), v, 0.35 + Math.random() * 0.3, 0.5 + Math.random() * 0.4);
+      this.mist.spawn(pos.clone().setY(pos.y + 0.9), v, 0.35 + Math.random() * 0.3, 0.5 + Math.random() * 0.4);
     }
   }
 
@@ -101,7 +102,7 @@ export class Gore {
   addSplat(pos, size, angle) {
     const s = this.splatData[this.nextSplat];
     this.nextSplat = (this.nextSplat + 1) % this.splatData.length;
-    s.pos.set(pos.x, 0.08, pos.z);
+    s.pos.set(pos.x, terrain.height(pos.x, pos.z) + 0.08, pos.z);
     s.sx = size * (0.7 + Math.random() * 0.4);
     s.sz = size * (1.2 + Math.random() * 0.8);
     s.ry = angle + (Math.random() - 0.5) * 0.6;
@@ -116,9 +117,10 @@ export class Gore {
       c.life -= dt;
       c.vel.y -= GRAVITY * dt;
       c.pos.addScaledVector(c.vel, dt);
-      if (c.pos.y < c.size * 0.5) {
+      const floor = terrain.height(c.pos.x, c.pos.z) + c.size * 0.5;
+      if (c.pos.y < floor) {
         // Bounce + skid on the ground, then come to rest.
-        c.pos.y = c.size * 0.5;
+        c.pos.y = floor;
         if (c.vel.y < -3 && Math.random() < 0.25) this.addSplat(c.pos, 0.25 + Math.random() * 0.3, Math.random() * 6);
         c.vel.y = Math.abs(c.vel.y) * 0.3;
         c.vel.x *= 0.6; c.vel.z *= 0.6;

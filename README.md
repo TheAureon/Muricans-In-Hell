@@ -41,6 +41,16 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
+**Region 3, the Bone Mountains** (new): the first region with real hills.
+Uphill slows you down, downhill speeds you up, and on a slope too steep for
+your tires you slide back down. Cars manage the valleys; treads (Half-Track,
+HELL TANK) climb the steep stuff, and the Bone King waits on the highest
+plateau. New demons: charging **Bone Rams** and spear-throwing **Bone
+Archers**.
+
+The garage also has a button in the bottom-right corner (it lights up when
+you're at the base).
+
 Souls from kills buy parts and chassis upgrades in the garage (**G**):
 Muscle Car → Armored Car → Half-Track → **HELL TANK**.
 
@@ -113,7 +123,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap
   vehicle/            the car's driving physics, 3D model, parts + build grid
