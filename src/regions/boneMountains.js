@@ -73,7 +73,7 @@ export default {
     type: 'boneKing',
     name: 'The Bone King',
     arena: { x: -720, z: -40, radius: 60, style: 'bones' },
-    look: { skin: 0xd8cfb8, dark: 0x5a4e40, glow: 0x60ffa0, horn: 0x2a1e18, eye: 0x9affc0, vents: false, crown: true },
+    look: { skeleton: true, skin: 0xe6dcc4, dark: 0xb4a688, glow: 0x60ffa0, horn: 0xb4a688, eye: 0x9affc0 },
     summons: [['boneArcher', 4], ['boneRam', 3], ['imp', 8]],
     throwKind: 'boneBoulder',
   },

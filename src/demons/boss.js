@@ -387,6 +387,16 @@ export class Boss {
     const upper = new THREE.Group(); // everything above the hips (lowers when sitting)
     root.add(upper);
 
+    // The Bone King is a real skeleton (its own body, same joints).
+    if (L.skeleton) {
+      const { legs, arms } = this.#skeleton(root, upper, add, L, eye);
+      this.parts = { upper, ...legs, ...arms };
+      this.root = root;
+      root.position.copy(this.arenaCenter || new THREE.Vector3());
+      scene.add(root);
+      return;
+    }
+
     // Legs (pivot at the hip)
     const legs = {};
     for (const [name, x] of [['legL', 1.2], ['legR', -1.2]]) {
@@ -451,6 +461,125 @@ export class Boss {
     this.root = root;
     root.position.copy(this.arenaCenter || new THREE.Vector3());
     scene.add(root);
+  }
+
+  // A giant crowned skeleton: thick bones, a ribcage with a green soul-fire
+  // burning inside, glowing eye sockets, a hanging jaw, skull pauldrons, a
+  // tattered royal cape, and a bone club. Same joints as the other bosses
+  // (hips at y 3.2, shoulders at y 6.4), so all the attacks animate.
+  #skeleton(root, upper, add, L, eye) {
+    const bone = this.matAsh;                                                     // (flashes when hit)
+    const old = litMaterial({ color: L.dark, flatShading: true, roughness: 0.85 });
+    const fire = this.matLava;                                                    // green soul-fire
+    const socket = new THREE.MeshBasicMaterial({ color: 0x050403 });
+    const gold = litMaterial({ color: 0xf0c040, flatShading: true, roughness: 0.3, metalness: 0.8 });
+    const gem = new THREE.MeshBasicMaterial({ color: 0xff2040 });
+    const cape = litMaterial({ color: 0x3a1040, flatShading: true, roughness: 1, side: THREE.DoubleSide });
+    const cyl = (r1, r2, h, s = 6) => new THREE.CylinderGeometry(r1, r2, h, s);
+    const ball = (r) => new THREE.IcosahedronGeometry(r, 0);
+    const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+
+    // Legs: femur, knee, two shin bones, a long bony foot with toes
+    const legs = {};
+    for (const [name, x] of [['legL', 1.0], ['legR', -1.0]]) {
+      const hip = new THREE.Group();
+      hip.position.set(x, 3.2, 0);
+      add(hip, ball(0.42), old, 0, 0, 0);
+      add(hip, cyl(0.26, 0.22, 1.5), bone, 0, -0.8, 0);
+      add(hip, ball(0.36), old, 0, -1.6, 0.05);                                  // knee
+      add(hip, cyl(0.13, 0.11, 1.4), bone, 0.12, -2.35, 0);
+      add(hip, cyl(0.1, 0.09, 1.4), bone, -0.12, -2.35, 0);
+      add(hip, box(0.6, 0.22, 1.2), bone, 0, -3.1, 0.35);                        // foot
+      for (const tx of [-0.2, 0, 0.2]) add(hip, new THREE.ConeGeometry(0.08, 0.4, 4).rotateX(Math.PI / 2), old, tx, -3.12, 1.1);
+      root.add(hip);
+      legs[name] = hip;
+    }
+    // Pelvis
+    add(upper, box(2.4, 0.5, 1.0), bone, 0, 3.55, 0);
+    for (const s of [-1, 1]) { const w = add(upper, box(0.9, 0.9, 0.25), bone, s * 0.85, 3.95, -0.1); w.rotation.z = s * 0.45; }
+    // Spine (vertebrae with little spikes at the back)
+    for (let k = 0; k < 7; k++) {
+      const y = 4.0 + k * 0.45;
+      add(upper, box(0.5, 0.3, 0.5), k % 2 ? old : bone, 0, y, -0.45);
+      add(upper, new THREE.ConeGeometry(0.1, 0.45, 4).rotateX(-Math.PI / 2), old, 0, y, -0.85);
+    }
+    // Ribcage around a burning soul
+    add(upper, ball(0.75), fire, 0, 5.3, 0.05);
+    for (let k = 0; k < 6; k++) {
+      const y = 4.5 + k * 0.38, r = 1.15 + Math.sin((k / 5) * Math.PI) * 0.35;
+      for (const s of [-1, 1]) {
+        const rib = add(upper, new THREE.TorusGeometry(r, 0.09, 4, 10, Math.PI * 0.85), bone, 0, y, -0.4);
+        rib.rotation.set(Math.PI / 2, 0, s > 0 ? -0.1 : Math.PI + 0.1);
+      }
+    }
+    add(upper, box(0.3, 2.2, 0.2), bone, 0, 5.4, 1.05);                          // sternum
+    // Collarbones + skull pauldrons
+    add(upper, box(4.6, 0.3, 0.4), bone, 0, 6.55, 0);
+    for (const s of [-1, 1]) {
+      const p = add(upper, new THREE.SphereGeometry(0.85, 7, 5), bone, s * 2.75, 6.95, 0);
+      p.scale.set(1, 0.8, 1.1);
+      add(upper, box(0.22, 0.18, 0.05), socket, s * 2.55, 7.0, 0.85);
+      add(upper, box(0.22, 0.18, 0.05), socket, s * 2.95, 7.0, 0.85);
+      for (const k of [-1, 0, 1]) add(upper, new THREE.ConeGeometry(0.12, 0.6, 4), old, s * 2.75 + k * 0.35, 7.7, -0.1);
+    }
+    // Tattered royal cape down the back
+    for (let k = 0; k < 7; k++) {
+      const len = 3.2 + ((k * 37) % 10) / 10 * 1.4;
+      const strip = add(upper, box(0.6, len, 0.04), cape, -1.8 + k * 0.6, 6.5 - len / 2, -1.0 - Math.abs(k - 3) * 0.05);
+      strip.rotation.x = 0.08;
+    }
+    // Neck + skull with glowing eye sockets, nose hole, teeth, a hanging jaw
+    add(upper, box(0.4, 0.3, 0.4), old, 0, 6.95, -0.2);
+    add(upper, box(0.35, 0.3, 0.35), bone, 0, 7.25, -0.1);
+    const skull = new THREE.Group();
+    skull.position.set(0, 8.1, 0.2);
+    upper.add(skull);
+    const cranium = add(skull, new THREE.SphereGeometry(1.0, 8, 6), bone, 0, 0.15, 0);
+    cranium.scale.set(1, 0.95, 1.1);
+    add(skull, box(1.5, 0.7, 1.4), bone, 0, -0.35, 0.25);                        // cheekbones / face
+    for (const s of [-1, 1]) {
+      add(skull, box(0.42, 0.36, 0.2), socket, s * 0.36, -0.1, 0.92);
+      add(skull, box(0.2, 0.16, 0.05), eye, s * 0.36, -0.1, 1.0);                 // glowing eyes
+    }
+    add(skull, new THREE.ConeGeometry(0.14, 0.3, 3).rotateX(Math.PI), socket, 0, -0.45, 0.97); // nose hole
+    for (let k = 0; k < 6; k++) add(skull, box(0.13, 0.2, 0.08), old, -0.33 + k * 0.13, -0.72, 0.9); // upper teeth
+    const jaw = add(skull, box(1.2, 0.3, 0.9), bone, 0, -1.05, 0.45);
+    jaw.rotation.x = 0.25;
+    for (let k = 0; k < 5; k++) add(skull, box(0.12, 0.16, 0.08), old, -0.26 + k * 0.13, -0.86, 0.86);
+    // The crown
+    add(skull, cyl(1.02, 0.98, 0.45, 8), gold, 0, 0.75, 0).material.side = THREE.DoubleSide;
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      add(skull, new THREE.ConeGeometry(0.16, 0.75, 4), gold, Math.sin(a) * 0.98, 1.3, Math.cos(a) * 0.98);
+      if (k % 2 === 0) add(skull, ball(0.11), gem, Math.sin(a) * 1.02, 0.75, Math.cos(a) * 1.02);
+    }
+    // Arms: humerus, elbow, two forearm bones, a bony clawed hand. The right
+    // hand carries a huge bone club.
+    const arms = {};
+    for (const [name, x] of [['armL', 2.8], ['armR', -2.8]]) {
+      const sh = new THREE.Group();
+      sh.position.set(x, 6.4, 0);
+      add(sh, ball(0.45), old, 0, 0, 0);
+      add(sh, cyl(0.24, 0.2, 1.7), bone, 0, -0.95, 0);
+      add(sh, ball(0.32), old, 0, -1.85, 0.05);                                  // elbow
+      add(sh, cyl(0.12, 0.1, 1.5), bone, 0.12, -2.65, 0.1);
+      add(sh, cyl(0.1, 0.09, 1.5), bone, -0.12, -2.65, 0.1);
+      add(sh, box(0.6, 0.5, 0.55), bone, 0, -3.6, 0.2);                          // palm
+      for (let f = 0; f < 4; f++) add(sh, new THREE.ConeGeometry(0.07, 0.55, 4).rotateX(Math.PI), old, -0.22 + f * 0.15, -4.05, 0.35);
+      if (name === 'armR') {
+        const club = new THREE.Group();
+        club.position.set(0, -3.7, 0.3);
+        club.rotation.x = Math.PI / 2 - 0.3;
+        add(club, cyl(0.16, 0.2, 3.2), bone, 0, 1.6, 0);
+        const head = add(club, new THREE.SphereGeometry(0.6, 7, 5), bone, 0, 3.3, 0);
+        head.scale.set(1, 1.2, 0.9);
+        for (const s of [-1, 1]) add(club, new THREE.ConeGeometry(0.14, 0.6, 4), old, s * 0.55, 3.4, 0).rotation.z = -s * 1.2;
+        sh.add(club);
+      }
+      upper.add(sh);
+      arms[name] = sh;
+    }
+    return { legs, arms };
   }
 }
 
