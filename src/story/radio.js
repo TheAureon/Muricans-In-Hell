@@ -6,6 +6,7 @@ import { CAST, RADIO } from './story.js';
 
 const SEEN_KEY = 'helldrive.story';
 // Conversations that interrupt whatever is being said.
+const WAIT = 60; // seconds a small conversation can wait for the radio to be free
 const IMPORTANT = new Set(['start', 'lavaArrive', 'boneArrive', 'titanAwake', 'titanDead', 'colossusDead', 'boneKingAwake', 'boneKingDead', 'teleporterFound', 'wrecked']);
 
 export class Radio {
@@ -13,6 +14,7 @@ export class Radio {
     this.audio = audio;
     this.queue = [];
     this.current = null;
+    this.waiting = []; // small conversations waiting for the radio to be free: { id, left }
     try { this.seen = new Set(JSON.parse(localStorage.getItem(SEEN_KEY) || '[]')); } catch { this.seen = new Set(); }
     const el = document.createElement('div');
     el.id = 'radio';
@@ -36,20 +38,32 @@ export class Radio {
   }
 
   // Play a conversation from story.js, once. Returns true if it played.
-  // Big story moments cut in right away; small tips wait for a quiet radio
-  // (they're skipped for now, not lost, if Doc is busy talking).
+  // Big story moments cut in right away (whatever was waiting plays after);
+  // small ones wait their turn until the radio is free (up to WAIT seconds,
+  // so they're never said long after the moment has passed).
   say(id, { force = false } = {}) {
     if (!RADIO[id] || (!force && this.seen.has(id))) return false;
-    const big = IMPORTANT.has(id);
-    if (!big && (this.queue.length > 0 || (this.current && this.current.t < 1.5))) return false;
-    if (big) { this.queue = []; this.current = null; window.speechSynthesis?.cancel(); }
-    this.markSeen(id);
-    for (const [who, line] of RADIO[id]) this.queue.push({ who, line });
+    if (IMPORTANT.has(id)) {
+      this.waiting = this.waiting.filter((w) => w.id !== id);
+      if (this.current) window.speechSynthesis?.cancel();
+      this.current = null;
+      this.#play(id, true);
+      return true;
+    }
+    if (!this.current && !this.queue.length) { this.#play(id); return true; }
+    if (!this.waiting.some((w) => w.id === id)) this.waiting.push({ id, left: WAIT });
     return true;
   }
 
+  #play(id, first = false) {
+    this.markSeen(id);
+    const lines = RADIO[id].map(([who, line]) => ({ who, line }));
+    this.queue = first ? [...lines, ...this.queue] : [...this.queue, ...lines];
+  }
+
   // Nobody is talking (and nobody is about to)?
-  get quiet() { return !this.current && !this.queue.length; }
+  // (Story lines waiting their turn count as talking: they go first.)
+  get quiet() { return !this.current && !this.queue.length && !this.waiting.length; }
 
   // Say some lines that aren't in story.js (e.g. a job offer): [[who, line], ...]
   talk(lines) { for (const [who, line] of lines) this.queue.push({ who, line }); }
@@ -58,6 +72,9 @@ export class Radio {
   static forget() { try { localStorage.removeItem(SEEN_KEY); } catch { /* ignore */ } }
 
   update(dt) {
+    for (const w of this.waiting) w.left -= dt;
+    this.waiting = this.waiting.filter((w) => w.left > 0 && !this.seen.has(w.id));
+    if (!this.current && !this.queue.length && this.waiting.length) this.#play(this.waiting.shift().id);
     if (!this.current && this.queue.length) this.#start(this.queue.shift());
     const c = this.current;
     if (!c) return;
@@ -92,6 +109,7 @@ export class Radio {
 
   clear() {
     this.queue = [];
+    this.waiting = [];
     this.current = null;
     this.el.classList.remove('on');
     window.speechSynthesis?.cancel();
