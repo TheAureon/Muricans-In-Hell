@@ -34,6 +34,9 @@ import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
 import { Progress } from './core/progress.js';
 import { Souls } from './world/souls.js';
+import { JobBoard } from './missions/jobBoard.js';
+import { JobLog } from './ui/jobLog.js';
+import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
 
 async function main() {
@@ -90,6 +93,14 @@ async function main() {
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   demons.base = base;
   const radio = new Radio(audio);
+  // Jobs (missions) from Doc and whoever else needs something done.
+  const jobs = new JobBoard({ region, progress, radio, hud, audio });
+  const jobLog = new JobLog(jobs);
+  const beacons = new Beacons(scene);
+  jobs.onChange = () => { hud.jobs(jobs); jobLog.render(); beacons.set(jobs.beacons()); };
+  jobs.onChange();
+  let jobsClicked = false;
+  document.getElementById('jobs-btn').addEventListener('click', (e) => { jobsClicked = true; e.currentTarget.blur(); });
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   if (SETTINGS.dev.creative && creativeStash) {
     // Came here by a creative-mode jump: bring the creative build along.
@@ -125,6 +136,7 @@ async function main() {
     lighting.flash(d.pos, d.def.heavy ? 1.5 : 0.6);
     if (mode === 'title') return; // the title-screen movie doesn't earn souls
     radio.say('firstKill');
+    jobs.emit('kill', { type: d.type, source });
     const P = SETTINGS.progression;
     souls.burst(d.pos, (P.souls[d.type] || 1) * (source === 'ram' ? P.ramBonus : 1));
   };
@@ -161,6 +173,7 @@ async function main() {
       souls.burst(boss.pos.clone().setY(4), boss.B.souls);
       progress.cleared[region.id] = true;
       progress.save();
+      jobs.emit('boss');
       gate?.setOpen(true);
     },
   }) : null;
@@ -213,6 +226,7 @@ async function main() {
       if (which === 'creative' && !D.creative) {
         // Back to reality: your real saved build, souls, unlocks and chassis.
         progress.reloadSaved();
+        jobs.reloadSaved();
         car.build.restore();
         car.savedBuild = car.build.snapshot();
         car.setTier(progress.tier);
@@ -334,6 +348,19 @@ async function main() {
           if (linked.length) travelTo(linked[linked.length - 1], 'teleporter');
           else hud.toast('No teleporters linked yet. Doc needs a hell-magic source out there first.', 'warn');
         }
+      }
+      // Job board: J or the corner button. The game pauses while it's open.
+      if (!garage.open && (input.wasPressed('KeyJ') || jobsClicked || (jobLog.open && input.wasPressed('Escape')))) {
+        jobLog.toggle();
+        input.mouse.down = false;
+      }
+      jobsClicked = false;
+      if (jobLog.open) {
+        aim.mesh.visible = false;
+        lighting.render();
+        input.endFrame();
+        requestAnimationFrame(frame);
+        return;
       }
       if (garage.open) {
         // Paused: only the garage camera moves.
@@ -501,6 +528,7 @@ async function main() {
           audio.chime();
           hud.banner('TELEPORTER ONLINE', 'Stay in the field to heal. Press F on the pad to teleport home to the garage.', 7);
           radio.say('teleporterFound', { force: true });
+          jobs.emit('teleporter');
         }
         healing = car.healStep(dt);
       }
@@ -519,6 +547,9 @@ async function main() {
         else if (boss.state !== 'dead' && boss.arenaCenter.distanceTo(car.currPos) < 260) radio.say(region.radio?.nearBoss);
       }
       if (tele && !tele.established && (regionTime += dt) > 75) radio.say('teleporterHint');
+      jobs.update(dt, car);
+      if (!car.wrecked && car.onLava > 0 && car.grounded) jobs.emit('lava', { dt });
+      if (!car.wrecked && car.drifting) jobs.emit('drift', { dt });
     }
 
     // --- Scrap: press E to grab what's in reach ---
@@ -577,6 +608,17 @@ async function main() {
     else if (gate?.open) pointAt(gate.pos, gate.leadsTo ? `⛧ HELLGATE → ${gate.leadsTo.name.toUpperCase()}` : '⛧ HELLGATE (sealed)');
     else if (boss && boss.state !== 'dead' && !SETTINGS.dev.noEnemies) pointAt(boss.arenaCenter, `☠ ${boss.name.toUpperCase()}`);
     else hud.objective(null);
+    // Second arrow: the nearest spot the tracked job wants you to go.
+    beacons.update(dt);
+    const spots = playing ? jobs.beacons().filter((b) => b.tracked) : [];
+    if (spots.length) {
+      const near = spots.reduce((a, b) => (Math.hypot(a.x - car.position.x, a.z - car.position.z) < Math.hypot(b.x - car.position.x, b.z - car.position.z) ? a : b));
+      const to = new THREE.Vector3(near.x - car.position.x, 0, near.z - car.position.z);
+      const camFwd = new THREE.Vector3();
+      camera.getWorldDirection(camFwd);
+      const angle = Math.atan2(camFwd.x * to.z - camFwd.z * to.x, camFwd.x * to.x + camFwd.z * to.z);
+      hud.jobPointer(`◆ ${jobs.trackedJob.title.toUpperCase()} · ${Math.round(to.length())} m`, angle, near.color);
+    } else hud.jobPointer(null);
     bullets.update(dt);
     gore.update(dt);
     stats.tick(dt);
@@ -602,7 +644,7 @@ async function main() {
   });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog };
 }
 
 main().catch((err) => {

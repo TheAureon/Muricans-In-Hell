@@ -21,6 +21,13 @@ there).
   somewhere. Reach it to set it up: its field heals you completely, and **F**
   on the pad teleports you home to the garage (and back from the base pad).
   Away from base, the garage is only reachable that way.
+- **Jobs:** Doc radios in jobs that move the story along: road tests,
+  seismic surveys hunting for the oil, demon samples, finding hell magic.
+  Open the **job board** (**J** or the JOBS button) to accept them. Your jobs
+  show on the right; places to go are marked with beams of light and a
+  second arrow at the top. Finished jobs pay souls and unlock the next one.
+  Jobs stay done when you wreck. (They live in `src/missions/missions.js`;
+  anyone in the cast can give jobs, so new characters can hand them out later.)
 - **Wrecked?** The run starts over (souls, unlocks, chassis, build), but you
   respawn at the region's teleporter if you've set one up, or at its start.
   Regions reached, bosses beaten and teleporters are remembered.
@@ -103,6 +110,7 @@ Your browser opens the game at http://localhost:5173. (After the first time,
 | Ctrl/⌘ + Z (in garage) | Undo the last change |
 | G | Garage: build + repair (only at the base) |
 | F | Teleport (standing on a teleporter pad) |
+| J | Job board: accept and track jobs |
 | C | Dev / creative panel: no enemies, no damage, free building, jump to any region |
 | T | Live tuning panel |
 | M | Mute |
@@ -125,6 +133,7 @@ src/
   core/               input, physics setup, sound, random numbers, graphics quality
   regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains) + the travel order
   story/              the story text (story.js), the radio, the intro panels
+  missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap
   vehicle/            the car's driving physics, 3D model, parts + build grid
   demons/             demon types (data), 3D models, spawning + AI, the boss, fireballs

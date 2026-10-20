@@ -347,3 +347,62 @@ body #devpanel { cursor: default; }
 #garage-btn:hover { transform: translateY(-2px); opacity: 1; }
 @keyframes gbpulse { 50% { box-shadow: 0 0 22px #ff5020a0; } }
 body.garage-open #garage-btn { display: none; }
+
+/* ---- Jobs: tracker, button, second arrow, job board ---- */
+#jobs-btn { position: absolute; right: 24px; bottom: 196px; pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 10px;
+  padding: 8px 16px 8px 12px; background: #06121acc; border: 2px solid #7fd8ff50; border-radius: 8px; color: #d8eef890;
+  font: 16px 'Arial Black', Impact, sans-serif; letter-spacing: 2px; transition: all 0.2s; opacity: 0.8; }
+#jobs-btn .gb-ico { font-size: 22px; }
+#jobs-btn small { display: block; font: 10px system-ui, sans-serif; letter-spacing: 1px; color: #fff6; text-align: left; }
+#jobs-btn:hover { transform: translateY(-2px); opacity: 1; }
+#jobs-btn .jb-new { position: absolute; top: -8px; right: -8px; min-width: 20px; height: 20px; border-radius: 10px; background: #ff3a2a; color: #fff;
+  font: 12px/20px 'Arial Black', Impact, sans-serif; font-style: normal; letter-spacing: 0; text-align: center; box-shadow: 0 0 8px #f00; }
+#jobs-btn .jb-new:empty { display: none; }
+#jobs-btn.ready { opacity: 1; color: #e6f8ff; border-color: #7fd8ff; background: #08263ae6; animation: jbpulse 1.6s infinite; }
+@keyframes jbpulse { 50% { box-shadow: 0 0 22px #7fd8ffa0; } }
+body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass { display: none !important; }
+#jobs { position: absolute; top: 130px; right: 16px; width: 250px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; }
+#jobs .j-job { background: #0a0d14c0; border-right: 3px solid var(--c); padding: 6px 10px; border-radius: 4px; opacity: 0.75; }
+#jobs .j-job.tracked { opacity: 1; background: #0a0d14e0; }
+#jobs .j-title { font: 13px 'Arial Black', Impact, sans-serif; color: #fff; letter-spacing: 1px; }
+#jobs .j-title span { color: var(--c); font-size: 10px; letter-spacing: 2px; margin-right: 4px; }
+#jobs ul { margin: 3px 0 0; padding: 0; list-style: none; font: 12px/1.5 system-ui, sans-serif; color: #e8e2da; }
+#jobs li b { color: var(--c); margin-left: 4px; }
+#jobs li.ok { color: #7fe07f; }
+#jcompass { position: absolute; top: 48px; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: 8px;
+  background: #0007; padding: 4px 12px; border-radius: 16px; color: var(--c, #7fd8ff); font: 12px system-ui, sans-serif; letter-spacing: 1px; }
+#jcompass .arrow { display: inline-block; font-size: 15px; transition: transform 0.1s; }
+#toasts .toast.job { color: #7fd8ff; font-size: 17px; }
+#joblog { position: fixed; inset: 0; z-index: 12; display: none; align-items: center; justify-content: center; background: #000a; cursor: default; }
+#joblog.on { display: flex; }
+#joblog .jl-panel { width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 60px); display: flex; flex-direction: column; background: #0c0f16f2;
+  border: 2px solid #7fd8ff50; border-radius: 10px; box-shadow: 0 10px 40px #000; font: 14px/1.45 system-ui, sans-serif; color: #e8e2da; }
+#joblog .jl-head { position: relative; padding: 14px 18px 10px; border-bottom: 1px solid #ffffff18; }
+#joblog .jl-head b { display: block; font: 26px 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 3px; transform: skew(-6deg); transform-origin: left;
+  text-shadow: 0 0 14px #ff200080, 0 3px 0 #400; }
+#joblog .jl-head small { color: #fff8; }
+#joblog .jl-close { position: absolute; top: 12px; right: 12px; background: none; border: 0; color: #fff8; font-size: 20px; cursor: pointer; }
+#joblog .jl-scroll { overflow-y: auto; padding: 4px 18px 12px; }
+#joblog h3 { margin: 14px 0 6px; font: 12px 'Arial Black', Impact, sans-serif; letter-spacing: 3px; color: #ff9a60; }
+#joblog .jl-empty { color: #fff6; font-style: italic; }
+#joblog .jl-card { display: flex; gap: 12px; align-items: flex-start; background: #ffffff08; border-left: 3px solid var(--c); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+#joblog .jl-card.done { opacity: 0.55; padding: 6px 12px; }
+#joblog .jl-card.done p { display: none; }
+#joblog .jl-who { flex: 0 0 52px; height: 52px; border-radius: 6px; background: #000; border: 2px solid var(--c); color: var(--c); display: flex; align-items: center;
+  justify-content: center; font: 13px 'Arial Black', Impact, sans-serif; letter-spacing: 1px; }
+#joblog .jl-card.done .jl-who { flex-basis: 40px; height: 28px; font-size: 10px; }
+#joblog .jl-body { flex: 1; min-width: 0; }
+#joblog .jl-title { font: 17px 'Arial Black', Impact, sans-serif; color: #fff; letter-spacing: 1px; }
+#joblog .jl-away { font: 11px system-ui; color: #ffcf9a; letter-spacing: 1px; margin-left: 6px; }
+#joblog p { margin: 3px 0 4px; color: #e8e2dac0; }
+#joblog ul { margin: 0; padding: 0; list-style: none; font-size: 13px; }
+#joblog li b { color: var(--c); margin-left: 4px; }
+#joblog li.ok { color: #7fe07f; }
+#joblog .jl-reward { margin-top: 4px; color: #bfe8ff; font: 13px 'Arial Black', Impact, sans-serif; text-shadow: 0 0 8px #3aa0ff; }
+#joblog .jl-act { align-self: center; }
+#joblog .jl-act button { cursor: pointer; border: 0; border-radius: 6px; padding: 8px 14px; font: 14px 'Arial Black', Impact, sans-serif; letter-spacing: 1px; color: #fff; }
+#joblog .jl-accept { background: #c8202a; box-shadow: 0 3px 0 #600; }
+#joblog .jl-track { background: #1f3a5a; }
+#joblog .jl-tracked { color: var(--c); font: 11px 'Arial Black', Impact, sans-serif; letter-spacing: 1px; white-space: nowrap; }
+#joblog .jl-foot { padding: 8px 18px; border-top: 1px solid #ffffff18; color: #fff6; font-size: 12px; }
+#joblog .jl-foot b { color: #ffb070; }

@@ -121,6 +121,7 @@ export function showTitleScreen({ region, progress, onMenu, onStory }) {
           localStorage.removeItem('helldrive.progress');
           localStorage.removeItem('helldrive.build');
           localStorage.removeItem('helldrive.story'); // so the intro and radio play again
+          localStorage.removeItem('helldrive.missions');
         } catch { /* ignore */ }
         location.reload();
       }

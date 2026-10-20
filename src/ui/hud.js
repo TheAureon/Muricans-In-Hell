@@ -19,7 +19,7 @@ export class Hud {
         <b>RAM</b> demons at 40+ km/h to splat them<br>
         <b>E</b> grab scrap that fell off your car<br>
         <b>WHEEL</b> zoom &nbsp; <b>R</b> unstick &nbsp; <b>BACKSPACE</b> back to start<br>
-        <b>G</b> garage (at base) &nbsp; <b>F</b> teleport (on a pad)<br>
+        <b>G</b> garage (at base) &nbsp; <b>F</b> teleport (on a pad) &nbsp; <b>J</b> jobs<br>
         <b>C</b> dev/creative &nbsp; <b>T</b> tuning panel &nbsp; <b>M</b> mute &nbsp; <b>H</b> hide help
       </div>
       <div id="fps"></div>
@@ -29,6 +29,9 @@ export class Hud {
       <div id="toasts"></div>
       <div id="souls"><span class="ico">✦</span> <b>0</b> <small>SOULS</small></div>
       <button id="garage-btn" title="Garage (G)"><span class="gb-ico">🔧</span><span class="gb-txt">GARAGE<small>G</small></span></button>
+      <button id="jobs-btn" title="Job board (J)"><span class="gb-ico">📋</span><span class="gb-txt">JOBS<small>J</small></span><i class="jb-new"></i></button>
+      <div id="jobs"></div>
+      <div id="jcompass"><span class="arrow">▲</span><span class="label"></span></div>
       <div id="compass"><span class="arrow">▲</span><span class="label"></span></div>
       <div id="bossbar"><div class="name"></div><div class="bar"><div class="fill"></div></div></div>
       <div id="victory"></div>
@@ -67,6 +70,35 @@ export class Hud {
     this.bossEl = document.getElementById('bossbar');
     this.victoryEl = document.getElementById('victory');
     this.garageBtn = document.getElementById('garage-btn');
+    this.jobsBtn = document.getElementById('jobs-btn');
+    this.jobsEl = document.getElementById('jobs');
+    this.jcompass = document.getElementById('jcompass');
+  }
+
+  // The jobs you've taken (right side), for this region.
+  jobs(board) {
+    const here = board.byStatus('active').filter((m) => board.here(m));
+    const html = here.map((m) => {
+      const who = board.giver(m);
+      const goals = m.goals.map((g, i) => {
+        const info = board.goalInfo(m, i);
+        return `<li class="${info.done ? 'ok' : ''}">${info.done ? '✔' : '◇'} ${info.label} <b>${info.done ? '' : info.progress}</b></li>`;
+      }).join('');
+      return `<div class="j-job${m.id === board.tracked ? ' tracked' : ''}" style="--c:${who.color}"><div class="j-title"><span>${who.name}</span> ${m.title}</div><ul>${goals}</ul></div>`;
+    }).join('');
+    if (this.jobsEl.dataset.html !== html) { this.jobsEl.dataset.html = html; this.jobsEl.innerHTML = html; }
+    const n = board.newCount;
+    this.jobsBtn.classList.toggle('ready', n > 0);
+    this.jobsBtn.querySelector('.jb-new').textContent = n > 0 ? n : '';
+  }
+
+  // Second arrow (under the main one) pointing at the tracked job's next spot.
+  jobPointer(label, angle, color) {
+    this.jcompass.style.display = label ? 'flex' : 'none';
+    if (!label) return;
+    this.jcompass.querySelector('.label').textContent = label;
+    this.jcompass.style.setProperty('--c', color);
+    this.jcompass.querySelector('.arrow').style.transform = `rotate(${angle}rad)`;
   }
 
   // Soul counter (top left). Pulses when it goes up.

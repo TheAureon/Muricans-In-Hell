@@ -16,8 +16,8 @@
 // =====================================================================
 
 export const CAST = {
-  you: { name: 'HANK', full: 'Hank "Redline" Mercer', color: '#ffb070' },
-  doc: { name: 'DOC', full: 'Dr. Wendell "Doc" Pike', color: '#7fd8ff' },
+  you: { name: 'HANK', full: 'Hank "Redline" Mercer', color: '#ffb070', voice: { pitch: 0.7, rate: 1.0 } },
+  doc: { name: 'DOC', full: 'Dr. Wendell "Doc" Pike', color: '#7fd8ff', voice: { pitch: 1.25, rate: 1.08 } },
 };
 
 // The intro, shown once when you start a new game (and from the menu: STORY).

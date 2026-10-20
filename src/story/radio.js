@@ -48,6 +48,12 @@ export class Radio {
     return true;
   }
 
+  // Nobody is talking (and nobody is about to)?
+  get quiet() { return !this.current && !this.queue.length; }
+
+  // Say some lines that aren't in story.js (e.g. a job offer): [[who, line], ...]
+  talk(lines) { for (const [who, line] of lines) this.queue.push({ who, line }); }
+
   // Wipe the memory of what's been said (new game).
   static forget() { try { localStorage.removeItem(SEEN_KEY); } catch { /* ignore */ } }
 
@@ -70,8 +76,9 @@ export class Radio {
     this.whoEl.textContent = who.name;
     this.whoEl.style.color = who.color;
     this.el.classList.toggle('you', msg.who === 'you');
+    this.el.style.borderLeftColor = who.color;
     this.el.classList.add('on');
-    this.#speak(msg.line, msg.who === 'doc' ? { pitch: 1.25, rate: 1.08 } : { pitch: 0.7, rate: 1.0 });
+    this.#speak(msg.line, who.voice || { pitch: 1, rate: 1 });
   }
 
   #speak(text, { pitch, rate }) {
