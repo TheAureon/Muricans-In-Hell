@@ -2,11 +2,28 @@
 import * as THREE from 'three';
 import { GFX } from '../core/graphics.js';
 
+// The browser sometimes refuses a WebGL context with the fancy options (or
+// for the fast GPU), so ask again more and more humbly before giving up.
+function createRenderer() {
+  const tries = [
+    { antialias: GFX.antialias && !GFX.bloom, powerPreference: 'high-performance', stencil: false },
+    { antialias: false, stencil: false },
+    { antialias: false, stencil: false, powerPreference: 'low-power', failIfMajorPerformanceCaveat: false },
+  ];
+  let lastError;
+  for (const opts of tries) {
+    try { return new THREE.WebGLRenderer(opts); } catch (e) { lastError = e; }
+  }
+  const err = new Error('NO_WEBGL');
+  err.cause = lastError;
+  throw err;
+}
+
 export function createScene(region) {
   const p = region.palette;
 
   // Graphics quality (Low / Medium / High) decides sharpness, shadows and color.
-  const renderer = new THREE.WebGLRenderer({ antialias: GFX.antialias && !GFX.bloom, powerPreference: 'high-performance', stencil: false });
+  const renderer = createRenderer();
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, GFX.pixelRatio));
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.shadowMap.enabled = GFX.shadows;

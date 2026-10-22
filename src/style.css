@@ -406,3 +406,12 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #joblog .jl-tracked { color: var(--c); font: 11px 'Arial Black', Impact, sans-serif; letter-spacing: 1px; white-space: nowrap; }
 #joblog .jl-foot { padding: 8px 18px; border-top: 1px solid #ffffff18; color: #fff6; font-size: 12px; }
 #joblog .jl-foot b { color: #ffb070; }
+
+/* ---- Graphics trouble message ---- */
+#problem { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; background: #0a0405f0; cursor: default; padding: 16px; }
+#problem > div { max-width: 560px; color: #f0e0d0; font: 15px/1.6 system-ui, sans-serif; }
+#problem b { display: block; font: 28px 'Arial Black', Impact, sans-serif; color: #ff5020; transform: skew(-6deg); text-shadow: 0 0 18px #ff200080, 0 3px 0 #400; margin-bottom: 10px; }
+#problem p b { display: inline; font: inherit; font-weight: 700; color: #ffcf9a; transform: none; text-shadow: none; }
+#problem .pb-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+#problem button { cursor: pointer; border: 0; border-radius: 6px; padding: 10px 18px; font: 15px 'Arial Black', Impact, sans-serif; color: #fff; background: #c8202a; box-shadow: 0 3px 0 #600; }
+#problem button + button { background: #3a2a2a; box-shadow: 0 3px 0 #000; }

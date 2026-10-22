@@ -7,6 +7,7 @@ import { createHank, createDoc } from './figures.js';
 import { createRip } from '../world/rip.js';
 import { createCarModel } from '../vehicle/carModel.js';
 import { Base } from '../world/base.js';
+import { GFX } from '../core/graphics.js';
 
 // ------------------------------------------------------------------ helpers
 function stage({ bg = 0x1a0505, fog = [0x1a0505, 12, 70], ground = 0x141010, groundRough = 0.9 } = {}) {
@@ -432,10 +433,18 @@ export function playIntro() {
       <div class="i-nav"><span class="i-dots"></span><span>CLICK / SPACE: next &nbsp;·&nbsp; ESC: skip</span></div>`;
     document.body.appendChild(el);
     const canvas = el.querySelector('canvas');
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
+    // Its own 3D view, as sharp as the graphics setting allows. If the
+    // browser won't give it one, skip the story rather than get stuck.
+    let renderer;
+    try { renderer = new THREE.WebGLRenderer({ canvas, antialias: GFX.antialias }); } catch (e) {
+      console.warn('Intro skipped: no WebGL', e);
+      el.remove();
+      resolve();
+      return;
+    }
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, GFX.pixelRatio, 1.5));
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.enabled = GFX.shadows;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.2;

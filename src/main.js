@@ -23,7 +23,7 @@ import { Hud } from './ui/hud.js';
 import { showTitleScreen } from './ui/titleScreen.js';
 import { Autopilot, Director } from './ui/attract.js';
 import { Lighting } from './world/lighting.js';
-import { GFX } from './core/graphics.js';
+import { GFX, setQuality } from './core/graphics.js';
 import { Base } from './world/base.js';
 import { setupTerrain, terrain } from './world/terrain.js';
 import { Teleporter } from './world/teleporter.js';
@@ -58,6 +58,14 @@ async function main() {
   setupTerrain(region); // hills (or flat ground) for this region
   const physics = await createPhysics();
   const { renderer, scene, camera, followPlayer, lights } = createScene(region);
+  // The graphics card gave up (driver crash, out of video memory...): say so
+  // instead of freezing on a black screen.
+  renderer.domElement.addEventListener('webglcontextlost', (e) => {
+    e.preventDefault();
+    try { car.build.save(); } catch { /* not built yet */ }
+    showProblem('GRAPHICS CRASHED', `The browser lost the 3D graphics (it happens when the graphics card runs out of memory or its driver hiccups). Your progress is saved.${GFX.name !== 'low' ? ' If it keeps happening, try Low graphics.' : ''}`,
+      [['RELOAD', () => location.reload()], ...(GFX.name !== 'low' ? [['RELOAD ON LOW GRAPHICS', reloadOnLow]] : [])]);
+  });
   const hazards = new Hazards(scene, region);
   createGround(scene, physics, region, hazards);
 
@@ -647,7 +655,33 @@ async function main() {
   window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog };
 }
 
+// A full-screen message with buttons (graphics trouble).
+function showProblem(title, text, buttons) {
+  document.getElementById('problem')?.remove();
+  const el = document.createElement('div');
+  el.id = 'problem';
+  el.innerHTML = `<div><b>${title}</b><p>${text}</p><div class="pb-btns"></div></div>`;
+  for (const [label, fn] of buttons) {
+    const b = document.createElement('button');
+    b.textContent = label;
+    b.onclick = fn;
+    el.querySelector('.pb-btns').appendChild(b);
+  }
+  document.body.appendChild(el);
+}
+const reloadOnLow = () => { setQuality('low'); location.reload(); };
+
 main().catch((err) => {
   console.error(err);
+  if (err.message === 'NO_WEBGL') {
+    showProblem('YOUR BROWSER WON\'T DRAW 3D RIGHT NOW',
+      'The browser refused to start WebGL (3D graphics). Usually one of these fixes it:<br>'
+      + '• <b>Close the tab and reopen it</b>, or restart the browser (after a graphics crash, browsers turn 3D off until restart).<br>'
+      + '• Close other tabs with games, maps or 3D in them.<br>'
+      + '• Turn on <b>hardware acceleration</b> in the browser settings (Chrome: Settings → System → "Use graphics acceleration").<br>'
+      + '• Try another browser (Chrome, Edge, Firefox, Safari).',
+      [['TRY AGAIN', () => location.reload()], ['TRY AGAIN ON LOW GRAPHICS', reloadOnLow]]);
+    return;
+  }
   document.body.insertAdjacentHTML('beforeend', `<pre style="color:#f88;position:fixed;top:0;left:0;z-index:99">Failed to start: ${err.message}</pre>`);
 });
