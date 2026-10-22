@@ -88,7 +88,7 @@ export class Radio {
   }
 
   #start(msg) {
-    const who = CAST[msg.who];
+    const who = CAST[msg.who] || { name: String(msg.who).toUpperCase(), color: '#cccccc' };
     this.current = { ...msg, t: 0, shown: -1 };
     this.whoEl.textContent = who.name;
     this.whoEl.style.color = who.color;

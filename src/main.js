@@ -100,6 +100,7 @@ async function main() {
   const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   demons.base = base;
+  demons.hazards = hazards;
   const radio = new Radio(audio);
   // Jobs (missions) from Doc and whoever else needs something done.
   const jobs = new JobBoard({ region, progress, radio, hud, audio });
@@ -193,14 +194,16 @@ async function main() {
   let traveling = false;
   // arriveAt: 'spawn' (the region's way in), 'base' (the home pad) or
   // 'teleporter' (that region's teleporter).
-  function travelTo(target, arriveAt = 'spawn') {
-    if (traveling) return;
+  function travelTo(target, arriveAt = 'spawn', { keepSave = false } = {}) {
+    // (Not while wrecked: the wreck has to finish first, or it would be skipped.)
+    if (traveling || (car.wrecked && !keepSave)) return;
     traveling = true;
+    car.invulnerable = true; // nothing can happen to you mid-teleport
     if (arriveAt === 'spawn') hud.travel(target.name);
     else hud.travel(arriveAt === 'base' ? "Doc's base" : target.name, 'TELEPORTING TO');
     try { sessionStorage.setItem('helldrive.arrive', arriveAt); } catch { /* ignore */ }
     audio.wreck();
-    if (SETTINGS.dev.creative) {
+    if (keepSave) { /* just going back: the real save is already right */ } else if (SETTINGS.dev.creative) {
       try {
         sessionStorage.setItem('helldrive.jump', target.id);
         sessionStorage.setItem('helldrive.creative', JSON.stringify({ build: car.build.snapshot(), tier: progress.tier }));
@@ -223,15 +226,23 @@ async function main() {
         if (D.noEnemies) {
           demons.clearAround(car.currPos, 1e9);
           projectiles.clear();
-          boss?.reset();
-          if (boss) boss.root.visible = false;
+          boss?.setDisabled(true);
           hud.bossBar(null);
         } else {
-          boss?.reset();
+          boss?.setDisabled(false);
           demons.populate(car.currPos);
         }
       }
+      // Undo history from one mode must never be undone into the other.
+      if (which === 'creative') garage.history = [];
       if (which === 'creative' && !D.creative) {
+        // Came here by a creative jump? That visit wasn't real: go back to
+        // where you really are.
+        if (jump && jump !== (progress.region || REGIONS[0].id)) {
+          progress.reloadSaved();
+          travelTo(regionById(progress.region), 'spawn', { keepSave: true });
+          return;
+        }
         // Back to reality: your real saved build, souls, unlocks and chassis.
         progress.reloadSaved();
         jobs.reloadSaved();
@@ -239,6 +250,11 @@ async function main() {
         car.savedBuild = car.build.snapshot();
         car.setTier(progress.tier);
         hud.souls(progress.souls);
+        // ...and the real state of this region (boss, gate, teleporter).
+        tele?.setEstablished(!!progress.teleporters[region.id]);
+        base?.setPadActive(REGIONS.some((r) => progress.teleporters[r.id]));
+        gate?.setOpen(!!progress.cleared[region.id]);
+        if (boss && boss.defeated && !progress.cleared[region.id]) { boss.defeated = false; boss.reset(); }
       }
       if (which === 'creative') car.applyBuild();
       garage.refresh();
@@ -252,7 +268,7 @@ async function main() {
       hud.toast(`Chassis: ${SETTINGS.chassisTiers[i].name}`, 'warn');
     },
   });
-  if (SETTINGS.dev.noEnemies && boss) boss.root.visible = false;
+  if (SETTINGS.dev.noEnemies) boss?.setDisabled(true);
 
   // Pieces breaking off the car become scrap lying in the world.
   car.onDetach = (pieces) => {
@@ -343,13 +359,13 @@ async function main() {
       if (input.wasPressed('KeyC')) dev.toggle();
       if (input.wasPressed('KeyH')) hud.toggleHelp();
       if (input.wasPressed('KeyM')) audio.toggleMute();
-      if (input.wasPressed('KeyG') || garageClicked || (garage.open && input.wasPressed('Escape'))) {
+      if (!jobLog.open && (input.wasPressed('KeyG') || garageClicked || (garage.open && input.wasPressed('Escape')))) {
         garageClicked = false;
         toggleGarage();
         input.mouse.down = false;
       }
       // Teleport: from a region's pad home to base, or from the base pad out.
-      if (input.wasPressed('KeyF') && !car.wrecked) {
+      if (input.wasPressed('KeyF') && !car.wrecked && !garage.open && !jobLog.open) { // (F = mirror in the garage)
         if (tele?.onPad(car.currPos)) travelTo(REGIONS[0], 'base');
         else if (base?.onPad(car.currPos)) {
           const linked = REGIONS.filter((r) => progress.teleporters[r.id]);
@@ -363,6 +379,7 @@ async function main() {
         input.mouse.down = false;
       }
       jobsClicked = false;
+      if (jobLog.open || garage.open) audio.update(0, 0, 0); // paused: no engine roar or tire screech
       if (jobLog.open) {
         aim.mesh.visible = false;
         lighting.render();
@@ -407,7 +424,7 @@ async function main() {
       wreckTimer += dt;
       if ((smokeTimer -= dt) <= 0) {
         smokeTimer = 0.05;
-        smoke.spawn(tmp.copy(car.position).setY(1.2), new THREE.Vector3((Math.random() - 0.5) * 1.5, 3 + Math.random() * 2, (Math.random() - 0.5) * 1.5), 0.6 + Math.random() * 0.5, 1.6);
+        smoke.spawn(tmp.copy(car.position).setY(car.position.y + 1.2), new THREE.Vector3((Math.random() - 0.5) * 1.5, 3 + Math.random() * 2, (Math.random() - 0.5) * 1.5), 0.6 + Math.random() * 0.5, 1.6);
       }
       if (wreckTimer > SETTINGS.damage.respawnDelay) {
         wreckTimer = 0;
@@ -442,7 +459,7 @@ async function main() {
     // along at demon height instead of plunging into the dirt.
     const aimed = demons.raycast(aim.raycaster.ray);
     if (aimed) aimPoint = aimed.point;
-    else if (aim.mesh.visible) aimPoint = tmpAim.copy(aimPoint).setY(0.8);
+    else if (aim.mesh.visible) aimPoint = tmpAim.copy(aimPoint).setY(aimPoint.y + 0.8);
     if (!playing) { aim.mesh.visible = false; aimPoint = autopilot.aim; }
     car.render(alpha, dt, aimPoint);
     demons.render(alpha, dt);
@@ -645,7 +662,7 @@ async function main() {
   }
   await lighting.precompile(); // build every shader now, not mid-game
   requestAnimationFrame(frame);
-  showTitleScreen({ region, progress, onMenu: () => audio.start(), onStory: () => playIntro() }).then(async () => {
+  showTitleScreen({ region, progress, onMenu: () => audio.start(), onStory: () => { radio.markSeen('intro'); return playIntro(); } }).then(async () => {
     // A brand new game starts with the story.
     if (progress.fresh && !radio.hasSeen('intro')) { radio.markSeen('intro'); await playIntro(); }
     startPlaying();

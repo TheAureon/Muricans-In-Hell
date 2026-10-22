@@ -11,6 +11,7 @@
 //        fight: that's a drift.
 //  - Steering spins the car directly; weight makes that spin lazier.
 import * as THREE from 'three';
+import { clearAndDispose } from '../core/dispose.js';
 import { SETTINGS } from '../settings.js';
 import { createCarModel, CAR_DIMENSIONS, carLightMaterials } from './carModel.js';
 import { Build, cellCenter, SECTION_CELLS, sectionCenter, pieceInfo, pieceStats, isSectionPiece } from './build.js';
@@ -134,7 +135,7 @@ export class Car {
     const RAPIER = this.RAPIER;
     for (const c of this.partColliders) this.world.removeCollider(c, false);
     this.partColliders = [];
-    this.partsGroup.clear();
+    clearAndDispose(this.partsGroup);
     this.partObjects.clear();
     this.turrets = [];
     this.boosterFlames = [];

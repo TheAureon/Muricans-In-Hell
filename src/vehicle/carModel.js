@@ -7,6 +7,7 @@
 //   │   └─ parts you bolted on
 //   └─ wheels     stay planted on the ground
 import * as THREE from 'three';
+import { disposeTree } from '../core/dispose.js';
 import { litMaterial } from '../core/graphics.js';
 
 export const CAR_DIMENSIONS = {
@@ -254,7 +255,7 @@ export function createCarModel() {
   // Change the look to a chassis tier: 0 car, 1 armored, 2 half-track, 3 tank.
   model.setTier = (tier) => {
     for (const [id, g] of Object.entries(sections)) {
-      for (const child of [...g.children]) if (child !== turret) g.remove(child);
+      for (const child of [...g.children]) if (child !== turret) { disposeTree(child); g.remove(child); }
       buildSection(id, g, tier);
     }
     for (const w of wheels) w.steer.visible = tier < 2 || (tier === 2 && w.front);

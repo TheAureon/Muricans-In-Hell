@@ -37,7 +37,11 @@ export function createTuningPanel() {
           if (v && typeof v === 'object') restore(target[k], v); else target[k] = v;
         }
       };
-      restore(SETTINGS, original);
+      // (Not the dev/creative switches: those belong to the dev panel.)
+      const { dev, ...rest } = original;
+      const keepUnlimited = SETTINGS.build.unlimitedParts;
+      restore(SETTINGS, rest);
+      SETTINGS.build.unlimitedParts = keepUnlimited;
       gui.controllersRecursive().forEach((c) => c.updateDisplay());
     },
   }, 'reset').name('↺ Reset to file values');

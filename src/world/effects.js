@@ -80,7 +80,8 @@ export class Embers {
       // Wrap around the player so embers are always nearby.
       if (x - center.x > R) x -= 2 * R; else if (x - center.x < -R) x += 2 * R;
       if (z - center.z > R) z -= 2 * R; else if (z - center.z < -R) z += 2 * R;
-      if (y > 25) y = 0;
+      // (and up and down with the ground: hills!)
+      if (y - center.y > 25) y -= 27; else if (y - center.y < -2) y += 27;
       p.setXYZ(i, x, y, z);
     }
     p.needsUpdate = true;

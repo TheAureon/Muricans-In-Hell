@@ -120,6 +120,7 @@ export class Demons {
       d.vel.set(0, 0, 0);
       d.hp = stats.health;
       d.stun = d.ramCd = d.flash = d.lunge = 0;
+      d.charging = d.chargeCd = 0; // (a reused Bone Ram must not start mid-charge)
       d.attackCd = Math.random() * stats.attackInterval;
       d.yaw = Math.random() * 6;
       d.wander.copy(dir);
@@ -151,8 +152,10 @@ export class Demons {
       const c = new THREE.Vector3(carPos.x + Math.cos(a) * dist, 0, carPos.z + Math.sin(a) * dist);
       c.x = THREE.MathUtils.clamp(c.x, -this.mapHalf, this.mapHalf);
       c.z = THREE.MathUtils.clamp(c.z, -this.mapHalf, this.mapHalf);
-      if (c.distanceTo(carPos) < 50) continue;
-      if (this.boss && c.distanceTo(this.boss.arenaCenter) < this.boss.arenaRadius + 20) continue; // keep the arena clear
+      if (Math.hypot(c.x - carPos.x, c.z - carPos.z) < 50) continue;
+      // Keep the arena clear (and the lava moat around an island arena).
+      if (this.boss && Math.hypot(c.x - this.boss.arenaCenter.x, c.z - this.boss.arenaCenter.z) < this.boss.arenaRadius + 20 + (this.region.boss?.arena?.moat || 0)) continue;
+      if (this.hazards?.lavaAt(c.x, c.z, 8)) continue; // not in a lava river
       if (this.base?.contains(c, 25)) continue; // and the base
       const type = this.#pickType(Math.hypot(c.x - this.start.x, c.z - this.start.z));
       const st = this.types[type].def.stats();
@@ -335,6 +338,7 @@ export class Demons {
         }
       }
       if (this.base?.pushOut(d.pos, r)) { d.vel.x *= 0.2; d.vel.z *= 0.2; } // Doc's walls + wards
+      if (!d.airborne) d.pos.y = terrain.height(d.pos.x, d.pos.z); // (stay on the ground after a shove)
       if (d.body) d.body.setNextKinematicTranslation({ x: d.pos.x, y: d.pos.y, z: d.pos.z });
 
       // ---- Touching the car? ----
@@ -363,7 +367,10 @@ export class Demons {
         const impact = (cvx * _n.x + cvz * _n.z) - Math.max(0, d.vel.x * _n.x + d.vel.z * _n.z);
 
         // Push light demons out so they're not inside the car.
-        if (!d.def.heavy) d.pos.addScaledVector(_n, px < pz ? px : pz);
+        if (!d.def.heavy) {
+          d.pos.addScaledVector(_n, px < pz ? px : pz);
+          if (!d.airborne) d.pos.y = terrain.height(d.pos.x, d.pos.z);
+        }
 
         if (impact > 2 && d.ramCd <= 0) {
           d.ramCd = 0.3;

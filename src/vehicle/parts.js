@@ -176,6 +176,7 @@ export function createGunTurret(kind = 'gun') {
   muzzle.position.set(0, 0, len + 0.1);
   barrels.add(muzzle);
   const flash = new THREE.Mesh(new THREE.OctahedronGeometry(0.22, 0), new THREE.MeshBasicMaterial({ color: 0xffd060, transparent: true, opacity: 0.9 }));
+  flash.userData.ownMat = true; // (its own material: freed when the gun is)
   flash.scale.set(1, 1, 1.8);
   flash.visible = false;
   muzzle.add(flash);

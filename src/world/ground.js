@@ -59,16 +59,23 @@ export function createGround(scene, physics, region, hazards = null) {
     [half + 5, 0, 5, half + 10], [-half - 5, 0, 5, half + 10],
   ];
   for (const [x, z, hx, hz] of walls) {
-    const b = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, 10, z));
-    world.createCollider(RAPIER.ColliderDesc.cuboid(hx, 20, hz), b);
+    // Tall enough to stop you even where a mountain runs into the edge.
+    let top = 0;
+    for (let t = -1; t <= 1; t += 0.01) top = Math.max(top, hx > hz ? terrain.height(x + t * hx, z) : terrain.height(x, z + t * hz));
+    const b = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(x, top / 2 + 10, z));
+    world.createCollider(RAPIER.ColliderDesc.cuboid(hx, top / 2 + 30, hz), b);
   }
 
   // ---- Scenery ----
   // Keep the start, the boss arena and the lava free of random scenery.
   const arena = region.boss?.arena;
   const tele = region.teleporter;
+  // (The Hellgate rises next to the arena, on the side you come from: see main.js.)
+  const gateOff = arena && arena.style !== 'island' ? (arena.radius + 25) / (Math.hypot(arena.x, arena.z) || 1) : 0;
+  const gateX = arena ? arena.x - arena.x * gateOff : 0, gateZ = arena ? arena.z - arena.z * gateOff : 0;
   const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 ||
     (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2) ||
+    (arena && gateOff && (x - gateX) ** 2 + (z - gateZ) ** 2 < 16 ** 2) ||
     (hazards && hazards.lavaAt(x, z, 4)) ||
     (tele && (x - tele.x) ** 2 + (z - tele.z) ** 2 < (tele.radius + 12) ** 2);
   for (const prop of region.props) {
@@ -224,7 +231,10 @@ const PROP_BUILDERS = {
         const d = RAPIER.ColliderDesc.cuboid(0.5 * s, 1.5 * s, 2.3 * s);
         d.setTranslation(dx, 1.5 * s, dz);
         d.setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
-        return d;
+        const d2 = RAPIER.ColliderDesc.cuboid(0.5 * s, 1.5 * s, 2.3 * s);
+        d2.setTranslation(-dx, 1.5 * s, -dz);
+        d2.setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
+        return [d, d2];
       },
       colorJitter: 0.15,
     };
@@ -296,10 +306,11 @@ function placeProps(scene, physics, prop, b, half, keepClear, rand) {
     mesh.setColorAt(i, col.copy(base).multiplyScalar(1 - b.colorJitter / 2 + rand() * b.colorJitter));
 
     if (fixedBody && b.collider) {
-      const desc = b.collider(RAPIER, dummy);
-      const t = desc.translation;
-      desc.setTranslation(x + t.x, dummy.position.y + t.y, z + t.z).setRestitution(0.2).setFriction(0.5);
-      world.createCollider(desc, fixedBody);
+      for (const desc of [].concat(b.collider(RAPIER, dummy))) {
+        const t = desc.translation;
+        desc.setTranslation(x + t.x, dummy.position.y + t.y, z + t.z).setRestitution(0.2).setFriction(0.5);
+        world.createCollider(desc, fixedBody);
+      }
     }
   }
   mesh.instanceMatrix.needsUpdate = true;

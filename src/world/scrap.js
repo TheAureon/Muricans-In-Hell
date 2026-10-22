@@ -1,6 +1,7 @@
 // Scrap: pieces that broke off your car. They fly off, tumble, land, and
 // glow with a beacon until you drive close and press E to grab them.
 import * as THREE from 'three';
+import { disposeTree } from '../core/dispose.js';
 import { terrain } from './terrain.js';
 
 const GRAVITY = 22;
@@ -104,7 +105,7 @@ export class Scrap {
   collect(list, carPos) {
     for (const s of list) {
       s.collecting = 0.01;
-      s.target = carPos.clone().setY(1.2);
+      s.target = carPos.clone().setY(carPos.y + 1.2);
       s.beam.visible = s.ring.visible = false;
     }
     return list.map((s) => s.item);
@@ -114,6 +115,7 @@ export class Scrap {
 
   #delete(s) {
     this.scene.remove(s.group, s.beam, s.ring);
+    disposeTree(s.group); // (its copy of the lost piece)
     this.items.splice(this.items.indexOf(s), 1);
   }
 }

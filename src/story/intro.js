@@ -469,13 +469,25 @@ export function playIntro() {
       requestAnimationFrame(loop);
     };
 
+    // Free a finished scene's shapes and pictures from the graphics card.
+    // (Not materials: some are shared with the game's car.)
+    const freeScene = (sc) => sc?.scene.traverse((o) => {
+      o.geometry?.dispose();
+      for (const m of [].concat(o.material || [])) for (const v of Object.values(m)) if (v?.isTexture) v.dispose();
+    });
+    let done = false;
     const finish = () => {
+      if (done) return;
+      done = true;
       clearInterval(typing);
+      typing = null;
+      el.removeEventListener('click', next);
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', onResize);
       el.classList.add('out');
       setTimeout(() => {
         running = false;
+        freeScene(current);
         renderer.dispose();
         renderer.forceContextLoss();
         el.remove();
@@ -486,6 +498,7 @@ export function playIntro() {
       i = n;
       if (i >= INTRO.length) return finish();
       const s = INTRO[i];
+      freeScene(current);
       fade.className = 'i-fade'; void fade.offsetWidth; fade.className = 'i-fade black';
       current = SCENES[s.art]?.() || SCENES.go();
       current.camera.aspect = window.innerWidth / window.innerHeight;
@@ -510,6 +523,7 @@ export function playIntro() {
       quote.innerHTML = `<b style="color:${who.color}">${who.name}:</b> ${s.quote.line}`;
     };
     const next = () => {
+      if (done) return;
       if (typing) {
         clearInterval(typing); typing = null;
         p.textContent = INTRO[i].text;

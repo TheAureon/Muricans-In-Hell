@@ -72,8 +72,13 @@ export class Bullets {
       // Hit the ground?
       const gy = terrain.height(b.pos.x + b.dir.x * step, b.pos.z + b.dir.z * step);
       if (b.pos.y + b.dir.y * step <= gy) {
-        const g0 = terrain.height(b.pos.x, b.pos.z);
-        step = b.dir.y < -1e-3 ? Math.max(0, (b.pos.y - g0) / -b.dir.y) : 0;
+        // Find where it crossed into the ground, within this step only.
+        let lo = 0, hi = step;
+        for (let k = 0; k < 8; k++) {
+          const m = (lo + hi) / 2;
+          if (b.pos.y + b.dir.y * m <= terrain.height(b.pos.x + b.dir.x * m, b.pos.z + b.dir.z * m)) hi = m; else lo = m;
+        }
+        step = hi;
         b.pos.addScaledVector(b.dir, step);
         if (Math.random() < 0.5) {
           this.dust.spawn(b.pos, new THREE.Vector3((Math.random() - 0.5) * 3, 2 + Math.random() * 2, (Math.random() - 0.5) * 3), 0.25, 0.5);

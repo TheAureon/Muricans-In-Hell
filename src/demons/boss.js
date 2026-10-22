@@ -57,6 +57,8 @@ export class Boss {
 
   // Back to sleep in the middle of the arena, fully healed.
   reset() {
+    // Killed but not blown up yet? Finish dying first (souls, gate, saved win).
+    if (this.state === 'dying' && !this.exploded) this.#explode();
     this.pos = this.arenaCenter.clone();
     this.prev = this.pos.clone();
     this.yaw = Math.atan2(-this.arenaCenter.x, -this.arenaCenter.z); // faces the way you'll come in
@@ -71,13 +73,21 @@ export class Boss {
     this.ring.visible = false;
     this.root.visible = !this.defeated;
     this.root.rotation.set(0, 0, 0);
-    this.body.setNextKinematicTranslation(this.defeated ? { x: 0, y: -200, z: 0 } : { x: this.pos.x, y: this.pos.y, z: this.pos.z });
+    this.body.setNextKinematicTranslation(this.defeated || this.disabled ? { x: 0, y: -200, z: 0 } : { x: this.pos.x, y: this.pos.y, z: this.pos.z });
     this.ctx.hud?.bossBar(null);
+  }
+
+  // Dev "No enemies": the boss is gone (not just invisible): no body to
+  // bump into, nothing for bullets to hit.
+  setDisabled(on) {
+    this.disabled = on;
+    this.reset();
+    if (on) this.root.visible = false;
   }
 
   // ------------------------------------------------------------------ hits
   takeHit(amount, source, push) {
-    if (this.state === 'dead' || this.state === 'dying') return false;
+    if (this.state === 'dead' || this.state === 'dying' || this.disabled) return false;
     if (this.state === 'dormant') this.#wake();
     const dealt = Math.min(amount, this.hp);
     this.hp -= amount;
@@ -89,7 +99,7 @@ export class Boss {
 
   // Ray against the Titan's body and head (for bullets and aiming).
   raycast(o, dir) {
-    if (this.state === 'dead') return null;
+    if (this.state === 'dead' || this.disabled) return null;
     let best = null;
     for (const [y, r] of [[4.6, 2.9], [7.4, 1.4]]) {
       const c = new THREE.Vector3(this.pos.x, this.pos.y + y, this.pos.z);

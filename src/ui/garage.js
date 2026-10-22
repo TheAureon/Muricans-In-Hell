@@ -18,6 +18,7 @@
 // The SHOP lives here too: spend souls to buy parts (+ Buy), unlock new
 // ones (🔒), and upgrade your chassis from car toward HELL TANK.
 import * as THREE from 'three';
+import { clearAndDispose } from '../core/dispose.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { SETTINGS } from '../settings.js';
 import { PART_TYPES } from '../vehicle/parts.js';
@@ -152,9 +153,14 @@ export class Garage {
       : this.car.build.whyNot(this.selected, ti, tj, tk, this.rot);
     this.hover = { i: ti, j: tj, k: tk, normal, reason, onPart: isPart ? { i, j, k } : null };
 
-    // Ghost of the selected part
-    this.ghost.clear();
-    this.ghost.add(makePieceModel({ type: this.selected, i: ti, j: tj, k: tk, normal, rot: this.rot }));
+    // Ghost of the selected part (only rebuilt when it actually changes)
+    const ghostKey = `${this.selected}|${ti},${tj},${tk}|${normal}|${this.rot}`;
+    if (ghostKey !== this.ghostKey) {
+      this.ghostKey = ghostKey;
+      clearAndDispose(this.ghost);
+      this.ghost.add(makePieceModel({ type: this.selected, i: ti, j: tj, k: tk, normal, rot: this.rot }));
+      this.ghost.traverse((o) => { if (o.isMesh) o.userData.ownMat = false; });
+    }
     const m = reason ? this.ghostBad : this.ghostOk;
     this.ghost.traverse((o) => { if (o.isMesh) { o.material = m; o.castShadow = false; } });
     this.ghost.visible = true;

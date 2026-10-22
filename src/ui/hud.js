@@ -132,7 +132,8 @@ export class Hud {
   victory(title, sub) {
     this.victoryEl.innerHTML = `${title}<br>CLEARED!<small>${sub}</small>`;
     this.victoryEl.classList.add('on');
-    setTimeout(() => this.victoryEl.classList.remove('on'), 9000);
+    clearTimeout(this.victoryTimer);
+    this.victoryTimer = setTimeout(() => this.victoryEl.classList.remove('on'), 9000);
   }
 
   // Big title card across the top (e.g. arriving in a new region).

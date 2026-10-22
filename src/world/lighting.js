@@ -117,7 +117,7 @@ export class Lighting {
     if (this.bossLight) {
       const on = boss && boss.root.visible && boss.state !== 'dead';
       this.bossLight.intensity = on ? 55 + Math.sin(performance.now() / 300) * 15 : 0;
-      if (on) this.bossLight.position.set(boss.root.position.x, 6, boss.root.position.z).addScaledVector(
+      if (on) this.bossLight.position.set(boss.root.position.x, boss.root.position.y + 6, boss.root.position.z).addScaledVector(
         new THREE.Vector3(Math.sin(boss.yaw), 0, Math.cos(boss.yaw)), 3.5);
     }
   }
