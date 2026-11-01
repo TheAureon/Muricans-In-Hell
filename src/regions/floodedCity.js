@@ -1,6 +1,7 @@
 // REGION 4 — THE FLOODED CITY OF THE DAMNED
 // A drowned hell-city: a grid of flooded streets (canals) between blocks of
-// ruined buildings, crossed by stone bridges. Shallow water slows you down;
+// ruined buildings, old rivers winding through it all, crossed by stone
+// bridges. Shallow water slows you down;
 // deep water floods your engine unless you've bolted on PONTOONS (then you
 // float, slow and slidey, like a boat). Treads are too heavy to float.
 // The Drowned Leviathan lives in the lake of the old plaza.
@@ -8,6 +9,29 @@
 // Flooded streets: a straight canal from one end of the map to the other.
 // Bridges at 1/4, 1/2 and 3/4 of the way along each one.
 const canal = (points, width) => ({ points, width, depth: 1.7, bridges: [0.25, 0.5, 0.75] });
+
+// Old rivers that were here before the city: they wind through the blocks
+// (through the given points, snaking side to side by `wiggle` m), with a
+// bridge about every 220 m.
+function river(points, width, wiggle = 30, phase = 0) {
+  const out = [];
+  let s = 0;
+  for (let i = 0; i < points.length - 1; i++) {
+    const [ax, az] = points[i], [bx, bz] = points[i + 1];
+    const len = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / len, nz = (bx - ax) / len;
+    const steps = Math.max(1, Math.round(len / 25));
+    for (let k = 0; k < steps; k++) {
+      const t = k / steps, d = s + len * t;
+      // (no wiggle at the very ends, so it meets the map edge / lake cleanly)
+      const w = Math.sin(d / 140 + phase) * wiggle * Math.min(1, d / 80, i < points.length - 2 ? 1 : (1 - t) * len / 80);
+      out.push([Math.round(ax + (bx - ax) * t + nx * w), Math.round(az + (bz - az) * t + nz * w)]);
+    }
+    s += len;
+  }
+  out.push(points[points.length - 1]);
+  const n = Math.max(1, Math.floor(s / 220));
+  return { points: out, width, depth: 1.8, bridges: Array.from({ length: n }, (_, k) => (k + 0.5) / n) };
+}
 
 export default {
   id: 'flooded_city',
@@ -44,6 +68,12 @@ export default {
       canal([[260, -1000], [260, 1000]], 26), canal([[720, -1000], [720, 1000]], 32),
       canal([[-1000, -720], [1000, -720]], 32), canal([[-1000, -260], [1000, -260]], 26),
       canal([[-1000, 260], [1000, 260]], 28), canal([[-1000, 720], [1000, 720]], 30),
+      // Winding rivers through the blocks
+      river([[-1000, 560], [-500, 400], [-120, 500], [380, 430], [1000, 560]], 22, 35, 0.5),  // the Old River (north)
+      river([[-1000, -60], [-720, -130], [-580, -360], [-535, -440]], 26, 25, 2.0),           // feeds the plaza lake
+      river([[-440, -545], [-200, -620], [150, -560], [520, -640], [1000, -540]], 24, 30, 1.2), // drains it, out to the east
+      river([[880, 1000], [840, 520], [930, 180], [860, -200], [930, -1000]], 20, 25, 3.1),   // the east river
+      river([[-1000, 880], [-420, 900], [120, 860], [600, 940], [1000, 880]], 18, 30, 4.0),   // along the north edge
     ],
     lakes: [{ x: -490, z: -490, r: 70, depth: 3.5 }], // the drowned plaza (boss)
   },
