@@ -12,6 +12,8 @@ import { Gore } from './world/gore.js';
 import { Scrap } from './world/scrap.js';
 import { Demons } from './demons/demons.js';
 import { Boss } from './demons/boss.js';
+import { Leviathan } from './demons/leviathan.js';
+import { Water } from './world/water.js';
 import { Hazards } from './world/hazards.js';
 import { Hellgate } from './world/hellgate.js';
 import { Projectiles } from './demons/projectiles.js';
@@ -68,6 +70,7 @@ async function main() {
   });
   const hazards = new Hazards(scene, region);
   createGround(scene, physics, region, hazards);
+  const water = terrain.waterLevel != null ? new Water(scene, physics, region) : null; // (Flooded City)
 
   // Doc's walled base (Ash Plains) and this region's teleporter, if any.
   const base = region.base ? new Base(scene, physics, region.base) : null;
@@ -97,10 +100,12 @@ async function main() {
   const gore = new Gore(scene);
   const stats = new Stats();
   const sparks = new Dust(scene, 160, 0xffd040, 0.95);
+  const spray = new Dust(scene, 160, 0xb8f0e8, 0.75); // water splashing
   const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   demons.base = base;
   demons.hazards = hazards;
+  demons.onPop = (at) => lighting.flash(at, 1.2); // (a Bloater bursting)
   const radio = new Radio(audio);
   // Jobs (missions) from Doc and whoever else needs something done.
   const jobs = new JobBoard({ region, progress, radio, hud, audio });
@@ -164,8 +169,10 @@ async function main() {
   }
 
   // The region's boss (and what happens when you beat it).
-  const boss = region.boss ? new Boss(scene, physics, {
-    region, car, demons, projectiles, gore, audio, hud, chase, dust, stats, hazards,
+  const BossKind = region.boss?.type === 'leviathan' ? Leviathan : Boss; // (the Leviathan swims instead of walking)
+  const boss = region.boss ? new BossKind(scene, physics, {
+    region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards,
+    dust: water ? spray : dust, // (splashes in the water)
     // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
     onDying: () => {
       const death = BOSS_DEATH[region.boss.type] || {};
@@ -566,6 +573,9 @@ async function main() {
       if (base && !base.contains(car.currPos)) radio.say('leaveBase');
       if (car.onLava > 0 && car.grounded) radio.say('firstLava');
       if (car.slipping > 0.5) radio.say('firstSlip');
+      if (car.water === 'shallow' && car.speed > 3) radio.say('firstWade');
+      if (car.water === 'sink') radio.say('firstSink');
+      if (car.water === 'float') { radio.say('firstFloat'); if (!car.wrecked) jobs.emit('float', { dt }); }
       hud.garageButton(canGarage() && !car.wrecked, canGarage() ? 'Open the garage (G)' : base ? 'The garage is at base (drive home)' : 'The garage is at base (teleport home from a teleporter pad)');
       if (boss && !SETTINGS.dev.noEnemies) {
         if (boss.awake) radio.say(region.radio?.bossAwake);
@@ -620,6 +630,26 @@ async function main() {
       const shield = Math.round(car.heatShield * 100);
       hud.lava(shield >= 100 ? 'Fully protected: the Hover Fans keep you cool' : `Burning! Heat protection ${shield}% (chassis ${Math.round((car.build.tier.heatResist || 0) * 100)}% · Hover Fans ${fans}/4)`);
     } else hud.lava(null);
+    // In the water: wading, floating, or sinking (and how to fix it).
+    if (water && !car.wrecked && playing && car.water !== 'dry') {
+      const p = car.stats.pontoons || 0;
+      if (car.water === 'sink') {
+        hud.water('🌊 ENGINE FLOODING 🌊', car.build.tier.sinks ? 'Treads are too heavy to float: get out of the deep water!'
+          : `Get out of the deep water! Pontoons ${p}/2 (bolt them on in the garage)`, 'sink');
+      } else if (car.water === 'float') hud.water('⚓ FLOATING', 'Slow and slidey: steer early', 'float');
+      else hud.water('', '');
+    } else hud.water('', '');
+    // Spray where the wheels hit the water
+    if (water && car.water !== 'dry' && car.speed > 3 && Math.random() < 0.6) {
+      for (const w of car.model.wheels) {
+        if (Math.random() < 0.5) continue;
+        w.steer.getWorldPosition(tmp);
+        tmp.y = water.level + 0.1;
+        spray.spawn(tmp, new THREE.Vector3((Math.random() - 0.5) * 3, 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 3), 0.2 + Math.random() * 0.25, 0.6);
+      }
+    }
+    water?.update(dt);
+    spray.update(dt);
 
     // --- Objective arrow: the Hellgate once it's open, else the boss arena ---
     const pointAt = (target, label) => {
@@ -660,7 +690,11 @@ async function main() {
     input.endFrame();
     requestAnimationFrame(frame);
   }
-  await lighting.precompile(); // build every shader now, not mid-game
+  // Build every shader now, not mid-game (a hidden boss too: show it for a moment).
+  const bossShown = boss?.root.visible;
+  if (boss) boss.root.visible = true;
+  await lighting.precompile();
+  if (boss) boss.root.visible = bossShown;
   requestAnimationFrame(frame);
   showTitleScreen({ region, progress, onMenu: () => audio.start(), onStory: () => { radio.markSeen('intro'); return playIntro(); } }).then(async () => {
     // A brand new game starts with the story.

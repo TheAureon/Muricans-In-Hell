@@ -115,6 +115,8 @@ export class Car {
     // Fire: pieces that are burning (piece id -> { t: seconds left, dps }).
     this.burns = new Map();
     this.onLava = 0;      // 0..1: how much of the car is over lava right now
+    this.water = 'dry';   // 'dry' / 'shallow' / 'float' (on Pontoons) / 'sink' (engine flooding)
+    this.floodTimer = 0;
     this.hazards = null;  // set by main (lava rivers / pools)
     this.setTier(0);
   }
@@ -406,9 +408,35 @@ export class Car {
   // Hills are a height map, not a physics shape: keep the car on top of
   // them. Going over a crest fast, the ground drops away faster than you
   // fall, so you fly. (On flat ground this changes nothing.)
+  // How high the car's middle sits here: on the ground, or on the water
+  // surface if it floats.
+  #restHeight(x, z) {
+    const ground = terrain.height(x, z);
+    if (terrain.waterLevel == null || this.floatShield < 1) return ground + CAR_DIMENSIONS.halfHeight;
+    return Math.max(ground, terrain.waterLevel - SETTINGS.water.floatDraft) + CAR_DIMENSIONS.halfHeight;
+  }
+
+  // 0..1: how well the car floats (1 = floats). Pontoons, unless it's on treads.
+  get floatShield() { return this.build.tier.sinks ? 0 : Math.min(1, (this.stats?.pontoons || 0) * SETTINGS.water.pontoonFloat); }
+
+  // Sunk in deep water: the engine floods and the low parts take damage
+  // (one Pontoon halves it).
+  #updateFlood(dt) {
+    if (this.water !== 'sink' || this.wrecked) { this.floodTimer = 0; return; }
+    this.floodTimer += dt;
+    if (this.floodTimer < 0.25) return;
+    const dmg = SETTINGS.water.floodDps * (1 - this.floatShield) * this.floodTimer;
+    this.floodTimer = 0;
+    if (dmg <= 0) return;
+    for (const pc of this.pieces()) {
+      if (pc.cells.some((c) => c.y < 0.3)) this.damagePiece(pc, dmg, true);
+      if (this.wrecked) return;
+    }
+  }
+
   #followGround() {
     const t = this.body.translation();
-    const rest = terrain.height(t.x, t.z) + CAR_DIMENSIONS.halfHeight;
+    const rest = this.#restHeight(t.x, t.z);
     if (t.y >= rest) return;
     const lv = this.body.linvel();
     const g = terrain.gradient(t.x, t.z);
@@ -484,6 +512,10 @@ export class Car {
     this.restingSteps = Math.abs(lv.y) < 0.4 ? (this.restingSteps || 0) + 1 : 0;
     const onHill = t.y - CAR_DIMENSIONS.halfHeight <= terrain.height(t.x, t.z) + 0.15;
     this.grounded = hit || onHill || this.restingSteps > 20;
+    // Water: wade, float (Pontoons) or sink to the bottom.
+    const depth = terrain.depth(t.x, t.z);
+    this.water = depth < 0.05 ? 'dry' : depth < S.water.deep ? 'shallow' : this.floatShield >= 1 ? 'float' : 'sink';
+    if (this.water === 'float' && t.y <= this.#restHeight(t.x, t.z) + 0.15) this.grounded = true; // (riding the water)
 
     // Smooth steering input (no instant full lock)
     const steerTarget = input.steer;
@@ -523,7 +555,7 @@ export class Car {
       // your tires (treads climb much steeper) and you slide back down.
       let slideX = 0, slideZ = 0;
       this.slipping = 0;
-      if (!terrain.flat) {
+      if (!terrain.flat && this.water !== 'float') {
         const g = terrain.gradient(t.x, t.z);
         const along = g.x * _fwd.x + g.z * _fwd.z; // rise per meter, going forward
         vf -= S.car.gravity * (along / Math.sqrt(1 + along * along)) * S.slopes.pull * dt;
@@ -537,6 +569,12 @@ export class Car {
           slideX = (-g.x / gl) * k; slideZ = (-g.z / gl) * k;
         }
       }
+      // Water slows you: wading, paddling on Pontoons, or crawling along the bottom.
+      if (this.water !== 'dry') {
+        const W = S.water;
+        const cap = topSpeed * (this.water === 'shallow' ? W.shallowSpeed : this.water === 'float' ? W.floatSpeed : W.sinkSpeed);
+        if (Math.abs(vf) > cap) vf = approach(vf, Math.sign(vf) * cap, 25 * dt);
+      }
       // Lava is thick: it bogs you down (Hover Fans blow it away).
       if (this.onLava > 0) {
         const cap = topSpeed * THREE.MathUtils.lerp(S.lava.speedFactor, 1, this.fanShield);
@@ -545,7 +583,7 @@ export class Car {
 
       // ---------- Sideways grip ----------
       const T = this.build.tier; // treads grip much harder than tires
-      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1);
+      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1) * (this.water === 'float' ? S.water.floatGrip : 1);
       const maxDv = grip * dt;
       const correction = THREE.MathUtils.clamp(-vs, -maxDv, maxDv);
       vs += correction;
@@ -581,6 +619,7 @@ export class Car {
     this.yawRate = this.body.angvel().y;
     this.drifting = this.grounded && Math.abs(vs) > S.grip.driftThreshold;
     this.#updateFire(dt);
+    this.#updateFlood(dt);
     const after = this.body.linvel();
     this.vBefore.set(after.x, after.y, after.z); // to spot crashes after the physics step
   }
@@ -637,7 +676,7 @@ export class Car {
     if (!terrain.flat) {
       const g = terrain.gradient(root.position.x, root.position.z);
       _v.set(-g.x, 1, -g.z).normalize();
-      _q.setFromUnitVectors(UP, this.grounded ? _v : UP);
+      _q.setFromUnitVectors(UP, this.grounded && this.water !== 'float' ? _v : UP);
       this.tilt.slerp(_q, 1 - Math.exp(-10 * dt));
       root.quaternion.premultiply(this.tilt);
     }
@@ -658,7 +697,10 @@ export class Car {
     const idle = this.speed < 1.5 && !this.wrecked ? 1 : 0;
     const rumble = Math.sin(this.clock * 70) * 0.006 * idle;
     this.model.body.position.y = THREE.MathUtils.clamp(this.heave.x, -0.15, 0.12) + rumble;
-    this.model.body.rotation.set(this.pitch.x + rumble * 0.4, 0, this.roll.x + Math.sin(this.clock * 53) * 0.004 * idle);
+    const bob = this.water === 'float' ? 1 : 0; // bobbing on the water
+    this.model.body.position.y += Math.sin(this.clock * 2.1) * 0.06 * bob;
+    this.model.body.rotation.set(this.pitch.x + rumble * 0.4 + Math.sin(this.clock * 1.7) * 0.025 * bob, 0,
+      this.roll.x + Math.sin(this.clock * 53) * 0.004 * idle + Math.sin(this.clock * 1.3) * 0.04 * bob);
 
     // --- Brake lights flare when braking; exhaust backfires when you lift off ---
     this.braking = !this.wrecked && ((this.throttle < 0 && this.forwardSpeed > 0.5) || (this.handbrake && this.speed > 2));

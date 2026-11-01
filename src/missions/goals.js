@@ -5,7 +5,7 @@
 //   points(goal, s)          places to mark with a beam of light (optional)
 //   show(n, total)           how the progress reads (optional)
 // The game sends events: kill { type, source }, tick { pos }, lava { dt },
-// drift { dt }, teleporter {}, boss {}.
+// drift { dt }, float { dt }, teleporter {}, boss {}.
 // A new kind of goal is just a new entry here.
 import { DEMON_TYPES } from '../demons/demonTypes.js';
 
@@ -52,6 +52,12 @@ export const GOALS = {
     total: (g) => g.seconds,
     label: () => 'Drive on lava',
     on: { lava: (g, e) => e.dt },
+    show: (n, t) => `${Math.floor(n)}/${t}s`,
+  },
+  floatTime: {
+    total: (g) => g.seconds,
+    label: () => 'Float on deep water',
+    on: { float: (g, e) => e.dt },
     show: (n, t) => `${Math.floor(n)}/${t}s`,
   },
   drift: {

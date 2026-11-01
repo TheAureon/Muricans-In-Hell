@@ -22,6 +22,7 @@
 //                boss       {}  (beat this region's boss)
 //                lavaTime   { seconds }  (drive on lava, total time)
 //                drift      { seconds }  (drift, total time)
+//                floatTime  { seconds }  (float on deep water with Pontoons, total time)
 //    reward    { souls }
 //    done      radio lines when it's finished
 // =====================================================================
@@ -138,5 +139,51 @@ export const MISSIONS = [
     goals: [{ kind: 'kill', demon: 'boneRam', count: 4, label: 'Take down Bone Rams' }],
     reward: { souls: 450 },
     done: [['doc', 'Hell magic in the joints. Like a teleporter, but for knees.'], ['you', 'Can I get some for the car?'], ['doc', '...Maybe.']],
+  },
+
+  // ---------------- THE FLOODED CITY ----------------
+  {
+    id: 'floodSource', giver: 'doc', region: 'flooded_city',
+    title: 'Hell Magic, Soggy',
+    brief: 'There\'s a hell-magic source somewhere in this drowned city. Find it for a teleporter.',
+    offer: [['doc', 'Hell magic, east side of the city. Get there and I\'ll link it up. Use the bridges.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 450 },
+    done: [['doc', 'Linked. Now get back here and let me bolt some floats on you.']],
+  },
+  {
+    id: 'seaTrial', giver: 'doc', region: 'flooded_city', after: ['floodSource'],
+    title: 'Sea Trial',
+    brief: 'Doc wants proof the Pontoons work. Float on deep water for a while (2 Pontoons, wheels only).',
+    offer: [
+      ['doc', 'Pontoons. Two of them, on the sides. Then drive into a canal and stay afloat for twenty seconds.'],
+      ['you', 'And if they don\'t work?'],
+      ['doc', 'Then I\'ll write that down too.'],
+    ],
+    goals: [{ kind: 'floatTime', seconds: 20, label: 'Float on deep water' }],
+    reward: { souls: 400 },
+    done: [['doc', 'Buoyancy confirmed. You are officially a boat.'], ['you', 'Captain Redline.']],
+  },
+  {
+    id: 'canalSurvey', giver: 'doc', region: 'flooded_city', after: ['seaTrial'],
+    title: 'Dive Survey',
+    brief: 'Drop sensors in the middle of three canals, where the water is deepest. You\'ll have to float out there.',
+    offer: [['doc', 'Sound travels best through water. Drop three sensors in the deep middle of the canals. Float out to them.']],
+    goals: [{ kind: 'reach', label: 'Drop sensors in the canals', points: [{ x: -720, z: 120 }, { x: 380, z: 720 }, { x: 720, z: -380 }] }],
+    reward: { souls: 700 },
+    done: [
+      ['doc', 'There\'s something under the plaza lake. Metal. A pipe... and something wrapped around it.'],
+      ['you', 'Something big?'],
+      ['doc', 'Something alive.'],
+    ],
+  },
+  {
+    id: 'gasLeak', giver: 'doc', region: 'flooded_city',
+    title: 'Gas Leak',
+    brief: 'Bloaters are full of rotten gas. Pop five of them with your guns, from a safe distance.',
+    offer: [['doc', 'Those swollen ones? Full of gas. Do NOT ram them. Shoot five of them from far away. I want to know what\'s in them.']],
+    goals: [{ kind: 'kill', demon: 'bloater', count: 5, by: 'gun', label: 'Shoot Bloaters' }],
+    reward: { souls: 500 },
+    done: [['doc', 'Methane, sulfur and... more crude. Everything down here is full of oil, Hank. Except the oil wells.']],
   },
 ];

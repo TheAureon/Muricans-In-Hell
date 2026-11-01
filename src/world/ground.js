@@ -38,6 +38,7 @@ export function createGround(scene, physics, region, hazards = null) {
       const h = (pos.getY(i0) + pos.getY(i0 + 1) + pos.getY(i0 + 2)) / 3;
       if (ny < 0.82) c.lerp(cliff, Math.min(1, (0.82 - ny) * 5));
       c.lerp(peak, Math.min(0.7, Math.max(0, (h - 35) / 60)));
+      if (terrain.waterLevel != null && h < terrain.waterLevel + 0.1) c.lerp(new THREE.Color(p.bed ?? 0x1a2018), 0.8); // muddy bottom
     }
     c.multiplyScalar(0.9 + rand() * 0.2);
     for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (tri * 3 + k) * 3);
@@ -49,7 +50,10 @@ export function createGround(scene, physics, region, hazards = null) {
   scene.add(ground);
 
   // ---- Physics ground: one big flat slab ----
-  const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, -1, 0));
+  // (Under water regions it sits below the deepest water: the car follows
+  // the carved ground itself, like hills.)
+  const floorY = terrain.waterLevel != null ? -6 : 0;
+  const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorY - 1, 0));
   world.createCollider(RAPIER.ColliderDesc.cuboid(size / 2, 1, size / 2).setFriction(0.8), groundBody);
 
   // ---- Invisible walls at the edge of the region ----
@@ -77,6 +81,8 @@ export function createGround(scene, physics, region, hazards = null) {
     (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2) ||
     (arena && gateOff && (x - gateX) ** 2 + (z - gateZ) ** 2 < 16 ** 2) ||
     (hazards && hazards.lavaAt(x, z, 4)) ||
+    terrain.wet(x, z, 5) ||
+    terrain.bridges.some((b) => (x - b.x) ** 2 + (z - b.z) ** 2 < (b.across + 18) ** 2) || // (bridge approaches)
     (tele && (x - tele.x) ** 2 + (z - tele.z) ** 2 < (tele.radius + 12) ** 2);
   for (const prop of region.props) {
     const builder = PROP_BUILDERS[prop.type];
@@ -84,6 +90,7 @@ export function createGround(scene, physics, region, hazards = null) {
     placeProps(scene, physics, prop, builder(p), half, keepClear, rand);
   }
   if (arena?.style === 'island') createIsland(scene, physics, arena, p, rand);
+  else if (arena?.style === 'lake') createLakeShore(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half };
@@ -91,8 +98,99 @@ export function createGround(scene, physics, region, hazards = null) {
 
 const ROCK_GEO = new THREE.IcosahedronGeometry(1, 0);
 
+// A box with its bottom at y = 0, colored one color (for vertex-colored props).
+function coloredBox(w, h, d, x, y, z, color) {
+  const g = new THREE.BoxGeometry(w, h, d).toNonIndexed();
+  g.translate(x, y + h / 2, z);
+  const c = new THREE.Color(color), arr = new Float32Array(g.attributes.position.count * 3);
+  for (let i = 0; i < arr.length; i += 3) arr.set([c.r, c.g, c.b], i);
+  g.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+  return g;
+}
+
+// A ruined city building (12 x 20 x 12 m before scaling): stone walls, rows
+// of dark empty windows, a broken jagged top and a collapsed corner.
+function buildingGeometry(p) {
+  const wall = p.stone ?? 0x6a6660, dark = 0x0c0c0e, trim = p.stoneDark ?? 0x3a3834;
+  const parts = [coloredBox(12, 16, 12, 0, 0, 0, wall)];
+  // jagged broken top
+  parts.push(coloredBox(7, 3, 12, -2.5, 16, 0, wall), coloredBox(4, 1.6, 6, 3, 16, 3, wall), coloredBox(3, 5, 3, -4.5, 19, -4.5, wall));
+  // floor bands
+  for (const y of [5.2, 10.4]) parts.push(coloredBox(12.3, 0.4, 12.3, 0, y, 0, trim));
+  parts.push(coloredBox(12.4, 1.2, 12.4, 0, 0, 0, trim)); // plinth
+  // windows on all four sides (thin dark boxes standing out a little)
+  for (let row = 0; row < 3; row++) {
+    for (let col = 0; col < 3; col++) {
+      if ((row * 3 + col) % 4 === 3) continue; // some bricked up
+      const y = 1.8 + row * 5.2, o = -3.6 + col * 3.6;
+      parts.push(coloredBox(1.8, 2.6, 0.2, o, y, 6.02, dark), coloredBox(1.8, 2.6, 0.2, o, y, -6.02, dark));
+      parts.push(coloredBox(0.2, 2.6, 1.8, 6.02, y, o, dark), coloredBox(0.2, 2.6, 1.8, -6.02, y, o, dark));
+    }
+  }
+  return mergeGeometries(parts);
+}
+
 // Each prop type: a shape, a material, how to sit on the ground, and its crash shape.
 const PROP_BUILDERS = {
+  // ---- Flooded City ----
+  ruin: (p) => ({
+    geometry: buildingGeometry(p),
+    material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.95 }),
+    shadows: true,
+    place: (m, s, rand) => {
+      m.scale.set(s * rand.range(0.8, 1.3), s * rand.range(0.6, 1.5), s * rand.range(0.8, 1.3));
+      m.rotation.y = Math.floor(rand() * 4) * Math.PI / 2 + rand.range(-0.08, 0.08); // lined up with the streets
+      m.position.y = -0.4;
+    },
+    collider: (RAPIER, m) => {
+      const d = RAPIER.ColliderDesc.cuboid(6 * m.scale.x, 8 * m.scale.y, 6 * m.scale.z).setTranslation(0, 8 * m.scale.y, 0);
+      const a = m.rotation.y;
+      d.setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
+      return d;
+    },
+    colorJitter: 0.25,
+  }),
+
+  column: (p) => {
+    const g = new THREE.CylinderGeometry(0.7, 0.8, 7, 8);
+    g.translate(0, 3.5, 0);
+    const cap = new THREE.BoxGeometry(2, 0.6, 2).translate(0, 0.3, 0);
+    return {
+      geometry: mergeGeometries([g.toNonIndexed(), cap.toNonIndexed()]),
+      material: litMaterial({ color: p.stone ?? 0x6a6660, flatShading: true, roughness: 0.85 }),
+      shadows: true,
+      place: (m, s, rand) => {
+        m.scale.set(s, s * rand.range(0.4, 1.1), s); // broken off at different heights
+        m.rotation.set(rand.range(-0.12, 0.12), rand() * 6, rand.range(-0.12, 0.12));
+      },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(3.5 * m.scale.y, 0.8 * m.scale.x).setTranslation(0, 3.5 * m.scale.y, 0),
+      colorJitter: 0.2,
+    };
+  },
+
+  // Rusted-out cars left behind when the city drowned.
+  carWreck: (p) => {
+    const rust = 0x5a3424, dark = 0x1a1412;
+    const g = mergeGeometries([
+      coloredBox(2, 0.8, 4.4, 0, 0.3, 0, rust),
+      coloredBox(1.7, 0.6, 2.2, 0, 1.1, -0.3, rust),
+      coloredBox(1.75, 0.45, 1.2, 0, 1.15, 0.3, dark), // empty windows
+      ...[[-1, 1.4], [1, 1.4], [-1, -1.4], [1, -1.4]].map(([x, z]) => coloredBox(0.3, 0.6, 0.6, x, 0, z, dark)),
+    ]);
+    return {
+      geometry: g,
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 1 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.set(rand.range(-0.06, 0.06), rand() * 6, rand.range(-0.1, 0.1)); },
+      collider: (RAPIER, m) => {
+        const a = m.rotation.y;
+        return RAPIER.ColliderDesc.cuboid(1 * m.scale.x, 0.7 * m.scale.y, 2.2 * m.scale.z).setTranslation(0, 0.7 * m.scale.y, 0)
+          .setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
+      },
+      colorJitter: 0.3,
+    };
+  },
+
   rock: (p) => ({
     geometry: ROCK_GEO,
     material: litMaterial({ color: p.rock, flatShading: true, roughness: 0.95 }),
@@ -432,4 +530,48 @@ function createIsland(scene, physics, arena, p, rand) {
   top.position.set(vx, 16.05, vz);
   group.add(top);
   world.createCollider(RAPIER.ColliderDesc.cylinder(8, 11).setTranslation(vx, 8, vz), body);
+}
+
+// Lake arena (Flooded City): the drowned plaza. The lake itself is carved
+// by the terrain; around its shore stand broken columns (gaps to drive
+// through) and a half-sunk statue of some forgotten king.
+function createLakeShore(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+  const stone = litMaterial({ color: p.stone ?? 0x6a6660, flatShading: true, roughness: 0.85 });
+  const colGeo = new THREE.CylinderGeometry(1.1, 1.3, 1, 8).translate(0, 0.5, 0);
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const count = 32, ring = R + 16;
+  for (let n = 0; n < count; n++) {
+    if (n % 8 < 2) continue; // gaps
+    const a = (n / count) * Math.PI * 2;
+    const h = 3 + rand() * 9;
+    const m = new THREE.Mesh(colGeo, stone);
+    m.position.set(Math.sin(a) * ring, -0.3, Math.cos(a) * ring);
+    m.scale.set(1, h, 1);
+    m.rotation.set(rand.range(-0.1, 0.1), 0, rand.range(-0.1, 0.1));
+    m.castShadow = true;
+    group.add(m);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 1.2).setTranslation(m.position.x, h / 2, m.position.z), body);
+  }
+  // A giant statue sinking in the middle-back of the lake (head and a raised arm)
+  const away = Math.atan2(ax, az);
+  const sx = Math.sin(away) * R * 0.55, sz = Math.cos(away) * R * 0.55;
+  const statue = new THREE.Group();
+  statue.position.set(sx, -2, sz);
+  statue.rotation.set(0.25, away + Math.PI, 0.15);
+  const green = litMaterial({ color: 0x4a6a58, flatShading: true, roughness: 0.7, metalness: 0.3 }); // old bronze
+  const head = new THREE.Mesh(new THREE.BoxGeometry(5, 6, 5), green); head.position.y = 6; statue.add(head);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(3, 2.6, 2, 6, 1, true), green); crown.position.y = 9.6; statue.add(crown);
+  const shoulders = new THREE.Mesh(new THREE.BoxGeometry(12, 4, 6), green); shoulders.position.y = 1.5; statue.add(shoulders);
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(2.2, 12, 2.2), green); arm.position.set(6, 7, 0); arm.rotation.z = -0.3; statue.add(arm);
+  const torch = new THREE.Mesh(new THREE.CylinderGeometry(1.4, 0.6, 2.4, 6), green); torch.position.set(7.9, 13.4, 0); statue.add(torch);
+  const flame = new THREE.Mesh(new THREE.IcosahedronGeometry(1.3, 0), new THREE.MeshBasicMaterial({ color: p.lava ?? 0x60ffd0 }));
+  flame.position.set(7.9, 15.2, 0); statue.add(flame);
+  statue.traverse((o) => { if (o.isMesh) o.castShadow = true; });
+  group.add(statue);
+  world.createCollider(RAPIER.ColliderDesc.cuboid(6, 6, 3.5).setTranslation(sx, 2, sz), body);
 }

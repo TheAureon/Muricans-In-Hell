@@ -48,7 +48,19 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 3, the Bone Mountains** (new): the first region with real hills.
+**Region 4, the Flooded City** (new): a drowned hell-city. Its streets are
+canals between blocks of ruined buildings, crossed by stone bridges.
+Shallow water slows you; deep water floods your engine (you sink to the
+bottom and the low parts of the car take damage) unless you bolt on two
+**Pontoons**, a new part: then you float, slow and slidey, like a boat.
+Treads (Half-Track, HELL TANK) are too heavy to float. New demons: hordes of
+**Drowned** and the **Bloater**, which pops when it dies or reaches you (shoot
+it from far away; its pop sets off other Bloaters). The boss, **the Drowned
+Leviathan**, is a sea serpent in the old plaza's lake: it rises near you,
+spits water and slams its head down, then dives and comes up somewhere
+else. You can only hurt it while it's up.
+
+**Region 3, the Bone Mountains**: the first region with real hills.
 Uphill slows you down, downhill speeds you up, and on a slope too steep for
 your tires you slide back down. Cars manage the valleys; treads (Half-Track,
 HELL TANK) climb the steep stuff, and the Bone King waits on the highest
@@ -131,7 +143,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

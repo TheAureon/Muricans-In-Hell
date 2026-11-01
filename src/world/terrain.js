@@ -16,6 +16,13 @@ export const terrain = {
     return { x: (current.height(x + e, z) - current.height(x - e, z)) / (2 * e), z: (current.height(x, z + e) - current.height(x, z - e)) / (2 * e) };
   },
   get flat() { return current.flat; },
+  // WATER (Flooded City): the water surface height, and how deep the water
+  // is at (x, z) (0 = dry).  wet(x, z, margin) = in or near water.
+  get waterLevel() { return current.water?.level ?? null; },
+  depth(x, z) { return current.water ? Math.max(0, current.water.level - current.height(x, z)) : 0; },
+  wet(x, z, margin = 0) { return current.water ? current.water.carve(x, z, margin) > 0 : false; },
+  get bridges() { return current.water?.bridges || []; },
+  get canals() { return current.water?.canals || []; },
   // Where a ray first hits the ground (null if it doesn't within maxDist).
   raycast(origin, dir, maxDist = 500) {
     if (current.flat) {
@@ -43,8 +50,8 @@ export const terrain = {
 // Set up the terrain for a region (call once, before building the world).
 export function setupTerrain(region) {
   const T = region.terrain || {};
-  if (!T.hills && !T.mountains) { current = flatTerrain(); return terrain; }
-  current = hillyTerrain(region);
+  current = !T.hills && !T.mountains ? flatTerrain() : hillyTerrain(region);
+  if (region.water) current = floodedTerrain(current, region.water);
   return terrain;
 }
 
@@ -89,5 +96,76 @@ function hillyTerrain(region) {
       }
       return h;
     },
+  };
+}
+
+// Water carved into the ground: canals (straight flooded streets) and lakes.
+//   water: { level, canals: [{ points: [[x, z], ...], width, depth, bridges: [0..1] }],
+//            lakes: [{ x, z, r, depth }], bank }
+// Bridges are gaps in a canal where the street carries on dry.
+function floodedTerrain(base, W) {
+  const bank = W.bank ?? 7; // width of the sloping edge (m)
+  const segs = [], bridges = [], canals = [];
+  for (const c of W.canals || []) {
+    const hw = c.width / 2, list = [];
+    let total = 0;
+    for (let i = 0; i < c.points.length - 1; i++) {
+      const [ax, az] = c.points[i], [bx, bz] = c.points[i + 1];
+      const len = Math.hypot(bx - ax, bz - az);
+      list.push({ ax, az, bx, bz, len, s0: total, hw, depth: c.depth ?? 1.6, tx: (bx - ax) / len, tz: (bz - az) / len });
+      total += len;
+    }
+    for (const f of c.bridges || []) {
+      const s = f * total;
+      const sg = list.find((q) => s >= q.s0 && s <= q.s0 + q.len) || list[list.length - 1];
+      const k = s - sg.s0;
+      bridges.push({ x: sg.ax + sg.tx * k, z: sg.az + sg.tz * k, tx: sg.tx, tz: sg.tz, along: 6, across: hw + bank + 2, width: hw * 2 });
+    }
+    segs.push(...list);
+    canals.push({ ...c, segs: list });
+  }
+  const lakes = (W.lakes || []).map((l) => ({ ...l, depth: l.depth ?? 3 }));
+  // Lookup grid so we only test nearby canal pieces.
+  const G = 60, grid = new Map();
+  for (const sg of segs) {
+    const pad = sg.hw + bank + 12;
+    for (let gx = Math.floor((Math.min(sg.ax, sg.bx) - pad) / G); gx <= Math.floor((Math.max(sg.ax, sg.bx) + pad) / G); gx++) {
+      for (let gz = Math.floor((Math.min(sg.az, sg.bz) - pad) / G); gz <= Math.floor((Math.max(sg.az, sg.bz) + pad) / G); gz++) {
+        const k = gx * 100003 + gz;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(sg);
+      }
+    }
+  }
+  const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  // How far below the ground the bottom is here (0 = not water).
+  // margin > 0 widens the water (to keep scenery off the banks).
+  const carve = (x, z, margin = 0) => {
+    let c = 0;
+    const cell = grid.get(Math.floor(x / G) * 100003 + Math.floor(z / G));
+    if (cell) {
+      for (const sg of cell) {
+        const px = x - sg.ax, pz = z - sg.az;
+        const along = Math.min(sg.len, Math.max(0, px * sg.tx + pz * sg.tz));
+        const d = Math.hypot(px - sg.tx * along, pz - sg.tz * along) - margin;
+        if (d < sg.hw + bank) c = Math.max(c, sg.depth * (1 - smooth((d - sg.hw) / bank)));
+      }
+    }
+    for (const l of lakes) {
+      const d = Math.hypot(x - l.x, z - l.z) - margin;
+      if (d < l.r + bank) c = Math.max(c, l.depth * (1 - smooth((d - l.r) / bank)) * (0.75 + 0.25 * smooth(1 - d / l.r)));
+    }
+    if (c > 0 && margin === 0) {
+      for (const b of bridges) {
+        const dx = x - b.x, dz = z - b.z;
+        if (Math.abs(dx * b.tx + dz * b.tz) < b.along && Math.abs(dx * b.tz - dz * b.tx) < b.across) return 0;
+      }
+    }
+    return c;
+  };
+  return {
+    flat: false,
+    height: (x, z) => base.height(x, z) - carve(x, z),
+    water: { level: W.level ?? -0.3, carve, bridges, canals, lakes },
   };
 }

@@ -222,6 +222,26 @@ export class Demons {
       this.fx.chase.addShake(SETTINGS.ramming.shake * big);
     }
     this.#remove(d);
+    if (d.def.bomber) this.#pop(d);
+  }
+
+  // A Bloater bursts: hurts the car and every demon nearby (chain reactions!).
+  #pop(d) {
+    const st = d.def.stats(), car = this.car;
+    const at = d.pos.clone().setY(d.pos.y + 1.2);
+    this.fx.gore.explode(at, new THREE.Vector3(0, 6, 0), d.def.goreColors, 2.2);
+    this.fx.audio.wreck();
+    if (car && !car.wrecked) {
+      const dist = Math.hypot(car.currPos.x - at.x, car.currPos.z - at.z);
+      if (dist < st.popRadius + 2) {
+        car.takeDamage(st.popDamage * (1 - 0.5 * Math.min(1, dist / st.popRadius)), at);
+        const ux = (car.currPos.x - at.x) / (dist || 1), uz = (car.currPos.z - at.z) / (dist || 1);
+        car.nudge(ux * 6, uz * 6);
+      }
+      this.fx.chase.addShake(Math.max(0.15, 0.8 - dist / 40));
+    }
+    this.damageArea(at, st.popRadius, st.popDamage * 1.5, 'gun'); // (demons get it worse: chain reactions)
+    this.onPop?.(at);
   }
 
   // Damage everything within `radius` of a point (explosions). Less at the edge.
@@ -239,6 +259,7 @@ export class Demons {
   // ---------------------------------------------------------------- update
   // Runs at the fixed physics rate (60/s), after the car has moved.
   fixedUpdate(dt, car) {
+    this.car = car;
     const S = SETTINGS.demons;
     const carPos = car.currPos;
     this.comboTimer -= dt;
@@ -419,6 +440,11 @@ export class Demons {
       }
 
       // ---- Claw / bite / smash ----
+      if (d.def.bomber && d.stun <= 0) { // reached you: POP
+        this.#remove(d);
+        this.#pop(d);
+        continue;
+      }
       if (d.def.behavior === 'melee' && d.stun <= 0 && d.attackCd <= 0) {
         d.attackCd = st.attackInterval * (0.8 + Math.random() * 0.4);
         d.lunge = 1;

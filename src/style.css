@@ -415,3 +415,11 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #problem .pb-btns { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
 #problem button { cursor: pointer; border: 0; border-radius: 6px; padding: 10px 18px; font: 15px 'Arial Black', Impact, sans-serif; color: #fff; background: #c8202a; box-shadow: 0 3px 0 #600; }
 #problem button + button { background: #3a2a2a; box-shadow: 0 3px 0 #000; }
+
+/* ---- Water (Flooded City) ---- */
+#water-warn { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); text-align: center; display: none; pointer-events: none; }
+#water-warn.on { display: block; }
+#water-warn b { display: block; font: 22px 'Arial Black', Impact, sans-serif; color: #7fe8d8; text-shadow: 0 0 12px #0a8a7a, 0 3px 0 #023; }
+#water-warn small { display: block; font: 12px system-ui; color: #fff; text-shadow: 0 1px 3px #000; }
+#water-warn.sink b { color: #ff7050; text-shadow: 0 0 12px #f20, 0 3px 0 #400; }
+#water-warn.sink { animation: pulse 0.6s infinite; }

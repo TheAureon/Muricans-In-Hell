@@ -37,6 +37,7 @@ export class Hud {
       <div id="victory"></div>
       <div id="banner"><b></b><small></small></div>
       <div id="lava-warn">🔥 ON LAVA 🔥<small></small></div>
+      <div id="water-warn"><b></b><small></small></div>
       <div id="travel"><span></span></div>
       <div id="stats">
         <div><span>KILLS</span> <b id="kills">0</b></div>
@@ -151,6 +152,17 @@ export class Hud {
     const el = this.lavaEl || (this.lavaEl = document.getElementById('lava-warn'));
     el.classList.toggle('on', text != null);
     if (text != null && el.dataset.t !== text) { el.dataset.t = text; el.querySelector('small').textContent = text; }
+  }
+
+  // Water status (title + line), null = off. kind: 'sink' (danger) / 'float' / 'wade'
+  water(title, text, kind = '') {
+    const el = this.waterEl || (this.waterEl = document.getElementById('water-warn'));
+    el.className = title ? `on ${kind}` : '';
+    if (title && el.dataset.t !== title + text) {
+      el.dataset.t = title + text;
+      el.querySelector('b').textContent = title;
+      el.querySelector('small').textContent = text;
+    }
   }
 
   // Screen fades to fire while traveling to another region.

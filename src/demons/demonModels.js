@@ -233,3 +233,62 @@ export function createBoneArcherGeometry() {
     ]),
   ]);
 }
+
+// DROWNED: a waterlogged corpse, grey-green and swollen, hunched forward
+// with its arms reaching out, weeds hanging off it, pale glowing eyes.
+export const DROWNED_GORE = [0x4a5a4a, 0x2a3a2e, 0x6a7a5a, 0x5a1010];
+export function createDrownedGeometry() {
+  const SKIN = 0x6a7a66, DARK = 0x3a463c, RAG = 0x2a3036, WEED = 0x2e4a22, EYE = glow(0xa0fff0), MOUTH = 0x140c0c;
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.16, 0.95, 0], [
+      piece(box(0.17, 0.5, 0.18), RAG, s * 0.16, 0.7, 0),                      // trouser leg
+      piece(box(0.13, 0.45, 0.14), SKIN, s * 0.16, 0.24, 0.02),
+      piece(box(0.16, 0.07, 0.26), DARK, s * 0.16, 0.03, 0.06),
+    ])),
+    piece(box(0.5, 0.62, 0.32), RAG, 0, 1.25, 0, 0.35),                         // torn shirt, hunched
+    piece(box(0.44, 0.3, 0.3), SKIN, 0, 1.0, 0.08, 0.2),                        // bloated belly
+    ...[-0.14, 0.02, 0.16].map((x) => piece(box(0.04, 0.5, 0.03), WEED, x, 1.05, -0.17, 0.2)), // weeds down the back
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.armL : PART.armR, [s * 0.3, 1.5, 0.12], [
+      piece(box(0.12, 0.12, 0.45), SKIN, s * 0.31, 1.45, 0.38),                 // reaching forward
+      piece(box(0.1, 0.1, 0.36), DARK, s * 0.31, 1.38, 0.76),
+      piece(box(0.14, 0.06, 0.14), SKIN, s * 0.31, 1.36, 0.98),
+      piece(box(0.03, 0.3, 0.03), WEED, s * 0.31, 1.2, 0.6),
+    ])),
+    ...limb(PART.head, [0, 1.62, 0.18], [
+      piece(box(0.3, 0.34, 0.3), SKIN, 0, 1.78, 0.28, 0.3),                     // drooping head
+      piece(box(0.2, 0.08, 0.06), MOUTH, 0, 1.66, 0.43),                        // slack mouth
+      piece(box(0.07, 0.06, 0.03), EYE, 0.08, 1.82, 0.43), piece(box(0.07, 0.06, 0.03), EYE, -0.08, 1.82, 0.43),
+      piece(box(0.32, 0.08, 0.32), WEED, 0, 1.96, 0.24, 0.3),                   // weed "hair"
+    ]),
+  ]);
+}
+
+// BLOATER: a swollen sack of rotten gas on stubby legs, covered in glowing
+// pustules. Pops when it dies (or when it reaches you).
+export const BLOATER_GORE = [0x6a7a3a, 0x9aff40, 0x4a5a2a, 0x7a1010];
+export function createBloaterGeometry() {
+  const SKIN = 0x7a8a52, DARK = 0x4a5430, PUS = glow(0xb0ff40, 0.9), EYE = glow(0xffe040), MOUTH = 0x1a0c08;
+  const blobs = [];
+  for (let k = 0; k < 14; k++) {
+    const a = k * 2.4, y = 0.7 + (k % 5) * 0.28, r = 0.78 - Math.abs(y - 1.25) * 0.35;
+    blobs.push(piece(ico(0.09 + (k % 3) * 0.03), PUS, Math.sin(a) * r, y, Math.cos(a) * r));
+  }
+  const belly = new THREE.IcosahedronGeometry(0.8, 1);
+  belly.scale(1, 0.95, 1);
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.32, 0.5, 0], [
+      piece(box(0.22, 0.42, 0.24), DARK, s * 0.32, 0.22, 0),
+      piece(box(0.26, 0.08, 0.32), DARK, s * 0.32, 0.03, 0.05),
+    ])),
+    piece(belly, SKIN, 0, 1.2, 0),
+    ...blobs,
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.armL : PART.armR, [s * 0.72, 1.4, 0.1], [
+      piece(box(0.1, 0.32, 0.1), DARK, s * 0.78, 1.22, 0.16),                   // tiny useless arms
+    ])),
+    ...limb(PART.head, [0, 1.9, 0.1], [
+      piece(box(0.3, 0.26, 0.28), SKIN, 0, 2.05, 0.18),
+      piece(box(0.18, 0.08, 0.04), MOUTH, 0, 1.97, 0.33),
+      piece(box(0.06, 0.06, 0.03), EYE, 0.08, 2.1, 0.33), piece(box(0.06, 0.06, 0.03), EYE, -0.08, 2.1, 0.33),
+    ]),
+  ]);
+}

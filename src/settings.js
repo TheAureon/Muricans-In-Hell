@@ -212,6 +212,7 @@ export const SETTINGS = {
     saw:     { mass: 60,  hp: 90,  ramBonus: 1.2 }, // spinning blade: +120% ram damage on its side
     cannon:  { mass: 160, hp: 120 },                // big gun: slow, hard-hitting, explosive shells
     hoverFan: { mass: 50, hp: 70 },                 // blows lava away: less lava burn and drag (see "lava")
+    pontoon:  { mass: 40, hp: 60 },                 // a float: keeps you up in deep water (see "water")
   },
 
   // ---------------------------------------------------------------
@@ -219,7 +220,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -239,6 +240,7 @@ export const SETTINGS = {
     saw:        { unlock: 300, price: 80 },
     heavyArmor: { unlock: 350, price: 60 },
     hoverFan:   { unlock: 250, price: 60 },
+    pontoon:    { unlock: 400, price: 70 },
     cannon:     { unlock: 500, price: 150 },
   },
 
@@ -248,11 +250,12 @@ export const SETTINGS = {
   //   turn: steering       turnInPlace: can spin on the spot (treads)
   //   heatResist: how much less lava burns you (0.4 = 40% less)
   //   maxClimb: steepest slope (degrees) it can drive up; steeper = slides back
+  //   sinks: too heavy to float, even with Pontoons (treads)
   chassisTiers: [
     { id: 'car',      name: 'Muscle Car',   cost: 0,    massAdd: 0,    hp: 1.0, power: 1.0,  topSpeed: 1.0,  grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0,   maxClimb: 20 },
     { id: 'armored',  name: 'Armored Car',  cost: 400,  massAdd: 350,  hp: 1.6, power: 1.3,  topSpeed: 0.97, grip: 1.0, turn: 1.0,  turnInPlace: false, heatResist: 0.4, maxClimb: 23 },
-    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false, heatResist: 0.5, maxClimb: 33 },
-    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true,  heatResist: 0.6, maxClimb: 42 },
+    { id: 'halftrack',name: 'Half-Track',   cost: 1200, massAdd: 900,  hp: 2.4, power: 1.8,  topSpeed: 0.9,  grip: 1.35, turn: 1.1,  turnInPlace: false, heatResist: 0.5, maxClimb: 33, sinks: true },
+    { id: 'tank',     name: 'HELL TANK',    cost: 2800, massAdd: 2000, hp: 3.5, power: 2.6,  topSpeed: 0.75, grip: 1.8, turn: 1.25, turnInPlace: true,  heatResist: 0.6, maxClimb: 42, sinks: true },
   ],
 
   // ---------------------------------------------------------------
@@ -273,6 +276,25 @@ export const SETTINGS = {
     afterBurn: 1.5,   // pieces keep burning this long after you get out (s)
     speedFactor: 0.3, // top speed while on lava (0.3 = 30% of normal)
     fanShield: 0.25,  // each Hover Fan blocks this much burn AND drag (4 fans = immune)
+  },
+
+  // ---------------------------------------------------------------
+  //  WATER (the Flooded City's canals and lakes)
+  // ---------------------------------------------------------------
+  // Shallow water slows you down. Deep water floods the engine: you sink to
+  // the bottom, crawl, and the low parts of the car take damage... unless
+  // you've bolted on enough Pontoon floats: then you float and paddle along
+  // like a (slow, slidey) boat. Treads are too heavy to float: Half-Tracks
+  // and HELL TANKS always sink.
+  water: {
+    deep: 0.9,           // water deeper than this (m) is "deep"
+    shallowSpeed: 0.6,   // top speed wading through shallow water (0.6 = 60%)
+    sinkSpeed: 0.25,     // top speed sunk on the bottom
+    floodDps: 9,         // damage per second to EACH low piece while sunk
+    pontoonFloat: 0.5,   // each Pontoon gives this much float (2 = floating)
+    floatSpeed: 0.55,    // top speed while floating
+    floatGrip: 0.3,      // sideways grip while floating (low = slides like a boat)
+    floatDraft: 0.3,     // how low the car sits in the water when floating (m)
   },
 
   // The car's own body sections: hit points and weight (kg). When one
@@ -346,6 +368,13 @@ export const SETTINGS = {
     // Throws bone spears (flat and fast) from range, backs off if you get close.
     boneArcher: { health: 45, mass: 50, chaseSpeed: 6, noticeRange: 110, attackDamage: 14, attackInterval: 2.2, packMin: 2, packMax: 4,
                   shootRange: 70, preferredRange: 40, fleeRange: 18, splash: 1.5, projectile: 'boneSpear' },
+    // FLOODED CITY
+    // Waterlogged dead: slow, tough for their size, come in big shambling hordes (and wade through water).
+    drowned: { health: 60, mass: 70, chaseSpeed: 5.5, noticeRange: 70, attackDamage: 5, attackInterval: 1.2, packMin: 8, packMax: 16 },
+    // Swollen gas-bag: waddles up and POPS next to you. Killing it pops it too,
+    // so shoot it from afar: ramming one blows up in your face.
+    bloater: { health: 40, mass: 90, chaseSpeed: 6.5, noticeRange: 80, attackDamage: 0, attackInterval: 1, packMin: 1, packMax: 3,
+               popDamage: 45, popRadius: 7 },
   },
 
   // ---------------------------------------------------------------
@@ -399,6 +428,22 @@ export const SETTINGS = {
       throwSplash: 5,
       leash: 180,
       souls: 1500,
+    },
+    // Flooded City: a sea serpent in the drowned plaza. It surfaces near
+    // you, spits water, slams its head down, then dives and comes up
+    // somewhere else. Only its head and neck can be hit (and only when up).
+    leviathan: {
+      health: 6000,
+      biteDamage: 55,         // head slam/bite when you're close to it
+      slamRadius: 7,
+      stompDamage: 30,        // the wave from a slam: get far away or get hit
+      stompRadius: 40,
+      throwDamage: 28,        // water bolts
+      throwSplash: 4,
+      upTime: 9,              // seconds above water before it dives
+      downTime: 3.5,          // seconds under water (can't be hit)
+      leash: 200,
+      souls: 2200,
     },
   },
 };

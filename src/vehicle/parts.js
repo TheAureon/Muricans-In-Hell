@@ -16,6 +16,7 @@ const M = {
   lead: mat(0x2c2e33, { metalness: 0.7, roughness: 0.4 }),
   flame: new THREE.MeshBasicMaterial({ color: 0xffa030, transparent: true, opacity: 0.85 }),
   cool: new THREE.MeshBasicMaterial({ color: 0x60d0ff }),
+  float: mat(0xff7a20, { roughness: 0.5, metalness: 0 }),
 };
 
 function add(group, geometry, material, x = 0, y = 0, z = 0) {
@@ -141,6 +142,21 @@ export const PART_TYPES = {
       add(rotor, new THREE.CylinderGeometry(0.06, 0.06, 0.06, 8), M.cool);                    // glowing hub
       g.add(rotor);
       g.userData.fan = rotor;
+    },
+  },
+  pontoon: {
+    name: 'Pontoon',
+    icon: '🛟',
+    desc: 'A float. 2 Pontoons keep you up in deep water (wheels only: treads sink).',
+    build(g) {
+      // A fat orange float lying along the car, on a little bracket.
+      add(g, new THREE.BoxGeometry(0.16, 0.14, 0.3), M.dark, 0, -0.17, 0);
+      const tube = add(g, new THREE.CapsuleGeometry(0.17, 0.2, 4, 10), M.float, 0, 0.06, 0);
+      tube.rotation.x = Math.PI / 2;
+      for (const z of [-0.12, 0.12]) {
+        const band = add(g, new THREE.TorusGeometry(0.175, 0.025, 4, 12), M.steel, 0, 0.06, z);
+        band.rotation.y = 0;
+      }
     },
   },
   weight: {

@@ -7,6 +7,7 @@
 //   thorns:   true = ramming it hurts your car too
 //   ramBurn:  true = ramming it sets the side you hit it with on fire
 //   charger:  true = lowers its head and charges at you (double speed, big hit)
+//   bomber:   true = pops when it dies or reaches you (popDamage in a popRadius)
 //   (stats with burnDps/burnTime = its attacks set your car on fire)
 //   anim:     how it moves ('waddle', 'gallop', 'stomp', 'sway', 'roll'):
 //             the demon shader swings its legs/arms/head/tail to match
@@ -18,6 +19,7 @@ import {
   createSpitterGeometry, SPITTER_GORE, createBruteGeometry, BRUTE_GORE,
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
   createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
+  createDrownedGeometry, DROWNED_GORE, createBloaterGeometry, BLOATER_GORE,
 } from './demonModels.js';
 
 export const DEMON_TYPES = {
@@ -76,6 +78,19 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.boneArcher,
     createGeometry: createBoneArcherGeometry, goreColors: BONE_ARCHER_GORE,
     radius: 0.45, height: 2.2, poolSize: 30,
+  },
+  // ---- Flooded City ----
+  drowned: {
+    name: 'Drowned', behavior: 'melee', anim: 'waddle',
+    stats: () => SETTINGS.demons.drowned,
+    createGeometry: createDrownedGeometry, goreColors: DROWNED_GORE,
+    radius: 0.5, height: 2.0, poolSize: 160,
+  },
+  bloater: {
+    name: 'Bloater', behavior: 'melee', anim: 'waddle', bomber: true,
+    stats: () => SETTINGS.demons.bloater,
+    createGeometry: createBloaterGeometry, goreColors: BLOATER_GORE,
+    radius: 0.85, height: 2.2, poolSize: 20,
   },
 };
 for (const t of Object.values(DEMON_TYPES)) t.style = STYLE[t.anim];

@@ -98,6 +98,21 @@ export const RADIO = {
   nearBoneKing: [['doc', 'Big reading on that plateau. Something up there is... assembling itself.']],
   boneKingAwake: [['you', 'It\'s a skeleton. A huge one. With a crown.'], ['doc', 'Aim for the crown. Or the everything.']],
   boneKingDead: [['you', 'Still no oil.'], ['doc', 'I\'m starting to think Hell has a very deep oil field.']],
+  floodArrive: [
+    ['you', 'Doc. There\'s a city down here. A whole drowned city.'],
+    ['doc', 'Fascinating. And the streets are canals. Deep ones. The car does NOT swim, Hank.'],
+    ['doc', 'Bolt on two Pontoons and you\'ll float. Treads are too heavy: you\'ll sink like a brick. Use the bridges.'],
+  ],
+  firstWade: [['you', 'Water\'s getting in the doors.'], ['doc', 'Shallow is fine. Deep is not. Stay out of the middle of those canals.']],
+  firstSink: [['doc', 'Hank, you\'re UNDER the water! The engine is flooding, get out of there!'], ['you', 'Glub.']],
+  firstFloat: [['you', 'We\'re floating! I\'m a boat!'], ['doc', 'You\'re a very bad boat. Steer early, it slides.']],
+  nearLeviathan: [['doc', 'Something enormous is moving under that plaza. Sonar says... long. Very long.']],
+  leviathanAwake: [['you', 'SEA SERPENT. SEA SERPENT, DOC.'], ['doc', 'Shoot it when it\'s up. When it dives, keep moving!']],
+  leviathanDead: [
+    ['doc', 'It\'s sinking. Good riddance.'],
+    ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
+    ['doc', 'An OIL pipe, Hank. Somebody down here has been pumping it. Follow it.'],
+  ],
 };
 
 // What bosses do when they die.
@@ -106,4 +121,5 @@ export const BOSS_DEATH = {
   ashTitan: { roar: true },
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
+  leviathan: { roar: true }, // (a long gurgling roar as it sinks)
 };
