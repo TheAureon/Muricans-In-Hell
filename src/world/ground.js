@@ -165,6 +165,47 @@ const PROP_BUILDERS = {
       colorJitter: 0.15,
     };
   },
+  // A big factory machine: a steel housing with vents, glowing furnace
+  // slots, a control panel and pipes going in.
+  machine: (p) => {
+    const steel = p.steel ?? 0x6e7078, dark = 0x2a2a30, hot = p.lava ?? 0xffa030, yel = 0xe0b020;
+    const g = mergeGeometries([
+      coloredBox(8, 5, 5, 0, 0, 0, steel),
+      coloredBox(6, 1.5, 4, -0.5, 5, 0, dark),
+      coloredBox(7.6, 0.6, 0.2, 0, 2.2, 2.55, hot),                  // glowing furnace slot
+      ...[0, 1, 2, 3].map((k) => coloredBox(0.25, 1.4, 0.15, -3 + k * 0.6, 3.6, 2.55, dark)), // vents
+      coloredBox(1.6, 1.2, 0.3, 2.8, 3.5, 2.6, yel),                 // control panel
+      coloredBox(1.0, 6, 1.0, 3.2, 5, -1.5, dark),                   // exhaust pipe
+      coloredBox(8.2, 0.4, 5.2, 0, 0, 0, yel),                       // hazard base
+    ]);
+    return {
+      geometry: g,
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.6, metalness: 0.4 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.y = Math.floor(rand() * 4) * Math.PI / 2; },
+      collider: (RAPIER, m) => {
+        const a = m.rotation.y;
+        return RAPIER.ColliderDesc.cuboid(4 * m.scale.x, 3 * m.scale.y, 2.5 * m.scale.z).setTranslation(0, 3 * m.scale.y, 0)
+          .setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) });
+      },
+      colorJitter: 0.15,
+    };
+  },
+  // A storage tank: a fat cylinder with bands, a ladder and a warning sign.
+  tank: (p) => {
+    const parts = [];
+    const cyl = (r, h, y, c) => { const g = new THREE.CylinderGeometry(r, r, h, 12).translate(0, y + h / 2, 0).toNonIndexed(); const col = new THREE.Color(c), arr = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < arr.length; i += 3) arr.set([col.r, col.g, col.b], i); g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); return g; };
+    parts.push(cyl(3.2, 9, 0, 0x8a8c90), cyl(3.3, 0.4, 2.5, 0x3a3a40), cyl(3.3, 0.4, 6.5, 0x3a3a40), cyl(2.6, 1, 9, 0x6a6c70));
+    parts.push(coloredBox(0.6, 9, 0.2, 0, 0, 3.3, 0x3a3a40), coloredBox(1.4, 1.4, 0.2, 1.4, 4.5, 3.25, 0xe0b020));
+    return {
+      geometry: mergeGeometries(parts),
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.5, metalness: 0.5 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.8, 1.2), s); m.rotation.y = rand() * 6; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(5 * m.scale.y, 3.2 * m.scale.x).setTranslation(0, 5 * m.scale.y, 0),
+      colorJitter: 0.15,
+    };
+  },
   // A steel girder frame (an unfinished building)
   girder: (p) => {
     const steel = p.steel ?? 0x6a4a3a;

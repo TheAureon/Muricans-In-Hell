@@ -253,7 +253,7 @@ export class Foundry {
     tex.repeat.set(1, len / b.width);
     tex.colorSpace = THREE.SRGBColorSpace;
     const belt = new THREE.Mesh(new THREE.PlaneGeometry(b.width, len).rotateX(-Math.PI / 2), litMaterial({ map: tex, roughness: 0.8 }));
-    belt.position.set((ax + bx) / 2, g + 0.06, (az + bz) / 2);
+    belt.position.set((ax + bx) / 2, g + 0.12, (az + bz) / 2); // (above the painted floor lines)
     belt.rotation.y = Math.atan2(tx, tz);
     belt.receiveShadow = true;
     this.scene.add(belt);

@@ -52,9 +52,9 @@ export default {
   palette: {
     sky: 0x160a06,
     fog: 0x34201a,
-    groundA: 0x5a544c, // soot and cast iron
-    groundB: 0x4c4741,
-    groundC: 0x645d54,
+    groundA: 0x5e5c58, // oil-stained concrete
+    groundB: 0x53514d,
+    groundC: 0x686560,
     rock: 0x3a3632,
     bone: 0xc8bca4,
     deadTree: 0x1a1612,
@@ -67,9 +67,9 @@ export default {
 
   terrain: { size: 2200, patchSize: 12 },
 
-  // It's all indoors: one gigantic factory hall with a steel roof 42 m up,
-  // held up by columns every 110 m.
-  indoor: { height: 42, grid: 110 },
+  // It's all indoors: one gigantic, low factory hall. A steel roof 24 m up,
+  // columns every 70 m, pipes, cranes and catwalks overhead.
+  indoor: { height: 24, grid: 70 },
 
   // Channels of molten metal (straight, with steel bridges)
   hazards: {
@@ -95,7 +95,9 @@ export default {
   turrets: turretSpots(),
 
   props: [
-    { type: 'smokestack', count: 110,  minScale: 0.7, maxScale: 1.3, solid: true },
+    { type: 'machine',    count: 520,  minScale: 0.8, maxScale: 1.4, solid: true },
+    { type: 'tank',       count: 260,  minScale: 0.8, maxScale: 1.3, solid: true },
+    { type: 'smokestack', count: 50,   minScale: 0.7, maxScale: 1.1, solid: true }, // (they go right up through the roof)
     { type: 'girder',     count: 130,  minScale: 0.8, maxScale: 1.2, solid: true },
     { type: 'barrels',    count: 320,  minScale: 0.9, maxScale: 1.2, solid: true },
     { type: 'scrapPile',  count: 300,  minScale: 0.8, maxScale: 2.2, solid: true },
