@@ -21,6 +21,7 @@ import {
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
   createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
   createDrownedGeometry, DROWNED_GORE, createBloaterGeometry, BLOATER_GORE,
+  createFrostWraithGeometry, FROST_WRAITH_GORE, createFrostBruteGeometry, FROST_BRUTE_GORE,
   createLeechGeometry, LEECH_GORE, createMireToadGeometry, MIRE_TOAD_GORE, createEggSacGeometry, EGG_SAC_GORE,
 } from './demonModels.js';
 
@@ -93,6 +94,19 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.bloater,
     createGeometry: createBloaterGeometry, goreColors: BLOATER_GORE,
     radius: 0.85, height: 2.2, poolSize: 20,
+  },
+  // ---- Ice Hell ----
+  frostWraith: {
+    name: 'Frost Wraith', behavior: 'melee', anim: 'sway',
+    stats: () => SETTINGS.demons.frostWraith,
+    createGeometry: createFrostWraithGeometry, goreColors: FROST_WRAITH_GORE,
+    radius: 0.45, height: 2.5, poolSize: 60,
+  },
+  frostBrute: {
+    name: 'Frost Brute', behavior: 'melee', anim: 'stomp', heavy: true,
+    stats: () => SETTINGS.demons.frostBrute,
+    createGeometry: createFrostBruteGeometry, goreColors: FROST_BRUTE_GORE,
+    radius: 1.2, height: 3.9, poolSize: 10,
   },
   // ---- Blood Swamp ----
   leech: {

@@ -362,3 +362,62 @@ export function createEggSacGeometry() {
     ...[0, 1, 2, 3].map((k) => piece(box(0.04, 1.1, 0.04), VEIN, Math.sin(k * 1.6) * 0.3, 0.9, Math.cos(k * 1.6) * 0.3, 0.2, 0, k)),
   ]);
 }
+
+// FROST WRAITH: a hooded ghost of frost floating above the snow, its robe
+// fraying into icicles, glowing cyan eyes and long icy claws. No legs.
+export const FROST_WRAITH_GORE = [0xc8e8ff, 0x8ab8e0, 0x2a3a5a, 0xa0ffff];
+export function createFrostWraithGeometry() {
+  const ROBE = 0x3a4a6a, PALE = 0x9ab8d8, ICE = 0xd0f0ff, EYE = glow(0x80ffff), HOLLOW = 0x06080e;
+  const shreds = [];
+  for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; shreds.push(piece(cone(0.09, 0.6, 3), ICE, Math.sin(a) * 0.32, 0.45, Math.cos(a) * 0.3, Math.PI)); }
+  return merged([
+    // (legs = the two halves of the robe's hem, so it billows as it glides)
+    ...limb(PART.legL, [0.12, 1.2, 0], [piece(cone(0.32, 1.0, 5), ROBE, 0.12, 0.85, 0, Math.PI), ...shreds.slice(0, 4)]),
+    ...limb(PART.legR, [-0.12, 1.2, 0], [piece(cone(0.32, 1.0, 5), ROBE, -0.12, 0.85, 0, Math.PI), ...shreds.slice(4)]),
+    piece(box(0.55, 0.75, 0.38), ROBE, 0, 1.6, 0),                                // torso
+    piece(box(0.6, 0.1, 0.42), ICE, 0, 1.95, 0),                                  // frosted shoulders
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.armL : PART.armR, [s * 0.3, 1.9, 0.05], [
+      piece(box(0.12, 0.12, 0.6), PALE, s * 0.36, 1.82, 0.32),                    // reaching
+      ...[-0.05, 0, 0.05].map((dx) => piece(cone(0.025, 0.28, 3), ICE, s * 0.36 + dx, 1.8, 0.72, Math.PI / 2)),
+    ])),
+    ...limb(PART.head, [0, 2.05, 0], [
+      piece(cone(0.32, 0.75, 4), ROBE, 0, 2.38, -0.04, 0, Math.PI / 4),            // pointed hood
+      piece(box(0.34, 0.32, 0.1), HOLLOW, 0, 2.2, 0.16),                           // dark face hole
+      piece(box(0.07, 0.05, 0.03), EYE, 0.08, 2.24, 0.22), piece(box(0.07, 0.05, 0.03), EYE, -0.08, 2.24, 0.22),
+    ]),
+  ]);
+}
+
+// FROST BRUTE: a huge shaggy white-furred demon with curling black horns,
+// icicles hanging off its fur, blue skin on its face and fists.
+export const FROST_BRUTE_GORE = [0xe8eef4, 0xb8c8d8, 0x3a4a6a, 0x9a0a0a];
+export function createFrostBruteGeometry() {
+  const FUR = 0xdce4ec, FUR2 = 0xb8c4d0, SKIN = 0x4a6a9a, HORN = 0x1a1a22, ICE = 0xc8f0ff, EYE = glow(0x80ffff), MOUTH = 0x0a0c14;
+  const icicles = [];
+  for (let k = 0; k < 9; k++) icicles.push(piece(cone(0.06, 0.4, 3), ICE, -0.8 + k * 0.2, 1.55, 0.45 - (k % 2) * 0.1, Math.PI));
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.5, 1.3, 0], [
+      piece(box(0.6, 0.8, 0.6), FUR2, s * 0.5, 0.95, 0),
+      piece(box(0.5, 0.55, 0.5), FUR, s * 0.5, 0.35, 0.02),
+      piece(box(0.55, 0.15, 0.65), SKIN, s * 0.5, 0.07, 0.08),
+    ])),
+    piece(box(1.8, 1.4, 1.1), FUR, 0, 2.1, 0),                                     // huge shaggy chest
+    piece(box(1.5, 0.8, 0.9), FUR2, 0, 1.5, 0),
+    ...icicles,
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.armL : PART.armR, [s * 1.0, 2.6, 0], [
+      piece(box(0.6, 1.1, 0.6), FUR, s * 1.15, 2.05, 0.05),
+      piece(box(0.55, 0.9, 0.55), FUR2, s * 1.2, 1.15, 0.12),
+      piece(box(0.7, 0.55, 0.7), SKIN, s * 1.2, 0.55, 0.15),                       // big blue fists
+    ])),
+    ...limb(PART.head, [0, 2.8, 0.2], [
+      piece(box(0.8, 0.7, 0.7), FUR, 0, 3.05, 0.35),
+      piece(box(0.6, 0.45, 0.2), SKIN, 0, 2.98, 0.72),                             // blue face
+      piece(box(0.42, 0.1, 0.05), MOUTH, 0, 2.85, 0.83),
+      piece(box(0.12, 0.08, 0.04), EYE, 0.15, 3.08, 0.83), piece(box(0.12, 0.08, 0.04), EYE, -0.15, 3.08, 0.83),
+      ...[1, -1].flatMap((s) => [
+        piece(cone(0.13, 0.7, 5), HORN, s * 0.5, 3.45, 0.25, 0, 0, -s * 0.9),
+        piece(cone(0.08, 0.45, 4), HORN, s * 0.85, 3.75, 0.25, 0, 0, -s * 0.2),
+      ]),
+    ]),
+  ]);
+}

@@ -17,6 +17,7 @@ const M = {
   flame: new THREE.MeshBasicMaterial({ color: 0xffa030, transparent: true, opacity: 0.85 }),
   cool: new THREE.MeshBasicMaterial({ color: 0x60d0ff }),
   float: mat(0xff7a20, { roughness: 0.5, metalness: 0 }),
+  glowHot: new THREE.MeshBasicMaterial({ color: 0xff7020 }),
 };
 
 function add(group, geometry, material, x = 0, y = 0, z = 0) {
@@ -177,6 +178,36 @@ export const PART_TYPES = {
       }
       g.add(tire);
       g.userData.fan = tire; // (spins like a fan)
+    },
+  },
+  spikeTire: {
+    name: 'Spiked Tire',
+    icon: '❄️',
+    desc: 'A studded tire that bites into ice. Each one gives back 25% grip on ice (4 = full grip).',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.2, 6), M.steel, 0, -0.15, 0);
+      const tire = new THREE.Group();
+      tire.position.y = 0.04;
+      add(tire, new THREE.CylinderGeometry(0.23, 0.23, 0.18, 12), M.dark);
+      add(tire, new THREE.CylinderGeometry(0.1, 0.1, 0.2, 8), M.steel);
+      for (let n = 0; n < 12; n++) { // steel studs
+        const a = (n / 12) * Math.PI * 2;
+        const stud = add(tire, new THREE.ConeGeometry(0.035, 0.1, 4), M.steel, Math.cos(a) * 0.26, (n % 2 ? 0.05 : -0.05), Math.sin(a) * 0.26);
+        stud.rotation.z = -Math.PI / 2;
+        stud.rotation.y = -a;
+      }
+      g.add(tire);
+      g.userData.fan = tire; // (spins)
+    },
+  },
+  heater: {
+    name: 'Heater',
+    icon: '🔥',
+    desc: 'A glowing radiator that keeps the engine warm. Each one: 30% slower freezing in Ice Hell.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.44, 0.3, 0.44), M.dark, 0, -0.08, 0);
+      for (let k = -1; k <= 1; k++) add(g, new THREE.BoxGeometry(0.4, 0.14, 0.06), M.glowHot, 0, 0.12, k * 0.13); // glowing fins
+      add(g, new THREE.CylinderGeometry(0.04, 0.04, 0.2, 5), M.steel, 0.15, 0.25, 0.15);                      // little chimney
     },
   },
   weight: {

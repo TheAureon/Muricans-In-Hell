@@ -97,6 +97,7 @@ export function createGround(scene, physics, region, hazards = null) {
   if (arena?.style === 'island') createIsland(scene, physics, arena, p, rand);
   else if (arena?.style === 'lake') createLakeShore(scene, physics, arena, p, rand);
   else if (arena?.style === 'pool') createBogPool(scene, physics, arena, p, rand);
+  else if (arena?.style === 'glacier') createGlacier(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half };
@@ -138,6 +139,54 @@ function buildingGeometry(p) {
 
 // Each prop type: a shape, a material, how to sit on the ground, and its crash shape.
 const PROP_BUILDERS = {
+  // ---- Ice Hell ----
+  iceSpire: (p) => {
+    const g = mergeGeometries([
+      new THREE.ConeGeometry(1, 6, 5).translate(0, 3, 0).toNonIndexed(),
+      new THREE.ConeGeometry(0.5, 3, 4).translate(0.9, 1.5, 0.3).toNonIndexed(),
+      new THREE.ConeGeometry(0.45, 2.4, 4).translate(-0.7, 1.2, -0.4).toNonIndexed(),
+    ]);
+    return {
+      geometry: g,
+      material: litMaterial({ color: p.ice ?? 0x9ad0f0, flatShading: true, roughness: 0.1, metalness: 0.1, emissive: 0x1a3a5a, emissiveIntensity: 0.4 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.8, 1.6), s); m.rotation.set(rand.range(-0.15, 0.15), rand() * 6, rand.range(-0.15, 0.15)); },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(3 * m.scale.y, 0.9 * m.scale.x).setTranslation(0, 3 * m.scale.y, 0),
+      colorJitter: 0.15,
+    };
+  },
+  // Snow drifts: soft white mounds (you plow right through).
+  snowDrift: (p) => {
+    const g = new THREE.SphereGeometry(1, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2);
+    return {
+      geometry: g,
+      material: litMaterial({ color: p.groundC ?? 0xffffff, flatShading: true, roughness: 1 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s * rand.range(1.5, 3), s * rand.range(0.3, 0.6), s * rand.range(1.2, 2.2)); m.rotation.y = rand() * 6; m.position.y = -0.1; },
+      colorJitter: 0.06,
+    };
+  },
+  // The damned, frozen in the ice up to their necks (heads and a reaching hand).
+  frozenDamned: (p) => {
+    const skin = 0x8aa0b8, dark = 0x101420, ice = p.ice ?? 0x9ad0f0;
+    const g = mergeGeometries([
+      coloredBox(0.5, 0.55, 0.5, 0, 0, 0, skin),
+      coloredBox(0.36, 0.08, 0.04, 0, 0.12, 0.25, dark),          // open mouth
+      coloredBox(0.08, 0.08, 0.04, 0.11, 0.33, 0.25, dark), coloredBox(0.08, 0.08, 0.04, -0.11, 0.33, 0.25, dark),
+      coloredBox(0.14, 0.7, 0.14, 0.55, 0, 0.1, skin),            // a hand reaching up
+      coloredBox(0.22, 0.2, 0.08, 0.55, 0.7, 0.1, skin),
+      coloredBox(1.6, 0.25, 1.4, 0, -0.1, 0, ice),                // the ice around them
+    ]);
+    return {
+      geometry: g,
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.6 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.y = rand() * 6; m.position.y = -0.15; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.ball(0.35 * m.scale.x).setTranslation(0, 0.3 * m.scale.y, 0),
+      colorJitter: 0.15,
+    };
+  },
+
   // ---- Blood Swamp ----
   // A clump of tall reeds (you drive straight through them).
   reed: (p) => {
@@ -636,5 +685,45 @@ function createBogPool(scene, physics, arena, p, rand) {
     skull.position.set(x + Math.cos(a) * 1.5, y + h * 0.75 - 1.6, z - Math.sin(a) * 1.5);
     group.add(skull);
     world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 0.9).setTranslation(x, y + h / 2, z), body);
+  }
+}
+
+// Glacier arena (Ice Hell): a frozen lake (made by the terrain), with a
+// great curved wall of glacier ice behind the Warden and spires of ice
+// around the shore (gaps to drive through).
+function createGlacier(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+  const ice = litMaterial({ color: p.ice ?? 0x9ad0f0, flatShading: true, roughness: 0.1, metalness: 0.1, emissive: 0x16304a, emissiveIntensity: 0.5 });
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const away = Math.atan2(ax, az);
+  // The glacier wall: big tilted blocks in an arc behind the Warden
+  for (let n = 0; n < 22; n++) {
+    const a = away + (n / 21 - 0.5) * 2.4;
+    const r = R + 8 + rand() * 6;
+    const h = 18 + rand() * 16;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(14, h, 10), ice);
+    m.position.set(Math.sin(a) * r, h / 2 - 2, Math.cos(a) * r);
+    m.rotation.set(rand.range(-0.15, 0.15), a, rand.range(-0.12, 0.12));
+    m.castShadow = true;
+    group.add(m);
+    world.createCollider(RAPIER.ColliderDesc.cuboid(7, h / 2, 5).setTranslation(m.position.x, m.position.y, m.position.z)
+      .setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) }), body);
+  }
+  // Spires around the rest of the shore
+  const spire = new THREE.ConeGeometry(1.6, 1, 5).translate(0, 0.5, 0);
+  for (let n = 0; n < 26; n++) {
+    const a = away + Math.PI + (n / 26 - 0.5) * 3.6;
+    if (n % 6 < 2) continue; // gaps
+    const h = 6 + rand() * 10;
+    const m = new THREE.Mesh(spire, ice);
+    m.position.set(Math.sin(a) * (R + 14), -0.3, Math.cos(a) * (R + 14));
+    m.scale.set(1, h, 1);
+    m.castShadow = true;
+    group.add(m);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 1.3).setTranslation(m.position.x, h / 2, m.position.z), body);
   }
 }

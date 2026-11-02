@@ -117,6 +117,8 @@ export class Car {
     this.onLava = 0;      // 0..1: how much of the car is over lava right now
     this.water = 'dry';   // 'dry' / 'shallow' / 'float' (on Pontoons) / 'sink' (engine flooding)
     this.mud = 0;         // 0..1: how muddy it is under the car (Blood Swamp)
+    this.ice = 0;         // 0..1: how icy it is under the car (Ice Hell)
+    this.cold = 0;        // 0..1: how frozen the engine is (Ice Hell)
     this.stuck = 0;       // 0..1: how hard the mud has hold of it (heavy builds)
     this.floodTimer = 0;
     this.hazards = null;  // set by main (lava rivers / pools)
@@ -418,6 +420,13 @@ export class Car {
     return Math.max(ground, terrain.waterLevel - SETTINGS.water.floatDraft) + CAR_DIMENSIONS.halfHeight;
   }
 
+  // 0..1: how much grip the Spiked Tires give back on ice.
+  get spikeShield() { return Math.min(1, (this.stats?.spikeTires || 0) * SETTINGS.ice.spikeBonus); }
+  // 0..1: how much of the freezing the Heaters block.
+  get heatShieldCold() { return Math.min(0.95, (this.stats?.heaters || 0) * SETTINGS.cold.heaterShield); }
+  // Something icy hit you (Frost Wraiths, the Warden's breath).
+  chill(amount) { if (terrain.iceLevel != null && !SETTINGS.dev.noDamage) this.cold = Math.min(1, this.cold + amount * (1 - this.heatShieldCold)); }
+
   // 0..1: how much the Mud Tires cut the mud's grip on you.
   get mudShield() { return Math.min(1, (this.stats?.mudTires || 0) * SETTINGS.mud.tireBonus); }
 
@@ -476,8 +485,18 @@ export class Car {
     // Weight, power and balance from the build (cheap to recompute).
     this.stats = this.build.stats();
     const mass = this.stats.mass;
-    const topSpeed = this.stats.topSpeed;
-    const power = this.stats.enginePower;
+    // Ice Hell: slippery ice under you, and a freezing engine.
+    const tp = this.body.translation();
+    this.ice = terrain.ice(tp.x, tp.z);
+    const iceK = this.ice * (1 - this.spikeShield); // how much the ice actually affects you
+    if (terrain.iceLevel != null && !this.wrecked) {
+      const C = S.cold;
+      const sp = Math.hypot(this.body.linvel().x, this.body.linvel().z);
+      this.cold += C.buildup * (1 - this.heatShieldCold) * dt - C.warmup * Math.min(1, sp / this.stats.topSpeed) * dt;
+      this.cold = THREE.MathUtils.clamp(this.cold, 0, 1);
+    } else this.cold = 0;
+    const topSpeed = this.stats.topSpeed * (1 - this.cold * S.cold.topSpeed);
+    const power = this.stats.enginePower * (1 - this.cold * S.cold.power) * (1 - iceK * (1 - S.ice.traction));
     // Nose-heavy = understeer (turns less); tail-heavy = oversteer (rear grip drops).
     const bal = this.stats.balance * S.build.balanceEffect;
     const balTurn = bal > 0 ? 1 - 0.3 * bal : 1 - 0.1 * bal;
@@ -544,7 +563,7 @@ export class Car {
       // ---------- Forward / backward ----------
       const g = S.car.gravity;
       const th = this.throttle;
-      const brakeDv = (S.car.brakePower / mass) * dt;
+      const brakeDv = (S.car.brakePower / mass) * dt * (1 - iceK * (1 - S.ice.brake));
       if (th > 0) {
         if (vf < -0.5) vf = approach(vf, 0, brakeDv);
         else {
@@ -559,7 +578,7 @@ export class Car {
         }
       } else {
         // Coasting: engine braking, plus a tiny constant so the car fully stops.
-        vf = approach(vf, 0, (Math.abs(vf) * S.car.coastSlowdown + 0.6) * dt);
+        vf = approach(vf, 0, (Math.abs(vf) * S.car.coastSlowdown + 0.6) * dt * (1 - iceK * (1 - S.ice.coast)));
       }
       // Rolling resistance grows with weight (heavy builds lose top speed).
       vf = approach(vf, 0, S.car.rollingResistance * g * (mass / S.steering.referenceMass) * dt);
@@ -603,7 +622,7 @@ export class Car {
 
       // ---------- Sideways grip ----------
       const T = this.build.tier; // treads grip much harder than tires
-      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1) * (this.water === 'float' ? S.water.floatGrip : 1) * (this.mud > 0.05 ? THREE.MathUtils.lerp(1, S.mud.grip, this.mud) : 1);
+      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1) * (this.water === 'float' ? S.water.floatGrip : 1) * (this.mud > 0.05 ? THREE.MathUtils.lerp(1, S.mud.grip, this.mud) : 1) * THREE.MathUtils.lerp(1, S.ice.grip, iceK);
       const maxDv = grip * dt;
       const correction = THREE.MathUtils.clamp(-vs, -maxDv, maxDv);
       vs += correction;
@@ -670,6 +689,7 @@ export class Car {
     this.build.save();
     this.wrecked = false;
     this.burns.clear();
+    this.cold = 0;
     this.applyBuild();
     this.reset(true);
   }
@@ -788,6 +808,7 @@ export class Car {
       mending = true;
     }
     this.burns.clear();
+    this.cold = Math.max(0, this.cold - dt * 0.5); // (the field thaws you out)
     if (mending) this.#refreshAllTints();
     return mending;
   }

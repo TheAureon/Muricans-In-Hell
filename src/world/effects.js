@@ -56,8 +56,10 @@ export class Dust {
 
 // ---------------- Glowing embers floating around the player ----------------
 export class Embers {
-  constructor(scene, count = 500, radius = 70) {
+  // (Ice Hell: { color, size, fall: true } makes it snow instead.)
+  constructor(scene, count = 500, radius = 70, { color = 0xff7a30, size = 0.25, fall = false } = {}) {
     this.radius = radius;
+    this.fall = fall;
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
       pos[i * 3] = (Math.random() - 0.5) * radius * 2;
@@ -66,7 +68,7 @@ export class Embers {
     }
     this.geo = new THREE.BufferGeometry();
     this.geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-    this.points = new THREE.Points(this.geo, new THREE.PointsMaterial({ color: 0xff7a30, size: 0.25, fog: true }));
+    this.points = new THREE.Points(this.geo, new THREE.PointsMaterial({ color, size, fog: true }));
     this.points.frustumCulled = false;
     scene.add(this.points);
   }
@@ -75,7 +77,7 @@ export class Embers {
     const p = this.geo.attributes.position;
     const R = this.radius;
     for (let i = 0; i < p.count; i++) {
-      let x = p.getX(i), y = p.getY(i) + dt * (1 + (i % 5) * 0.4), z = p.getZ(i);
+      let x = p.getX(i), y = p.getY(i) + dt * (1 + (i % 5) * 0.4) * (this.fall ? -2.2 : 1), z = p.getZ(i);
       x += Math.sin(y * 0.5 + i) * dt * 0.6;
       // Wrap around the player so embers are always nearby.
       if (x - center.x > R) x -= 2 * R; else if (x - center.x < -R) x += 2 * R;

@@ -48,7 +48,19 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 5, the Blood Swamp** (new): a rotting bog of blood-mud, dead
+**Region 6, Ice Hell** (new): the frozen bottom of Hell. Snow, great
+glassy ice sheets, and the damned frozen in the ice up to their necks. On
+ice you slide, drift and brake forever; new **Spiked Tires** give the grip
+back (each one a quarter). The cold slowly freezes your engine (less power
+and speed) unless you keep moving fast; new **Heaters** slow the freezing,
+and teleporter fields thaw you out. Snow roads are the grippy way through.
+New demons: fast **Frost Wraiths** whose touch chills your engine, and huge
+**Frost Brutes**. The boss, **the Frozen Warden**, is a three-faced demon
+frozen to its waist in a glacier at the edge of a frozen lake: fist smashes,
+lines of ice spikes racing at you, and a freezing breath that shoves you
+away and freezes your engine.
+
+**Region 5, the Blood Swamp**: a rotting bog of blood-mud, dead
 trees and reeds. The mud grabs HEAVY builds: the heavier your car, the
 slower you go and the deeper you sink, while light builds skim across. So
 here the HELL TANK is the worst car to bring, unless you bolt on the new
@@ -154,7 +166,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

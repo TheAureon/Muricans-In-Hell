@@ -121,6 +121,20 @@ export const RADIO = {
     ['you', 'Cold? In Hell?'],
     ['doc', 'Pack a sweater.'],
   ],
+  iceArrive: [
+    ['you', 'Doc... it\'s snowing. In Hell.'],
+    ['doc', 'The very bottom. Frozen solid. The ice is like glass: you\'ll slide everywhere. Spiked Tires will help.'],
+    ['doc', 'And the cold will freeze your engine if you dawdle. Keep moving fast, or bolt on Heaters.'],
+  ],
+  firstSlide: [['you', 'No grip! NO GRIP!'], ['doc', 'Steer into the slide. Gently. Like a figure skater. A two-ton figure skater.']],
+  firstCold: [['doc', 'Engine temperature is dropping fast. Floor it, the engine heat will keep it alive.'], ['you', 'My fingers are numb, Doc.'], ['doc', 'The CAR\'S fingers, Hank. Focus.']],
+  nearWarden: [['doc', 'The pipe ends at the glacier ahead. And there\'s something frozen in it. Something with three faces.']],
+  wardenAwake: [['you', 'It\'s moving. The ice is cracking!'], ['doc', 'It can\'t leave the glacier. Stay out of its reach, watch the spikes, and don\'t stand in its breath!']],
+  wardenDead: [
+    ['doc', 'It\'s over. And behind it, in the ice... a pump. A gigantic pump.'],
+    ['you', 'Somebody\'s been pumping oil OUT of Hell?'],
+    ['doc', 'There\'s a stamp on it. \'Property of the Throne.\' Hank, I think we\'ve found who\'s been raising gas prices.'],
+  ],
   leviathanDead: [
     ['doc', 'It\'s sinking. Good riddance.'],
     ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
@@ -135,5 +149,6 @@ export const BOSS_DEATH = {
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
+  frozenWarden: { roar: true }, // (placeholder: shatters with a roar; tell Claude what it should do)
   bogMother: { line: 'My... babies...', voice: { pitch: 0.3, rate: 0.6 } }, // (placeholder: tell Claude what she should do)
 };

@@ -228,4 +228,42 @@ export const MISSIONS = [
     reward: { souls: 650 },
     done: [['doc', 'The throat sac is a pressure pump. A natural one. I could build an oil pump on the same idea.'], ['you', 'Doc, are you going to make me drive a toad?'], ['doc', 'Not yet.']],
   },
+
+  // ---------------- ICE HELL ----------------
+  {
+    id: 'iceSource', giver: 'doc', region: 'ice_hell',
+    title: 'Hell Magic, Frozen',
+    brief: 'The hell-magic source is at the end of the north-west snow road. Its field will thaw you out, too.',
+    offer: [['doc', 'Hell magic, north-west, at the end of the snow road. Stay on the snow, it has grip. The field will warm the engine up too.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 600 },
+    done: [['doc', 'Linked. And warm. Come home whenever you need to thaw.']],
+  },
+  {
+    id: 'iceDancing', giver: 'doc', region: 'ice_hell', after: ['iceSource'],
+    title: 'Ice Dancing',
+    brief: 'Doc wants data on how the car handles on ice. Drift. A lot.',
+    offer: [['doc', 'I need handling data on the ice. Drift for thirty seconds. Total.'], ['you', 'Doc. I was an F1 champion.'], ['doc', 'Then this should be easy, shouldn\'t it?']],
+    goals: [{ kind: 'drift', seconds: 30, label: 'Drift' }],
+    reward: { souls: 600 },
+    done: [['doc', 'Beautiful. Terrifying, but beautiful.'], ['you', 'Still got it.']],
+  },
+  {
+    id: 'deepFreeze', giver: 'doc', region: 'ice_hell', after: ['iceSource'],
+    title: 'Deep Freeze',
+    brief: 'Plant sensors at three spots out on the open ice, far from the snow roads, to trace where the pipe goes.',
+    offer: [['doc', 'The pipe runs under the ice. Three sensors, out on the open ice. Keep moving, keep warm.']],
+    goals: [{ kind: 'reach', label: 'Plant sensors on the ice', points: [{ x: -650, z: -300 }, { x: 300, z: 300 }, { x: 250, z: -650 }] }],
+    reward: { souls: 900 },
+    done: [['doc', 'It all leads to the Warden\'s glacier. Whatever is pumping the oil is frozen in there with it.']],
+  },
+  {
+    id: 'wraithHunt', giver: 'doc', region: 'ice_hell',
+    title: 'Ghost Story',
+    brief: 'Frost Wraiths keep chilling the engine. Doc wants to know what they\'re made of.',
+    offer: [['doc', 'Those floating things that freeze the engine. Get me twenty of them. Shoot them, they\'re fast.']],
+    goals: [{ kind: 'kill', demon: 'frostWraith', count: 20, label: 'Kill Frost Wraiths' }],
+    reward: { souls: 600 },
+    done: [['doc', 'Ice, sorrow, and... antifreeze. Hell\'s own antifreeze. I\'m keeping some.']],
+  },
 ];

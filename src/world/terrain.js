@@ -30,6 +30,10 @@ export const terrain = {
   mud(x, z) { return current.bog ? current.bog.mud(x, z) : 0; },
   get bogLevel() { return current.bog?.level ?? null; },
   get walks() { return current.bog?.walks || []; },
+  // ICE (Ice Hell): how icy (x, z) is, 0 (snow) .. 1 (sheer ice), and the
+  // level of the frozen sheets.
+  ice(x, z) { return current.ice ? current.ice.mud(x, z) : 0; },
+  get iceLevel() { return current.ice?.level ?? null; },
   get canals() { return current.water?.canals || []; },
   // Where a ray first hits the ground (null if it doesn't within maxDist).
   raycast(origin, dir, maxDist = 500) {
@@ -61,6 +65,9 @@ export function setupTerrain(region) {
   current = !T.hills && !T.mountains ? flatTerrain() : hillyTerrain(region);
   if (region.water) current = floodedTerrain(current, region.water);
   if (region.bog) current = boggyTerrain(current, region.bog, region.id);
+  // Ice sheets are made the same way as the swamp's mud patches (frozen
+  // instead of wet).
+  if (region.ice) { current = boggyTerrain(current, region.ice, region.id + 'ice'); current.ice = current.bog; current.bog = null; }
   return terrain;
 }
 

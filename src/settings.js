@@ -214,6 +214,8 @@ export const SETTINGS = {
     hoverFan: { mass: 50, hp: 70 },                 // blows lava away: less lava burn and drag (see "lava")
     pontoon:  { mass: 40, hp: 60 },                 // a float: keeps you up in deep water (see "water")
     mudTire:  { mass: 45, hp: 80 },                 // a fat paddle tire: less stuck in blood-mud (see "mud")
+    spikeTire: { mass: 45, hp: 80 },                // a studded tire: grip on ice (see "ice")
+    heater:   { mass: 70, hp: 70 },                 // keeps the engine warm (see "cold")
   },
 
   // ---------------------------------------------------------------
@@ -221,7 +223,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -243,6 +245,8 @@ export const SETTINGS = {
     hoverFan:   { unlock: 250, price: 60 },
     pontoon:    { unlock: 400, price: 70 },
     mudTire:    { unlock: 500, price: 70 },
+    spikeTire:  { unlock: 600, price: 70 },
+    heater:     { unlock: 600, price: 80 },
     cannon:     { unlock: 500, price: 150 },
   },
 
@@ -313,6 +317,29 @@ export const SETTINGS = {
     sink: 0.6,         // how deep a fully stuck car sinks (m)
     grip: 0.7,         // sideways grip in mud (lower = slides)
     tireBonus: 0.25,   // each Mud Tire removes this much of the stickiness
+  },
+
+  // ---------------------------------------------------------------
+  //  ICE and COLD (Ice Hell)
+  // ---------------------------------------------------------------
+  // Ice sheets have hardly any grip: you slide, drift and brake forever.
+  // Spiked Tires give the grip back (each one: a quarter; 4 = full grip).
+  ice: {
+    grip: 0.16,        // sideways grip on sheer ice (1 = normal)
+    brake: 0.25,       // braking power on ice
+    traction: 0.5,     // how much engine push actually reaches the ice (wheelspin)
+    coast: 0.2,        // how much you slow down when you let go of the gas
+    spikeBonus: 0.25,  // each Spiked Tire gives back this much grip
+  },
+  // The cold slowly freezes your engine: less power and top speed. Driving
+  // fast keeps it warm; crawling or sitting still freezes it. Heater parts
+  // slow the freezing down (each one: 30%), teleporter fields thaw you out.
+  cold: {
+    buildup: 0.03,     // how fast it freezes (per second): ~30 s from warm to frozen
+    warmup: 0.06,      // how fast driving at full speed warms it back up
+    heaterShield: 0.3, // each Heater blocks this much of the freezing
+    power: 0.6,        // engine power lost when fully frozen
+    topSpeed: 0.35,    // top speed lost when fully frozen
   },
 
   // The car's own body sections: hit points and weight (kg). When one
@@ -391,6 +418,11 @@ export const SETTINGS = {
     drowned: { health: 60, mass: 70, chaseSpeed: 5.5, noticeRange: 70, attackDamage: 5, attackInterval: 1.2, packMin: 8, packMax: 16 },
     // Swollen gas-bag: waddles up and POPS next to you. Killing it pops it too,
     // so shoot it from afar: ramming one blows up in your face.
+    // ICE HELL
+    // A hooded ghost of frost: fast, and its touch chills your engine (chill = cold added per hit).
+    frostWraith: { health: 35, mass: 40, chaseSpeed: 13, noticeRange: 95, attackDamage: 4, attackInterval: 0.9, packMin: 4, packMax: 8, chill: 0.06 },
+    // A huge shaggy horned brute of the ice: solid, and its punches chill you too.
+    frostBrute: { health: 650, mass: 950, chaseSpeed: 5, noticeRange: 70, attackDamage: 26, attackInterval: 2.2, packMin: 1, packMax: 2, chill: 0.12 },
     // BLOOD SWAMP (bloater is above)
     // Swarms of fat blood leeches: fast, fragile, nibble constantly.
     leech: { health: 15, mass: 20, chaseSpeed: 12, noticeRange: 70, attackDamage: 1.5, attackInterval: 0.45, packMin: 8, packMax: 16 },
@@ -462,6 +494,23 @@ export const SETTINGS = {
     // Blood Swamp: a giant bloated hag-toad squatting in a pool of blood.
     // Her tongue grabs your car and reels it in; she belches up leeches
     // and lays egg sacs that hatch into Mire Toads.
+    // Ice Hell: a giant three-faced demon frozen up to its waist in a
+    // glacier. Fist smashes up close, lines of ice spikes racing along the
+    // ground, and a freezing breath that shoves you and freezes your engine.
+    frozenWarden: {
+      health: 8500,
+      slamDamage: 60,          // fist smash
+      slamRadius: 7,
+      stompDamage: 30,         // the shock ring from a smash
+      stompRadius: 42,
+      spikeDamage: 30,         // ice spikes erupting under you
+      spikeSpeed: 32,          // how fast a spike line races toward you (m/s)
+      breathRange: 85,         // freezing breath reach (m)
+      breathPush: 7,           // how hard it shoves you (m/s)
+      breathChill: 0.3,        // cold added per second in the breath
+      leash: 220,
+      souls: 3600,
+    },
     bogMother: {
       health: 7000,
       tongueRange: 55,        // how far her tongue reaches (m)

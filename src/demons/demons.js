@@ -467,6 +467,7 @@ export class Demons {
         d.yaw = Math.atan2(carPos.x - d.pos.x, carPos.z - d.pos.z);
         car.takeDamage(st.attackDamage, _v.copy(d.pos).setY(d.pos.y + 0.8)); // hits the nearest piece
         if (st.burnDps) car.igniteAt(_v, st.burnDps, st.burnTime);           // fire claws / magma fists
+        if (st.chill) car.chill(st.chill);                                    // frost: freezes your engine
         if (d.charging > 0) {
           // A charging Bone Ram slams into you: double damage and a big shove.
           car.takeDamage(st.attackDamage, _v.copy(d.pos).setY(d.pos.y + 0.8));
