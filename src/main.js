@@ -17,6 +17,7 @@ import { BogMother } from './demons/bogMother.js';
 import { FrozenWarden } from './demons/frozenWarden.js';
 import { createBoardwalks } from './world/boardwalk.js';
 import { Foundry } from './world/foundry.js';
+import { createFactoryHall } from './world/factoryHall.js';
 import { Water } from './world/water.js';
 import { Hazards } from './world/hazards.js';
 import { Hellgate } from './world/hellgate.js';
@@ -73,7 +74,8 @@ async function main() {
       [['RELOAD', () => location.reload()], ...(GFX.name !== 'low' ? [['RELOAD ON LOW GRAPHICS', reloadOnLow]] : [])]);
   });
   const hazards = new Hazards(scene, region);
-  createGround(scene, physics, region, hazards);
+  const groundInfo = createGround(scene, physics, region, hazards);
+  if (region.indoor) createFactoryHall(scene, physics, region, groundInfo.keepClear); // (the Iron Foundry's roof, columns and walls)
   const water = terrain.waterLevel != null ? new Water(scene, physics, region) : null; // (Flooded City)
   // Blood Swamp: pools of blood where the mud is deepest, and boardwalks.
   const blood = terrain.bogLevel != null ? new Water(scene, physics, region, { level: terrain.bogLevel, color: region.palette.blood, opacity: 0.86 }) : null;

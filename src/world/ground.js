@@ -109,7 +109,7 @@ export function createGround(scene, physics, region, hazards = null) {
   else if (arena?.style === 'yard') createFoundryYard(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
-  return { size, half };
+  return { size, half, keepClear };
 }
 
 const ROCK_GEO = new THREE.IcosahedronGeometry(1, 0);

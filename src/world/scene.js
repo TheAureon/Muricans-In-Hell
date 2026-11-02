@@ -57,8 +57,11 @@ export function createScene(region) {
   scene.add(sun);
   scene.add(sun.target);
 
-  scene.add(createSkyDome(p));
-  scene.add(createDistantMountains(p));
+  // (Indoors, like the Iron Foundry, there's a roof instead: no sky.)
+  if (!region.indoor) {
+    scene.add(createSkyDome(p));
+    scene.add(createDistantMountains(p));
+  }
 
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight;

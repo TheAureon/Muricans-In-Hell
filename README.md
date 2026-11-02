@@ -49,7 +49,9 @@ flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
 **Region 7, the Iron Foundry** (new): the Throne's industrial hell where
-Hell's oil is refined. Gun **turrets** on towers fire bursts of shells
+Hell's oil is refined, all inside one gigantic factory hall: a steel roof
+42 m up with trusses, hanging lamps and red skylights, a forest of support
+columns, and walls of lit windows where the sky would be. Gun **turrets** on towers fire bursts of shells
 (blow them up for souls; new **Radar Jammers** make them miss), **conveyor
 belts** carry you along, giant **crushers** slam down over the belts on a
 rhythm (watch the red light), runaway **ore carts** roll along their rails,

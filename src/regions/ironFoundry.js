@@ -67,6 +67,10 @@ export default {
 
   terrain: { size: 2200, patchSize: 12 },
 
+  // It's all indoors: one gigantic factory hall with a steel roof 42 m up,
+  // held up by columns every 110 m.
+  indoor: { height: 42, grid: 110 },
+
   // Channels of molten metal (straight, with steel bridges)
   hazards: {
     lavaRivers: [
