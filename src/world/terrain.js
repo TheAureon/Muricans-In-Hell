@@ -128,7 +128,7 @@ function floodedTerrain(base, W) {
     for (let i = 0; i < c.points.length - 1; i++) {
       const [ax, az] = c.points[i], [bx, bz] = c.points[i + 1];
       const len = Math.hypot(bx - ax, bz - az);
-      list.push({ ax, az, bx, bz, len, s0: total, hw, depth: c.depth ?? 1.6, tx: (bx - ax) / len, tz: (bz - az) / len });
+      list.push({ ax, az, bx, bz, len, s0: total, hw, depth: c.depth ?? 1.6, bank: c.bank ?? bank, tx: (bx - ax) / len, tz: (bz - az) / len });
       total += len;
     }
     for (const f of c.bridges || []) {
@@ -164,7 +164,7 @@ function floodedTerrain(base, W) {
         const px = x - sg.ax, pz = z - sg.az;
         const along = Math.min(sg.len, Math.max(0, px * sg.tx + pz * sg.tz));
         const d = Math.hypot(px - sg.tx * along, pz - sg.tz * along) - margin;
-        if (d < sg.hw + bank) c = Math.max(c, sg.depth * (1 - smooth((d - sg.hw) / bank)));
+        if (d < sg.hw + sg.bank) c = Math.max(c, sg.depth * (1 - smooth((d - sg.hw) / sg.bank)));
       }
     }
     for (const l of lakes) {

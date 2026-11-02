@@ -33,6 +33,35 @@ function river(points, width, wiggle = 30, phase = 0) {
   return { points: out, width, depth: 1.8, bridges: Array.from({ length: n }, (_, k) => (k + 0.5) / n) };
 }
 
+// Streams: a whole web of small, shallow streams (you can wade through
+// them) running between the houses, about every 60 m both ways, gently
+// winding. They stay out of the big canals, the plaza lake, the start
+// and the teleporter.
+function streams() {
+  const out = [];
+  const CANALS = [-720, -260, 260, 720];
+  const dry = (x, z) => Math.hypot(x, z) < 70 || Math.hypot(x - 490, z) < 40 || Math.hypot(x + 490, z + 490) < 95
+    || CANALS.some((c) => Math.abs(x - c) < 24 || Math.abs(z - c) < 24);
+  let k = 0;
+  for (let v = -970; v <= 970; v += 60) {
+    for (const vertical of [true, false]) {
+      k++;
+      // Walk along the line, wiggling, and cut it wherever it must stay dry.
+      let piece = [];
+      for (let t = -1000; t <= 1000; t += 20) {
+        const w = Math.sin(t / 90 + k * 1.7) * 9 + Math.sin(t / 37 + k) * 3;
+        const x = vertical ? v + w : t, z = vertical ? t : v + w;
+        if (dry(x, z)) {
+          if (piece.length > 2) out.push(piece);
+          piece = [];
+        } else piece.push([Math.round(x), Math.round(z)]);
+      }
+      if (piece.length > 2) out.push(piece);
+    }
+  }
+  return out.map((points) => ({ points, width: 8, depth: 0.85, bank: 4, bridges: [] }));
+}
+
 export default {
   id: 'flooded_city',
   name: 'The Flooded City',
@@ -58,7 +87,7 @@ export default {
     ambientGround: 0x201416,
   },
 
-  terrain: { size: 2000, patchSize: 7 },
+  terrain: { size: 2000, patchSize: 6 },
 
   water: {
     level: -0.3,
@@ -74,6 +103,7 @@ export default {
       river([[-440, -545], [-200, -620], [150, -560], [520, -640], [1000, -540]], 24, 30, 1.2), // drains it, out to the east
       river([[880, 1000], [840, 520], [930, 180], [860, -200], [930, -1000]], 20, 25, 3.1),   // the east river
       river([[-1000, 880], [-420, 900], [120, 860], [600, 940], [1000, 880]], 18, 30, 4.0),   // along the north edge
+      ...streams(),                                                                         // and streams between the houses
     ],
     lakes: [{ x: -490, z: -490, r: 70, depth: 3.5 }], // the drowned plaza (boss)
   },

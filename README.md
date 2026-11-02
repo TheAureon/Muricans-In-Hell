@@ -87,7 +87,9 @@ reels it in (shoot her to break free), she spits, belly-flops, belches up
 leeches and lays egg sacs that hatch into Mire Toads (smash them first).
 
 **Region 4, the Flooded City**: a drowned hell-city. Its streets are
-canals between blocks of ruined buildings, crossed by stone bridges.
+canals between blocks of ruined buildings, crossed by stone bridges, with
+winding rivers and a web of shallow streams between every few houses
+(wade through them).
 Shallow water slows you; deep water floods your engine (you sink to the
 bottom and the low parts of the car take damage) unless you bolt on two
 **Pontoons**, a new part: then you float, slow and slidey, like a boat.
