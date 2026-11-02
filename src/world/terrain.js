@@ -10,6 +10,9 @@ import { makeRandom } from '../core/random.js';
 let current = flatTerrain();
 export const terrain = {
   height: (x, z) => current.height(x, z),
+  // The ground you SEE (the swamp's mud bottom under its pools of blood);
+  // height() is what you stand on (the blood's surface there).
+  visualHeight: (x, z) => (current.visualHeight || current.height)(x, z),
   // Slope: how much the ground rises per meter in x and in z.
   gradient(x, z) {
     const e = 1.5;
@@ -22,6 +25,11 @@ export const terrain = {
   depth(x, z) { return current.water ? Math.max(0, current.water.level - current.height(x, z)) : 0; },
   wet(x, z, margin = 0) { return current.water ? current.water.carve(x, z, margin) > 0 : false; },
   get bridges() { return current.water?.bridges || []; },
+  // BOG (Blood Swamp): how muddy (x, z) is, 0 (dry) .. 1 (deep blood-mud),
+  // the level of the blood pools, and the boardwalks (dry paths).
+  mud(x, z) { return current.bog ? current.bog.mud(x, z) : 0; },
+  get bogLevel() { return current.bog?.level ?? null; },
+  get walks() { return current.bog?.walks || []; },
   get canals() { return current.water?.canals || []; },
   // Where a ray first hits the ground (null if it doesn't within maxDist).
   raycast(origin, dir, maxDist = 500) {
@@ -52,6 +60,7 @@ export function setupTerrain(region) {
   const T = region.terrain || {};
   current = !T.hills && !T.mountains ? flatTerrain() : hillyTerrain(region);
   if (region.water) current = floodedTerrain(current, region.water);
+  if (region.bog) current = boggyTerrain(current, region.bog, region.id);
   return terrain;
 }
 
@@ -167,5 +176,86 @@ function floodedTerrain(base, W) {
     flat: false,
     height: (x, z) => base.height(x, z) - carve(x, z),
     water: { level: W.level ?? -0.3, carve, bridges, canals, lakes },
+  };
+}
+
+// Blood-mud carved into the ground in big organic patches (from noise),
+// with boardwalks (dry paths), dry spots and pools.
+//   bog: { scale, threshold, carve, level, walks: [{ points, width }],
+//          dry: [{ x, z, r }], pools: [{ x, z, r, depth }] }
+// The deepest mud dips below the blood level, so pools of blood show there.
+function boggyTerrain(base, B, seed) {
+  const rand = makeRandom(seed.length * 4243 + 7);
+  const perm = new Uint16Array(512);
+  const p = [...Array(256).keys()];
+  for (let i = 255; i > 0; i--) { const j = Math.floor(rand() * (i + 1)); [p[i], p[j]] = [p[j], p[i]]; }
+  for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+  const hash = (x, z) => perm[(perm[x & 255] + z) & 511] / 255;
+  const fade = (t) => t * t * (3 - 2 * t);
+  const noise = (x, z) => {
+    const xi = Math.floor(x), zi = Math.floor(z), xf = x - xi, zf = z - zi;
+    const a = hash(xi, zi), b = hash(xi + 1, zi), c = hash(xi, zi + 1), d = hash(xi + 1, zi + 1);
+    const u = fade(xf), v = fade(zf);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+  const fbm = (x, z) => (noise(x, z) * 0.6 + noise(x * 2.1, z * 2.1) * 0.28 + noise(x * 4.3, z * 4.3) * 0.12);
+  const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  const walks = (B.walks || []).map((w) => {
+    const segs = [];
+    for (let i = 0; i < w.points.length - 1; i++) {
+      const [ax, az] = w.points[i], [bx, bz] = w.points[i + 1];
+      const len = Math.hypot(bx - ax, bz - az);
+      segs.push({ ax, az, len, tx: (bx - ax) / len, tz: (bz - az) / len });
+    }
+    return { ...w, segs };
+  });
+  const distToWalk = (x, z, w) => {
+    let best = Infinity;
+    for (const sg of w.segs) {
+      const px = x - sg.ax, pz = z - sg.az;
+      const along = Math.min(sg.len, Math.max(0, px * sg.tx + pz * sg.tz));
+      best = Math.min(best, Math.hypot(px - sg.tx * along, pz - sg.tz * along));
+    }
+    return best;
+  };
+  const scale = B.scale ?? 140, thr = B.threshold ?? 0.48;
+  const mud = (x, z) => {
+    let m = smooth((fbm(x / scale + 11.3, z / scale - 4.7) - thr) / 0.14);
+    for (const pl of B.pools || []) {
+      const d = Math.hypot(x - pl.x, z - pl.z);
+      if (d < pl.r + 30) m = Math.max(m, 1 - smooth((d - pl.r) / 30));
+    }
+    if (m <= 0) return 0;
+    for (const dr of B.dry || []) {
+      const d = Math.hypot(x - dr.x, z - dr.z);
+      if (d < dr.r + 25) m *= smooth((d - dr.r) / 25);
+    }
+    for (const w of walks) {
+      if (m <= 0) break;
+      const d = distToWalk(x, z, w) - w.width / 2;
+      if (d < 8) m *= smooth(d / 8);
+    }
+    return m;
+  };
+  const pools = B.pools || [];
+  const carve = B.carve ?? 0.7;
+  const level = B.level ?? -0.3;
+  const bottom = (x, z) => {
+    const m = mud(x, z);
+    let h = base.height(x, z) - carve * m * m;
+    for (const pl of pools) {
+      const d = Math.hypot(x - pl.x, z - pl.z);
+      if (d < pl.r) h -= (pl.depth ?? 1) * smooth(1 - d / pl.r);
+    }
+    return h;
+  };
+  return {
+    flat: false,
+    // You (and the demons) slosh along just under the blood's surface;
+    // heavy cars sink further in (see car.js).
+    height: (x, z) => Math.max(bottom(x, z), level - 0.12),
+    visualHeight: bottom,
+    bog: { mud, level, walks },
+    water: base.water,
   };
 }

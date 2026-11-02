@@ -213,6 +213,7 @@ export const SETTINGS = {
     cannon:  { mass: 160, hp: 120 },                // big gun: slow, hard-hitting, explosive shells
     hoverFan: { mass: 50, hp: 70 },                 // blows lava away: less lava burn and drag (see "lava")
     pontoon:  { mass: 40, hp: 60 },                 // a float: keeps you up in deep water (see "water")
+    mudTire:  { mass: 45, hp: 80 },                 // a fat paddle tire: less stuck in blood-mud (see "mud")
   },
 
   // ---------------------------------------------------------------
@@ -220,7 +221,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -241,6 +242,7 @@ export const SETTINGS = {
     heavyArmor: { unlock: 350, price: 60 },
     hoverFan:   { unlock: 250, price: 60 },
     pontoon:    { unlock: 400, price: 70 },
+    mudTire:    { unlock: 500, price: 70 },
     cannon:     { unlock: 500, price: 150 },
   },
 
@@ -295,6 +297,22 @@ export const SETTINGS = {
     floatSpeed: 0.55,    // top speed while floating
     floatGrip: 0.3,      // sideways grip while floating (low = slides like a boat)
     floatDraft: 0.3,     // how low the car sits in the water when floating (m)
+  },
+
+  // ---------------------------------------------------------------
+  //  BLOOD-MUD (the Blood Swamp)
+  // ---------------------------------------------------------------
+  // The mud grabs HEAVY builds: the heavier your car (body + chassis +
+  // parts), the slower you go and the deeper you sink. Light builds skim
+  // across. Mud Tire parts cut the stickiness (4 = barely notice it).
+  mud: {
+    lightMass: 1500,   // at or under this weight (kg) the mud hardly slows you
+    heavyMass: 3800,   // at or over this weight you're as stuck as it gets
+    stuckSpeed: 0.15,  // top speed when fully stuck (0.15 = 15%)
+    drag: 0.15,        // even light builds lose this much top speed in deep mud
+    sink: 0.6,         // how deep a fully stuck car sinks (m)
+    grip: 0.7,         // sideways grip in mud (lower = slides)
+    tireBonus: 0.25,   // each Mud Tire removes this much of the stickiness
   },
 
   // The car's own body sections: hit points and weight (kg). When one
@@ -373,6 +391,15 @@ export const SETTINGS = {
     drowned: { health: 60, mass: 70, chaseSpeed: 5.5, noticeRange: 70, attackDamage: 5, attackInterval: 1.2, packMin: 8, packMax: 16 },
     // Swollen gas-bag: waddles up and POPS next to you. Killing it pops it too,
     // so shoot it from afar: ramming one blows up in your face.
+    // BLOOD SWAMP (bloater is above)
+    // Swarms of fat blood leeches: fast, fragile, nibble constantly.
+    leech: { health: 15, mass: 20, chaseSpeed: 12, noticeRange: 70, attackDamage: 1.5, attackInterval: 0.45, packMin: 8, packMax: 16 },
+    // Squats in the mud and spits globs of blood at you.
+    mireToad: { health: 80, mass: 160, chaseSpeed: 4, noticeRange: 100, attackDamage: 16, attackInterval: 2.4, packMin: 1, packMax: 3,
+                shootRange: 60, preferredRange: 32, fleeRange: 12, splash: 3, projectile: 'bloodGlob' },
+    // The Bog Mother's eggs: don't move, hatch into Mire Toads after hatchTime s. Shoot or ram them first!
+    eggSac: { health: 60, mass: 400, chaseSpeed: 0, noticeRange: 0, attackDamage: 0, attackInterval: 99, packMin: 1, packMax: 1,
+              hatchTime: 9, hatches: 'mireToad', hatchCount: 2 },
     bloater: { health: 40, mass: 90, chaseSpeed: 6.5, noticeRange: 80, attackDamage: 0, attackInterval: 1, packMin: 1, packMax: 3,
                popDamage: 45, popRadius: 7 },
   },
@@ -432,6 +459,23 @@ export const SETTINGS = {
     // Flooded City: a sea serpent in the drowned plaza. It surfaces near
     // you, spits water, slams its head down, then dives and comes up
     // somewhere else. Only its head and neck can be hit (and only when up).
+    // Blood Swamp: a giant bloated hag-toad squatting in a pool of blood.
+    // Her tongue grabs your car and reels it in; she belches up leeches
+    // and lays egg sacs that hatch into Mire Toads.
+    bogMother: {
+      health: 7000,
+      tongueRange: 55,        // how far her tongue reaches (m)
+      tonguePull: 14,         // how hard it reels you in (m/s)
+      tongueTime: 1.6,        // seconds it holds on (shoot her to make her let go!)
+      chompDamage: 60,        // if she reels you all the way in
+      slamDamage: 35,         // belly flop: a wave of blood rolling outward
+      stompRadius: 38,
+      throwDamage: 22,        // spat blood globs
+      throwSplash: 4,
+      eggs: 3,                // egg sacs per clutch
+      leash: 200,
+      souls: 2800,
+    },
     leviathan: {
       health: 6000,
       biteDamage: 55,         // head slam/bite when you're close to it

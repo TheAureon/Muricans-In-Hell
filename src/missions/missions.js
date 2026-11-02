@@ -186,4 +186,46 @@ export const MISSIONS = [
     reward: { souls: 500 },
     done: [['doc', 'Methane, sulfur and... more crude. Everything down here is full of oil, Hank. Except the oil wells.']],
   },
+
+  // ---------------- THE BLOOD SWAMP ----------------
+  {
+    id: 'swampSource', giver: 'doc', region: 'blood_swamp',
+    title: 'Hell Magic, Sticky',
+    brief: 'The hell-magic source is out on a dry island. Follow the north-west boardwalk.',
+    offer: [['doc', 'Hell magic, north-west, on a dry island. There\'s a boardwalk most of the way. Stay on it.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 500 },
+    done: [['doc', 'Linked. Now come home and let me take some weight off that car.']],
+  },
+  {
+    id: 'lightFoot', giver: 'doc', region: 'blood_swamp', after: ['swampSource'],
+    title: 'Light Footed',
+    brief: 'Plant sensors at three spots deep in the bog, far from any boardwalk. Strip the car down or bolt on Mud Tires.',
+    offer: [
+      ['doc', 'Three sensors, deep in the mud, nowhere near a boardwalk.'],
+      ['you', 'The car weighs two tons, Doc.'],
+      ['doc', 'Then make it weigh less. Or bolt on Mud Tires. Science requires sacrifice. Usually armor.'],
+    ],
+    goals: [{ kind: 'reach', label: 'Plant sensors in the bog', points: [{ x: -300, z: 100 }, { x: 100, z: -400 }, { x: 200, z: 200 }] }],
+    reward: { souls: 800 },
+    done: [['doc', 'The pipe runs right under the Bog Mother\'s pool. And it\'s COLD down there. Ice cold.'], ['you', 'Ice. In Hell.'], ['doc', 'Hell\'s full of surprises.']],
+  },
+  {
+    id: 'leechCull', giver: 'doc', region: 'blood_swamp',
+    title: 'Leech Cull',
+    brief: 'The leeches are getting into the base\'s water supply somehow. Thin them out.',
+    offer: [['doc', 'Something keeps getting into the base\'s water tank. Something with teeth. Kill forty leeches. Please.']],
+    goals: [{ kind: 'kill', demon: 'leech', count: 40, label: 'Kill Blood Leeches' }],
+    reward: { souls: 500 },
+    done: [['doc', 'The tank\'s quiet. Mostly. I\'m not drinking from it either way.']],
+  },
+  {
+    id: 'toadHunt', giver: 'doc', region: 'blood_swamp', after: ['leechCull'],
+    title: 'Toad Hunt',
+    brief: 'Mire Toads spit blood with frightening accuracy. Doc wants six of their throat sacs.',
+    offer: [['doc', 'Those Mire Toads hit you from sixty meters with a ball of blood. I want to know how. Six of them.']],
+    goals: [{ kind: 'kill', demon: 'mireToad', count: 6, label: 'Take down Mire Toads' }],
+    reward: { souls: 650 },
+    done: [['doc', 'The throat sac is a pressure pump. A natural one. I could build an oil pump on the same idea.'], ['you', 'Doc, are you going to make me drive a toad?'], ['doc', 'Not yet.']],
+  },
 ];

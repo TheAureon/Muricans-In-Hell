@@ -13,6 +13,8 @@ import { Scrap } from './world/scrap.js';
 import { Demons } from './demons/demons.js';
 import { Boss } from './demons/boss.js';
 import { Leviathan } from './demons/leviathan.js';
+import { BogMother } from './demons/bogMother.js';
+import { createBoardwalks } from './world/boardwalk.js';
 import { Water } from './world/water.js';
 import { Hazards } from './world/hazards.js';
 import { Hellgate } from './world/hellgate.js';
@@ -71,6 +73,9 @@ async function main() {
   const hazards = new Hazards(scene, region);
   createGround(scene, physics, region, hazards);
   const water = terrain.waterLevel != null ? new Water(scene, physics, region) : null; // (Flooded City)
+  // Blood Swamp: pools of blood where the mud is deepest, and boardwalks.
+  const blood = terrain.bogLevel != null ? new Water(scene, physics, region, { level: terrain.bogLevel, color: region.palette.blood, opacity: 0.86 }) : null;
+  createBoardwalks(scene, region);
 
   // Doc's walled base (Ash Plains) and this region's teleporter, if any.
   const base = region.base ? new Base(scene, physics, region.base) : null;
@@ -100,7 +105,7 @@ async function main() {
   const gore = new Gore(scene);
   const stats = new Stats();
   const sparks = new Dust(scene, 160, 0xffd040, 0.95);
-  const spray = new Dust(scene, 160, 0xb8f0e8, 0.75); // water splashing
+  const spray = new Dust(scene, 160, region.bog ? 0x7a1010 : 0xb8f0e8, 0.75); // water (or blood-mud) splashing
   const projectiles = new Projectiles(scene, { car, dust, sparks, audio, chase });
   const demons = new Demons(scene, region, { gore, audio, stats, hud, chase, physics, projectiles });
   demons.base = base;
@@ -169,10 +174,11 @@ async function main() {
   }
 
   // The region's boss (and what happens when you beat it).
-  const BossKind = region.boss?.type === 'leviathan' ? Leviathan : Boss; // (the Leviathan swims instead of walking)
+  // (Most bosses walk; the Leviathan swims and the Bog Mother squats in her pool.)
+  const BossKind = { leviathan: Leviathan, bogMother: BogMother }[region.boss?.type] || Boss;
   const boss = region.boss ? new BossKind(scene, physics, {
     region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards,
-    dust: water ? spray : dust, // (splashes in the water)
+    dust: water || blood ? spray : dust, // (splashes in the water / blood)
     // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
     onDying: () => {
       const death = BOSS_DEATH[region.boss.type] || {};
@@ -575,6 +581,7 @@ async function main() {
       if (car.slipping > 0.5) radio.say('firstSlip');
       if (car.water === 'shallow' && car.speed > 3) radio.say('firstWade');
       if (car.water === 'sink') radio.say('firstSink');
+      if (car.stuck > 0.4) radio.say('firstStuck');
       if (car.water === 'float') { radio.say('firstFloat'); if (!car.wrecked) jobs.emit('float', { dt }); }
       hud.garageButton(canGarage() && !car.wrecked, canGarage() ? 'Open the garage (G)' : base ? 'The garage is at base (drive home)' : 'The garage is at base (teleport home from a teleporter pad)');
       if (boss && !SETTINGS.dev.noEnemies) {
@@ -638,17 +645,22 @@ async function main() {
           : `Get out of the deep water! Pontoons ${p}/2 (bolt them on in the garage)`, 'sink');
       } else if (car.water === 'float') hud.water('⚓ FLOATING', 'Slow and slidey: steer early', 'float');
       else hud.water('', '');
+    } else if (blood && !car.wrecked && playing && car.stuck > 0.25) {
+      // Stuck in the blood-mud: say why, and what helps.
+      const n = car.stats.mudTires || 0;
+      hud.water('🩸 STUCK IN THE MUD 🩸', `Too heavy (${Math.round(car.totalMass)} kg)! Go lighter, bolt on Mud Tires (${n}/4), or use the boardwalks`, 'sink');
     } else hud.water('', '');
-    // Spray where the wheels hit the water
-    if (water && car.water !== 'dry' && car.speed > 3 && Math.random() < 0.6) {
+    // Spray where the wheels hit the water (or churn the mud)
+    if (((water && car.water !== 'dry') || car.mud > 0.3) && car.speed > 3 && Math.random() < 0.6) {
       for (const w of car.model.wheels) {
         if (Math.random() < 0.5) continue;
         w.steer.getWorldPosition(tmp);
-        tmp.y = water.level + 0.1;
+        tmp.y = water ? water.level + 0.1 : Math.max(terrain.height(tmp.x, tmp.z), blood?.level ?? -99) + 0.1;
         spray.spawn(tmp, new THREE.Vector3((Math.random() - 0.5) * 3, 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 3), 0.2 + Math.random() * 0.25, 0.6);
       }
     }
     water?.update(dt);
+    blood?.update(dt);
     spray.update(dt);
 
     // --- Objective arrow: the Hellgate once it's open, else the boss arena ---

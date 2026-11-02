@@ -108,6 +108,19 @@ export const RADIO = {
   firstFloat: [['you', 'We\'re floating! I\'m a boat!'], ['doc', 'You\'re a very bad boat. Steer early, it slides.']],
   nearLeviathan: [['doc', 'Something enormous is moving under that plaza. Sonar says... long. Very long.']],
   leviathanAwake: [['you', 'SEA SERPENT. SEA SERPENT, DOC.'], ['doc', 'Shoot it when it\'s up. When it dives, keep moving!']],
+  swampArrive: [
+    ['you', 'The pipe goes into a swamp. A swamp of... is that blood?'],
+    ['doc', 'Blood-mud. It grabs anything heavy. The bigger your build, the more it sucks you in.'],
+    ['doc', 'Go light, or bolt on Mud Tires. Or stay on the boardwalks, somebody built those for a reason.'],
+  ],
+  firstStuck: [['you', 'I\'m stuck. I\'m STUCK, Doc.'], ['doc', 'You\'re too heavy! Lose some armor or get Mud Tires. Or find a boardwalk.']],
+  nearBogMother: [['doc', 'Big heat signature in that pool. And dozens of smaller ones around it. Eggs?'], ['you', 'Please don\'t say eggs.']],
+  bogMotherAwake: [['you', 'IT\'S A TOAD. A GIANT HAIRY TOAD.'], ['doc', 'Watch the tongue! If it grabs you, shoot her till she lets go!']],
+  bogMotherDead: [
+    ['doc', 'She\'s down. And the pipe... it goes straight down under her pool. Into something cold.'],
+    ['you', 'Cold? In Hell?'],
+    ['doc', 'Pack a sweater.'],
+  ],
   leviathanDead: [
     ['doc', 'It\'s sinking. Good riddance.'],
     ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
@@ -122,4 +135,5 @@ export const BOSS_DEATH = {
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
+  bogMother: { line: 'My... babies...', voice: { pitch: 0.3, rate: 0.6 } }, // (placeholder: tell Claude what she should do)
 };

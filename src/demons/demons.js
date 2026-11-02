@@ -121,6 +121,7 @@ export class Demons {
       d.hp = stats.health;
       d.stun = d.ramCd = d.flash = d.lunge = 0;
       d.charging = d.chargeCd = 0; // (a reused Bone Ram must not start mid-charge)
+      d.hatch = stats.hatchTime || 0;
       d.attackCd = Math.random() * stats.attackInterval;
       d.yaw = Math.random() * 6;
       d.wander.copy(dir);
@@ -130,7 +131,7 @@ export class Demons {
   }
 
   #pickType(distFromStart) {
-    const ok = this.weights.filter((w) => distFromStart >= w.minDistance);
+    const ok = this.weights.filter((w) => w.weight > 0 && distFromStart >= w.minDistance);
     const total = ok.reduce((s, w) => s + w.weight, 0);
     let r = Math.random() * total;
     for (const w of ok) if ((r -= w.weight) <= 0) return w.type;
@@ -287,6 +288,21 @@ export class Demons {
       if (dist > S.despawnDistance) { this.#remove(d); continue; }
       d.stun -= dt; d.attackCd -= dt; d.ramCd -= dt; d.lunge = Math.max(0, d.lunge - dt * 4);
       d.flash = Math.max(0, d.flash - dt * 6);
+
+      // ---- Eggs just sit there... until they hatch ----
+      if (d.def.behavior === 'egg') {
+        d.hatch -= dt;
+        d.pos.y = terrain.height(d.pos.x, d.pos.z);
+        d.vel.set(0, 0, 0);
+        if (d.hatch <= 0) {
+          this.#remove(d);
+          this.fx.gore.explode(d.pos.clone().setY(d.pos.y + 1), new THREE.Vector3(0, 4, 0), d.def.goreColors, 1);
+          this.spawnPack(d.pos, st.hatchCount, st.hatches);
+        }
+        // Driven into? Squish.
+        else if (!car.wrecked && dist < r + 2.6 && car.speed > 4) this.damage(d, 9999, 'ram', new THREE.Vector3(car.vBefore.x, 3, car.vBefore.z));
+        continue;
+      }
 
       // ---- Flying through the air after a hit ----
       const gy = terrain.height(d.pos.x, d.pos.z);

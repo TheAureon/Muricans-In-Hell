@@ -7,14 +7,15 @@ import { litMaterial } from '../core/graphics.js';
 import { terrain } from './terrain.js';
 
 export class Water {
-  constructor(scene, physics, region) {
-    this.level = terrain.waterLevel;
+  // (Also used for the Blood Swamp's pools of blood: pass level and color.)
+  constructor(scene, physics, region, { level = terrain.waterLevel, color = region.palette.water, opacity = 0.9 } = {}) {
+    this.level = level;
     this.time = 0;
     const p = region.palette;
     const size = region.terrain.size;
     const geo = new THREE.PlaneGeometry(size, size, 1, 1).rotateX(-Math.PI / 2);
-    this.mat = litMaterial({ color: p.water, transparent: true, opacity: 0.9, roughness: 0.1, metalness: 0.25, depthWrite: false });
-    this.base = new THREE.Color(p.water);
+    this.mat = litMaterial({ color, transparent: true, opacity, roughness: 0.1, metalness: 0.25, depthWrite: false });
+    this.base = new THREE.Color(color);
     this.mesh = new THREE.Mesh(geo, this.mat);
     this.mesh.position.y = this.level;
     this.mesh.receiveShadow = true;

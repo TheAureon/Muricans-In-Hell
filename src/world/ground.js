@@ -20,7 +20,7 @@ export function createGround(scene, physics, region, hazards = null) {
   // catches the light.
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i);
-    pos.setY(i, terrain.height(x, z) + (Math.sin(x * 0.37 + z * 0.11) + Math.cos(z * 0.29 - x * 0.07)) * 0.04);
+    pos.setY(i, terrain.visualHeight(x, z) + (Math.sin(x * 0.37 + z * 0.11) + Math.cos(z * 0.29 - x * 0.07)) * 0.04);
   }
   const palette = [new THREE.Color(p.groundA), new THREE.Color(p.groundB), new THREE.Color(p.groundC)];
   const cliff = new THREE.Color(p.cliff ?? p.rock), peak = new THREE.Color(p.peak ?? p.groundA);
@@ -39,6 +39,10 @@ export function createGround(scene, physics, region, hazards = null) {
       if (ny < 0.82) c.lerp(cliff, Math.min(1, (0.82 - ny) * 5));
       c.lerp(peak, Math.min(0.7, Math.max(0, (h - 35) / 60)));
       if (terrain.waterLevel != null && h < terrain.waterLevel + 0.1) c.lerp(new THREE.Color(p.bed ?? 0x1a2018), 0.8); // muddy bottom
+      if (terrain.bogLevel != null) { // blood-mud: dark and wet
+        const cx = (pos.getX(i0) + pos.getX(i0 + 1) + pos.getX(i0 + 2)) / 3, cz = (pos.getZ(i0) + pos.getZ(i0 + 1) + pos.getZ(i0 + 2)) / 3;
+        c.lerp(new THREE.Color(p.mud ?? 0x3a1410), Math.min(1, terrain.mud(cx, cz) * 1.4));
+      }
     }
     c.multiplyScalar(0.9 + rand() * 0.2);
     for (let k = 0; k < 3; k++) colors.set([c.r, c.g, c.b], (tri * 3 + k) * 3);
@@ -52,7 +56,7 @@ export function createGround(scene, physics, region, hazards = null) {
   // ---- Physics ground: one big flat slab ----
   // (Under water regions it sits below the deepest water: the car follows
   // the carved ground itself, like hills.)
-  const floorY = terrain.waterLevel != null ? -6 : 0;
+  const floorY = terrain.waterLevel != null || terrain.bogLevel != null ? -6 : 0;
   const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorY - 1, 0));
   world.createCollider(RAPIER.ColliderDesc.cuboid(size / 2, 1, size / 2).setFriction(0.8), groundBody);
 
@@ -82,6 +86,7 @@ export function createGround(scene, physics, region, hazards = null) {
     (arena && gateOff && (x - gateX) ** 2 + (z - gateZ) ** 2 < 16 ** 2) ||
     (hazards && hazards.lavaAt(x, z, 4)) ||
     terrain.wet(x, z, 5) ||
+    terrain.walks.some((w) => w.segs.some((sg) => { const px = x - sg.ax, pz = z - sg.az, al = Math.min(sg.len, Math.max(0, px * sg.tx + pz * sg.tz)); return Math.hypot(px - sg.tx * al, pz - sg.tz * al) < w.width / 2 + 3; })) ||
     terrain.bridges.some((b) => (x - b.x) ** 2 + (z - b.z) ** 2 < (b.across + 18) ** 2) || // (bridge approaches)
     (tele && (x - tele.x) ** 2 + (z - tele.z) ** 2 < (tele.radius + 12) ** 2);
   for (const prop of region.props) {
@@ -91,6 +96,7 @@ export function createGround(scene, physics, region, hazards = null) {
   }
   if (arena?.style === 'island') createIsland(scene, physics, arena, p, rand);
   else if (arena?.style === 'lake') createLakeShore(scene, physics, arena, p, rand);
+  else if (arena?.style === 'pool') createBogPool(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half };
@@ -132,6 +138,26 @@ function buildingGeometry(p) {
 
 // Each prop type: a shape, a material, how to sit on the ground, and its crash shape.
 const PROP_BUILDERS = {
+  // ---- Blood Swamp ----
+  // A clump of tall reeds (you drive straight through them).
+  reed: (p) => {
+    const parts = [];
+    for (let k = 0; k < 7; k++) {
+      const a = k * 2.4, r = 0.15 + (k % 3) * 0.12, h = 1.2 + (k % 4) * 0.35;
+      const g = new THREE.ConeGeometry(0.035, h, 3).translate(Math.sin(a) * r, h / 2, Math.cos(a) * r);
+      g.rotateZ((k % 3 - 1) * 0.12);
+      parts.push(g.toNonIndexed());
+    }
+    parts.push(new THREE.CylinderGeometry(0.05, 0.05, 0.35, 4).translate(0.05, 1.45, 0).toNonIndexed()); // a cattail head
+    return {
+      geometry: mergeGeometries(parts),
+      material: litMaterial({ color: p.reed ?? 0x4a4a22, flatShading: true, roughness: 1 }),
+      shadows: false,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.8, 1.4), s); m.rotation.y = rand() * 6; },
+      colorJitter: 0.3,
+    };
+  },
+
   // ---- Flooded City ----
   ruin: (p) => ({
     geometry: buildingGeometry(p),
@@ -574,4 +600,41 @@ function createLakeShore(scene, physics, arena, p, rand) {
   statue.traverse((o) => { if (o.isMesh) o.castShadow = true; });
   group.add(statue);
   world.createCollider(RAPIER.ColliderDesc.cuboid(6, 6, 3.5).setTranslation(sx, 2, sz), body);
+}
+
+// Pool arena (Blood Swamp): the Bog Mother's pool of blood (carved by the
+// terrain). Around it: a ring of twisted dead trees hung with bones, gaps to
+// drive through, and bone totems.
+function createBogPool(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+  const wood = litMaterial({ color: p.deadTree, flatShading: true, roughness: 1 });
+  const bone = litMaterial({ color: p.bone, flatShading: true, roughness: 0.8 });
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const trunk = new THREE.CylinderGeometry(0.5, 1.1, 1, 6).translate(0, 0.5, 0);
+  const count = 30, ring = R + 22;
+  for (let n = 0; n < count; n++) {
+    if (n % 6 < 2) continue; // gaps
+    const a = (n / count) * Math.PI * 2;
+    const x = Math.sin(a) * ring, z = Math.cos(a) * ring, y = terrain.height(ax + x, az + z);
+    const h = 7 + rand() * 7;
+    const t = new THREE.Mesh(trunk, wood);
+    t.position.set(x, y - 0.5, z);
+    t.scale.set(1, h, 1);
+    t.rotation.set(rand.range(-0.2, 0.2), rand() * 6, rand.range(-0.2, 0.2));
+    t.castShadow = true;
+    group.add(t);
+    // a crooked branch, and a skull hanging off it
+    const br = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.3, 4, 4), wood);
+    br.position.set(x, y + h * 0.75, z);
+    br.rotation.set(0, a, 1.1);
+    group.add(br);
+    const skull = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), bone);
+    skull.position.set(x + Math.cos(a) * 1.5, y + h * 0.75 - 1.6, z - Math.sin(a) * 1.5);
+    group.add(skull);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 0.9).setTranslation(x, y + h / 2, z), body);
+  }
 }

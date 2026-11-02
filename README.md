@@ -48,7 +48,18 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 4, the Flooded City** (new): a drowned hell-city. Its streets are
+**Region 5, the Blood Swamp** (new): a rotting bog of blood-mud, dead
+trees and reeds. The mud grabs HEAVY builds: the heavier your car, the
+slower you go and the deeper you sink, while light builds skim across. So
+here the HELL TANK is the worst car to bring, unless you bolt on the new
+**Mud Tires** (each one cuts the stickiness by a quarter; 4 = barely notice).
+Rickety boardwalks are the dry way through. New demons: swarms of **Blood
+Leeches** and blood-spitting **Mire Toads**. The boss, **the Bog Mother**, is a
+giant hag-toad squatting in a pool of blood: her tongue grabs your car and
+reels it in (shoot her to break free), she spits, belly-flops, belches up
+leeches and lays egg sacs that hatch into Mire Toads (smash them first).
+
+**Region 4, the Flooded City**: a drowned hell-city. Its streets are
 canals between blocks of ruined buildings, crossed by stone bridges.
 Shallow water slows you; deep water floods your engine (you sink to the
 bottom and the low parts of the car take damage) unless you bolt on two
@@ -143,7 +154,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

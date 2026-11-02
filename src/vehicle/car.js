@@ -116,6 +116,8 @@ export class Car {
     this.burns = new Map();
     this.onLava = 0;      // 0..1: how much of the car is over lava right now
     this.water = 'dry';   // 'dry' / 'shallow' / 'float' (on Pontoons) / 'sink' (engine flooding)
+    this.mud = 0;         // 0..1: how muddy it is under the car (Blood Swamp)
+    this.stuck = 0;       // 0..1: how hard the mud has hold of it (heavy builds)
     this.floodTimer = 0;
     this.hazards = null;  // set by main (lava rivers / pools)
     this.setTier(0);
@@ -411,10 +413,13 @@ export class Car {
   // How high the car's middle sits here: on the ground, or on the water
   // surface if it floats.
   #restHeight(x, z) {
-    const ground = terrain.height(x, z);
+    const ground = terrain.height(x, z) - this.stuck * SETTINGS.mud.sink; // (sunk into the mud)
     if (terrain.waterLevel == null || this.floatShield < 1) return ground + CAR_DIMENSIONS.halfHeight;
     return Math.max(ground, terrain.waterLevel - SETTINGS.water.floatDraft) + CAR_DIMENSIONS.halfHeight;
   }
+
+  // 0..1: how much the Mud Tires cut the mud's grip on you.
+  get mudShield() { return Math.min(1, (this.stats?.mudTires || 0) * SETTINGS.mud.tireBonus); }
 
   // 0..1: how well the car floats (1 = floats). Pontoons, unless it's on treads.
   get floatShield() { return this.build.tier.sinks ? 0 : Math.min(1, (this.stats?.pontoons || 0) * SETTINGS.water.pontoonFloat); }
@@ -516,6 +521,14 @@ export class Car {
     const depth = terrain.depth(t.x, t.z);
     this.water = depth < 0.05 ? 'dry' : depth < S.water.deep ? 'shallow' : this.floatShield >= 1 ? 'float' : 'sink';
     if (this.water === 'float' && t.y <= this.#restHeight(t.x, t.z) + 0.15) this.grounded = true; // (riding the water)
+    // Blood-mud: grabs heavy builds (Mud Tires help).
+    this.mud = terrain.mud(t.x, t.z);
+    if (this.mud > 0.05) {
+      const M = S.mud;
+      const heavy = THREE.MathUtils.clamp((mass - M.lightMass) / (M.heavyMass - M.lightMass), 0, 1);
+      this.stuck = this.mud * heavy * (1 - this.mudShield);
+    } else this.stuck = 0;
+    if (this.stuck > 0 && t.y <= this.#restHeight(t.x, t.z) + 0.2) this.grounded = true; // (sunk in, still touching)
 
     // Smooth steering input (no instant full lock)
     const steerTarget = input.steer;
@@ -575,6 +588,13 @@ export class Car {
         const cap = topSpeed * (this.water === 'shallow' ? W.shallowSpeed : this.water === 'float' ? W.floatSpeed : W.sinkSpeed);
         if (Math.abs(vf) > cap) vf = approach(vf, Math.sign(vf) * cap, 25 * dt);
       }
+      // Blood-mud: the heavier you are, the slower you get.
+      if (this.mud > 0.05) {
+        const M = S.mud;
+        const k = (1 - this.mud * M.drag * (1 - this.mudShield)) * THREE.MathUtils.lerp(1, M.stuckSpeed, this.stuck);
+        const cap = topSpeed * k;
+        if (Math.abs(vf) > cap) vf = approach(vf, Math.sign(vf) * cap, 20 * dt);
+      }
       // Lava is thick: it bogs you down (Hover Fans blow it away).
       if (this.onLava > 0) {
         const cap = topSpeed * THREE.MathUtils.lerp(S.lava.speedFactor, 1, this.fanShield);
@@ -583,7 +603,7 @@ export class Car {
 
       // ---------- Sideways grip ----------
       const T = this.build.tier; // treads grip much harder than tires
-      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1) * (this.water === 'float' ? S.water.floatGrip : 1);
+      const grip = S.grip.tireGrip * balGrip * T.grip * (this.handbrake ? S.grip.handbrakeGrip : 1) * (this.water === 'float' ? S.water.floatGrip : 1) * (this.mud > 0.05 ? THREE.MathUtils.lerp(1, S.mud.grip, this.mud) : 1);
       const maxDv = grip * dt;
       const correction = THREE.MathUtils.clamp(-vs, -maxDv, maxDv);
       vs += correction;

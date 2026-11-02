@@ -159,6 +159,26 @@ export const PART_TYPES = {
       }
     },
   },
+  mudTire: {
+    name: 'Mud Tire',
+    icon: '🛞',
+    desc: 'A fat paddle tire that churns through mud. Each one: -25% blood-mud stickiness (4 = barely notice).',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.2, 6), M.steel, 0, -0.15, 0);       // axle stub
+      const tire = new THREE.Group();
+      tire.position.y = 0.04;
+      add(tire, new THREE.CylinderGeometry(0.24, 0.24, 0.2, 12), M.dark);                  // fat tire
+      add(tire, new THREE.CylinderGeometry(0.12, 0.12, 0.22, 8), M.red);                   // hub
+      for (let n = 0; n < 8; n++) {                                                        // paddles
+        const paddle = add(tire, new THREE.BoxGeometry(0.06, 0.2, 0.08), M.dark);
+        const a = (n / 8) * Math.PI * 2;
+        paddle.position.set(Math.cos(a) * 0.26, 0, Math.sin(a) * 0.26);
+        paddle.rotation.y = -a;
+      }
+      g.add(tire);
+      g.userData.fan = tire; // (spins like a fan)
+    },
+  },
   weight: {
     name: 'Lead Weight',
     icon: '🏋️',

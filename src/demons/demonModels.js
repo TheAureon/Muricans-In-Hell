@@ -292,3 +292,73 @@ export function createBloaterGeometry() {
     ]),
   ]);
 }
+
+// BLOOD LEECH: a fat, glossy red slug with a round mouth full of teeth.
+// Comes in swarms. (Sways side to side as it crawls.)
+export const LEECH_GORE = [0x7a0a10, 0xb01818, 0x3a0608, 0xff3030];
+export function createLeechGeometry() {
+  const RED = 0x8a1018, DARK = 0x4a080c, BELLY = 0xb84040, TEETH = 0xe8dcc0, MAW = glow(0xff2020, 0.5);
+  const body = [];
+  for (let k = 0; k < 5; k++) {
+    const r = 0.22 - Math.abs(k - 1.5) * 0.03;
+    body.push(piece(new THREE.SphereGeometry(r, 7, 5), k % 2 ? RED : DARK, 0, r * 0.9, -0.35 + k * 0.17));
+  }
+  return merged([
+    ...limb(PART.tail, [0, 0.2, -0.3], body.slice(0, 2)),
+    ...body.slice(2),
+    piece(box(0.3, 0.06, 0.6), BELLY, 0, 0.04, -0.05),
+    ...limb(PART.head, [0, 0.25, 0.3], [
+      piece(new THREE.CylinderGeometry(0.17, 0.2, 0.18, 8), RED, 0, 0.26, 0.42, Math.PI / 2),
+      piece(new THREE.CircleGeometry(0.13, 8), MAW, 0, 0.26, 0.515),
+      ...[0, 1, 2, 3, 4, 5].map((n) => piece(cone(0.025, 0.08, 3), TEETH, Math.cos(n) * 0.1, 0.26 + Math.sin(n) * 0.1, 0.52, Math.PI / 2)),
+    ]),
+  ]);
+}
+
+// MIRE TOAD: a squat, warty toad the size of a cow, red-brown, with a
+// glowing throat sac it fills with blood before spitting.
+export const MIRE_TOAD_GORE = [0x5a2a1a, 0x8a3a20, 0x2a1008, 0xd04020];
+export function createMireToadGeometry() {
+  const SKIN = 0x6a3420, DARK = 0x3a1a10, BELLY = 0xa87050, SAC = glow(0xff4030, 0.7), EYE = glow(0xffe040), WART = 0x8a5030;
+  const warts = [];
+  for (let k = 0; k < 10; k++) { const a = k * 2.2; warts.push(piece(ico(0.06 + (k % 3) * 0.02), WART, Math.sin(a) * 0.5, 0.95 + (k % 3) * 0.12, Math.cos(a) * 0.45 - 0.1)); }
+  const bodyG = new THREE.SphereGeometry(0.75, 9, 6); bodyG.scale(1.1, 0.7, 1.2);
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.55, 0.6, -0.35], [
+      piece(box(0.32, 0.42, 0.6), SKIN, s * 0.68, 0.4, -0.45),                 // big folded back legs
+      piece(box(0.3, 0.08, 0.5), DARK, s * 0.72, 0.04, -0.2),
+    ])),
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.armL : PART.armR, [s * 0.45, 0.6, 0.45], [
+      piece(box(0.14, 0.5, 0.14), SKIN, s * 0.5, 0.3, 0.55),
+      piece(box(0.24, 0.06, 0.24), DARK, s * 0.5, 0.03, 0.62),
+    ])),
+    piece(bodyG, SKIN, 0, 0.75, 0),
+    piece(box(0.9, 0.2, 1.0), BELLY, 0, 0.42, 0.05),
+    ...warts,
+    ...limb(PART.head, [0, 0.9, 0.6], [
+      piece(box(0.95, 0.4, 0.55), SKIN, 0, 1.0, 0.75),                         // wide flat head
+      piece(box(0.9, 0.06, 0.5), DARK, 0, 0.86, 0.78),                         // mouth line
+      piece(new THREE.SphereGeometry(0.28, 8, 6), SAC, 0, 0.72, 0.85),          // throat sac
+      piece(new THREE.SphereGeometry(0.13, 6, 5), SKIN, 0.32, 1.25, 0.72), piece(new THREE.SphereGeometry(0.13, 6, 5), SKIN, -0.32, 1.25, 0.72),
+      piece(box(0.1, 0.08, 0.05), EYE, 0.32, 1.27, 0.84), piece(box(0.1, 0.08, 0.05), EYE, -0.32, 1.27, 0.84),
+    ]),
+  ]);
+}
+
+// EGG SAC: a cluster of slimy, glowing eggs on a stalk, something
+// squirming inside each one.
+export const EGG_SAC_GORE = [0xc0d060, 0x8a9a30, 0x6a1010, 0xf0ffa0];
+export function createEggSacGeometry() {
+  const SLIME = 0x5a4a20, EGG = glow(0xd0e060, 0.55), VEIN = 0x7a1010, INSIDE = 0x2a1a08;
+  const eggs = [];
+  const spots = [[0, 0.9, 0], [0.42, 0.7, 0.15], [-0.4, 0.75, -0.1], [0.1, 0.65, -0.42], [-0.15, 0.6, 0.42], [0.05, 1.45, 0.05], [0.3, 1.2, -0.25], [-0.3, 1.25, 0.25]];
+  for (const [x, y, z] of spots) {
+    eggs.push(piece(new THREE.SphereGeometry(0.32, 8, 6), EGG, x, y, z));
+    eggs.push(piece(new THREE.SphereGeometry(0.12, 5, 4), INSIDE, x * 1.1, y, z * 1.1 + 0.05));
+  }
+  return merged([
+    piece(new THREE.CylinderGeometry(0.5, 0.8, 0.3, 8), SLIME, 0, 0.15, 0),
+    ...limb(PART.body, [0, 0.3, 0], eggs),
+    ...[0, 1, 2, 3].map((k) => piece(box(0.04, 1.1, 0.04), VEIN, Math.sin(k * 1.6) * 0.3, 0.9, Math.cos(k * 1.6) * 0.3, 0.2, 0, k)),
+  ]);
+}

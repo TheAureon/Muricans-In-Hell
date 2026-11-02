@@ -3,6 +3,7 @@
 // under "demons".
 //   behavior: 'melee'  = run at you and claw/bite
 //             'ranged' = keep its distance and lob fireballs
+//             'egg'    = doesn't move; hatches into something after a while
 //   heavy:    true = a solid obstacle: your car bounces off it
 //   thorns:   true = ramming it hurts your car too
 //   ramBurn:  true = ramming it sets the side you hit it with on fire
@@ -20,6 +21,7 @@ import {
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
   createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
   createDrownedGeometry, DROWNED_GORE, createBloaterGeometry, BLOATER_GORE,
+  createLeechGeometry, LEECH_GORE, createMireToadGeometry, MIRE_TOAD_GORE, createEggSacGeometry, EGG_SAC_GORE,
 } from './demonModels.js';
 
 export const DEMON_TYPES = {
@@ -91,6 +93,25 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.bloater,
     createGeometry: createBloaterGeometry, goreColors: BLOATER_GORE,
     radius: 0.85, height: 2.2, poolSize: 20,
+  },
+  // ---- Blood Swamp ----
+  leech: {
+    name: 'Blood Leech', behavior: 'melee', anim: 'sway',
+    stats: () => SETTINGS.demons.leech,
+    createGeometry: createLeechGeometry, goreColors: LEECH_GORE,
+    radius: 0.3, height: 0.5, poolSize: 160,
+  },
+  mireToad: {
+    name: 'Mire Toad', behavior: 'ranged', anim: 'waddle',
+    stats: () => SETTINGS.demons.mireToad,
+    createGeometry: createMireToadGeometry, goreColors: MIRE_TOAD_GORE,
+    radius: 0.85, height: 1.5, poolSize: 30,
+  },
+  eggSac: {
+    name: 'Egg Sac', behavior: 'egg', anim: 'sway',
+    stats: () => SETTINGS.demons.eggSac,
+    createGeometry: createEggSacGeometry, goreColors: EGG_SAC_GORE,
+    radius: 0.8, height: 1.8, poolSize: 16,
   },
 };
 for (const t of Object.values(DEMON_TYPES)) t.style = STYLE[t.anim];

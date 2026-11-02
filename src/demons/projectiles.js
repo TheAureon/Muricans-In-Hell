@@ -35,6 +35,11 @@ export class Projectiles {
         mat: litMaterial({ color: 0xd8cfb8, flatShading: true }),
         trail: 0x8a8070,
       },
+      bloodGlob: { // Mire Toads and the Bog Mother spit these
+        geo: new THREE.IcosahedronGeometry(0.5, 1),
+        mat: new THREE.MeshBasicMaterial({ color: 0xa01010 }),
+        trail: 0x6a0808,
+      },
       waterBolt: { // the Leviathan's spit: a ball of black water
         geo: new THREE.IcosahedronGeometry(0.9, 1),
         mat: new THREE.MeshBasicMaterial({ color: 0x40c0b0, transparent: true, opacity: 0.85 }),
