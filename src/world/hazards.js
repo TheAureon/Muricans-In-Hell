@@ -107,10 +107,10 @@ export class Hazards {
     }
     const last = r.points[r.points.length - 1];
     pts.push({ x: last[0], z: last[1], s: total });
-    const amp = r.width * 0.9 + 6;
+    const amp = r.straight ? 0 : r.width * 0.9 + 6; // (straight: foundry channels)
     for (const p of pts) {
       const fade = Math.min(1, p.s / 80, (total - p.s) / 80);
-      p.wob = Math.sin(p.s / 160 * Math.PI * 2 + phase) * amp * fade + Math.sin(p.s / 47 + phase * 2) * 3 * fade;
+      p.wob = Math.sin(p.s / 160 * Math.PI * 2 + phase) * amp * fade + (r.straight ? 0 : Math.sin(p.s / 47 + phase * 2) * 3 * fade);
       p.hw = (r.width / 2) * (1 + 0.2 * Math.sin(p.s / 37 + phase));
     }
     // Directions and the final (wiggled) center line.

@@ -39,6 +39,7 @@ export class Demons {
     this.kills = 0;
     this.boss = null; // set by main once the boss exists
     this.base = null; // the walled base (demons stay out), if this region has one
+    this.targets = []; // other things you can shoot (Iron Foundry turrets): { alive, pos, raycast, takeHit, distanceTo }
 
     // One instanced mesh per demon type that lives in this region.
     this.types = {};
@@ -196,7 +197,7 @@ export class Demons {
   // ---------------------------------------------------------------- damage
   // source: 'gun' or 'ram'. push: direction/velocity for gore.
   damage(d, amount, source, push) {
-    if (d.isBoss) return d.takeHit(amount, source, push);
+    if (d.isBoss || d.isTarget) return d.takeHit(amount, source, push);
     if (!d.alive) return false;
     const dealt = Math.min(amount, d.hp);
     d.hp -= amount;
@@ -255,6 +256,7 @@ export class Demons {
       this.damage(d, amount * (1 - 0.5 * Math.min(1, dist / radius)), source, push);
     }
     if (this.boss?.awake && this.boss.distanceTo(point) < radius) this.boss.takeHit(amount, source, new THREE.Vector3());
+    for (const t of this.targets) if (t.alive && t.distanceTo(point) < radius) t.takeHit(amount, source);
   }
 
   // ---------------------------------------------------------------- update
@@ -539,7 +541,11 @@ export class Demons {
       if (t !== null && t < bestT) { bestT = t; best = d; bestPoint = c.clone(); }
     }
     const bh = this.boss?.raycast(ray.origin, ray.direction);
-    if (bh && bh.t < bestT) return { demon: this.boss, point: bh.point };
+    if (bh && bh.t < bestT) { bestT = bh.t; best = this.boss; bestPoint = bh.point; }
+    for (const tg of this.targets) {
+      const h = tg.alive && tg.raycast(ray.origin, ray.direction);
+      if (h && h.t < bestT) { bestT = h.t; best = tg; bestPoint = h.point; }
+    }
     return best ? { demon: best, point: bestPoint } : null;
   }
 
@@ -555,7 +561,12 @@ export class Demons {
       if (t !== null && t < bestT) { bestT = t; best = d; }
     }
     const bh = this.boss?.raycast(a, dir);
-    if (bh && bh.t < bestT) return { demon: this.boss, t: bh.t };
+    if (bh && bh.t < bestT) { bestT = bh.t; best = this.boss; }
+    for (const tg of this.targets) {
+      if (!tg.alive || Math.abs(tg.pos.x - a.x) > length + 6 || Math.abs(tg.pos.z - a.z) > length + 6) continue;
+      const h = tg.raycast(a, dir);
+      if (h && h.t < bestT) { bestT = h.t; best = tg; }
+    }
     return best ? { demon: best, t: bestT } : null;
   }
 }

@@ -48,7 +48,18 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 6, Ice Hell** (new): the frozen bottom of Hell. Snow, great
+**Region 7, the Iron Foundry** (new): the Throne's industrial hell where
+Hell's oil is refined. Gun **turrets** on towers fire bursts of shells
+(blow them up for souls; new **Radar Jammers** make them miss), **conveyor
+belts** carry you along, giant **crushers** slam down over the belts on a
+rhythm (watch the red light), runaway **ore carts** roll along their rails,
+**magnet towers** switch on and pull your car in (the more parts bolted on,
+the harder; new **Degaussers** shield you), and channels of molten metal
+burn like lava. New demon: the **Iron Husk**, half demon, half machine. The
+boss, **the Iron Colossus**, is a giant demon-driven war machine: missile
+volleys, stomps, fist slams and a flamethrower.
+
+**Region 6, Ice Hell**: the frozen bottom of Hell. Snow, great
 glassy ice sheets, and the damned frozen in the ice up to their necks. On
 ice you slide, drift and brake forever; new **Spiked Tires** give the grip
 back (each one a quarter). The cold slowly freezes your engine (less power
@@ -166,7 +177,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

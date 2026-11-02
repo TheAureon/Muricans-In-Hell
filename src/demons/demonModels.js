@@ -421,3 +421,37 @@ export function createFrostBruteGeometry() {
     ]),
   ]);
 }
+
+// IRON HUSK: half demon, half machine. Riveted iron plates over red
+// flesh, a glowing furnace grate in its belly, a claw on one arm and a
+// steaming pipe on the other, a welding-mask face with one red eye.
+export const IRON_HUSK_GORE = [0x4a4c52, 0x7a1a12, 0xffa030, 0x1a1a1e];
+export function createIronHuskGeometry() {
+  const IRON = 0x55585e, DARK = 0x222226, FLESH = 0x7a2418, FIRE = glow(0xff8020), EYE = glow(0xff2010), RIVET = 0x8a8c92;
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.28, 1.05, 0], [
+      piece(box(0.3, 0.55, 0.32), FLESH, s * 0.28, 0.8, 0),
+      piece(box(0.34, 0.5, 0.36), IRON, s * 0.28, 0.32, 0.02),                 // iron shin guards
+      piece(box(0.4, 0.12, 0.5), DARK, s * 0.28, 0.06, 0.06),
+    ])),
+    piece(box(0.85, 0.85, 0.55), IRON, 0, 1.55, 0),                            // armored torso
+    piece(box(0.5, 0.35, 0.05), FIRE, 0, 1.4, 0.29),                           // furnace grate
+    ...[-0.12, 0, 0.12].map((y) => piece(box(0.52, 0.04, 0.06), DARK, 0, 1.4 + y, 0.31)),
+    ...[[-0.35, 1.9], [0.35, 1.9], [-0.35, 1.2], [0.35, 1.2]].map(([x, y]) => piece(box(0.06, 0.06, 0.04), RIVET, x, y, 0.29)),
+    piece(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 6), DARK, -0.25, 2.2, -0.2), // smokestack
+    ...limb(PART.armL, [0.5, 1.85, 0], [
+      piece(box(0.22, 0.6, 0.22), FLESH, 0.55, 1.55, 0.05),
+      piece(box(0.12, 0.45, 0.12), IRON, 0.5, 1.1, 0.2),                       // claw
+      piece(cone(0.06, 0.35, 3), RIVET, 0.43, 0.85, 0.28, Math.PI), piece(cone(0.06, 0.35, 3), RIVET, 0.57, 0.85, 0.28, Math.PI),
+    ]),
+    ...limb(PART.armR, [-0.5, 1.85, 0], [
+      piece(new THREE.CylinderGeometry(0.12, 0.12, 0.9, 6), IRON, -0.55, 1.4, 0.1),  // pipe arm
+      piece(new THREE.CylinderGeometry(0.15, 0.15, 0.12, 6), DARK, -0.55, 0.92, 0.1),
+    ]),
+    ...limb(PART.head, [0, 2.0, 0.05], [
+      piece(box(0.42, 0.42, 0.4), DARK, 0, 2.22, 0.06),                        // welding-mask head
+      piece(box(0.3, 0.1, 0.04), EYE, 0, 2.26, 0.27),
+      piece(box(0.46, 0.06, 0.44), IRON, 0, 2.45, 0.06),
+    ]),
+  ]);
+}

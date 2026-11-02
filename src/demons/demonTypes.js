@@ -21,6 +21,7 @@ import {
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
   createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
   createDrownedGeometry, DROWNED_GORE, createBloaterGeometry, BLOATER_GORE,
+  createIronHuskGeometry, IRON_HUSK_GORE,
   createFrostWraithGeometry, FROST_WRAITH_GORE, createFrostBruteGeometry, FROST_BRUTE_GORE,
   createLeechGeometry, LEECH_GORE, createMireToadGeometry, MIRE_TOAD_GORE, createEggSacGeometry, EGG_SAC_GORE,
 } from './demonModels.js';
@@ -94,6 +95,13 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.bloater,
     createGeometry: createBloaterGeometry, goreColors: BLOATER_GORE,
     radius: 0.85, height: 2.2, poolSize: 20,
+  },
+  // ---- Iron Foundry ----
+  ironHusk: {
+    name: 'Iron Husk', behavior: 'melee', anim: 'stomp',
+    stats: () => SETTINGS.demons.ironHusk,
+    createGeometry: createIronHuskGeometry, goreColors: IRON_HUSK_GORE,
+    radius: 0.55, height: 2.5, poolSize: 60,
   },
   // ---- Ice Hell ----
   frostWraith: {

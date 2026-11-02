@@ -16,6 +16,7 @@ import { Leviathan } from './demons/leviathan.js';
 import { BogMother } from './demons/bogMother.js';
 import { FrozenWarden } from './demons/frozenWarden.js';
 import { createBoardwalks } from './world/boardwalk.js';
+import { Foundry } from './world/foundry.js';
 import { Water } from './world/water.js';
 import { Hazards } from './world/hazards.js';
 import { Hellgate } from './world/hellgate.js';
@@ -123,6 +124,18 @@ async function main() {
   jobs.onChange();
   let jobsClicked = false;
   document.getElementById('jobs-btn').addEventListener('click', (e) => { jobsClicked = true; e.currentTarget.blur(); });
+  // Iron Foundry: turrets, belts, crushers, ore carts, magnets.
+  const foundry = region.turrets || region.belts || region.magnets ? new Foundry(scene, physics, region, {
+    projectiles, audio, gore, sparks, chase, hud,
+    onTurretKilled: (tr, source) => {
+      lighting.flash(tr.pos, 1.5);
+      if (mode !== 'play') return;
+      stats.kill(source === 'ram' ? 'ram' : 'gun');
+      souls.burst(tr.pos.clone().setY(tr.pos.y - 3), SETTINGS.foundry.turretSouls);
+      jobs.emit('kill', { type: 'turret', source });
+    },
+  }) : null;
+  if (foundry) demons.targets = foundry.turrets; // (shootable like demons)
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   if (SETTINGS.dev.creative && creativeStash) {
     // Came here by a creative-mode jump: bring the creative build along.
@@ -180,7 +193,7 @@ async function main() {
   // (Most bosses walk; the Leviathan swims and the Bog Mother squats in her pool.)
   const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden }[region.boss?.type] || Boss;
   const boss = region.boss ? new BossKind(scene, physics, {
-    region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards,
+    region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards, flames,
     dust: water || blood ? spray : dust, // (splashes in the water / blood)
     // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
     onDying: () => {
@@ -335,6 +348,7 @@ async function main() {
       bullets.clear();
       gore.clear();
       hazards.clearPools();
+      foundry?.reset();
       souls.clear();
       scrap.clear();
       stats.reset();
@@ -424,6 +438,7 @@ async function main() {
       car.capture();
       car.afterStep(); // crash damage from hitting rocks
       demons.fixedUpdate(PHYSICS_STEP, car);
+      foundry?.fixedUpdate(PHYSICS_STEP, car);
       if (!SETTINGS.dev.noEnemies) boss?.fixedUpdate(PHYSICS_STEP, car);
       car.applyCrashDamage();
       accumulator -= PHYSICS_STEP;
@@ -449,6 +464,7 @@ async function main() {
         // the start. Where you've been (regions, bosses beaten, teleporters)
         // is remembered.
         car.spawn.copy(respawnPoint());
+        foundry?.reset();
         car.respawn();
         scrap.clear();
         projectiles.clear();
@@ -587,6 +603,8 @@ async function main() {
       if (car.stuck > 0.4) radio.say('firstStuck');
       if (car.ice > 0.5 && car.drifting) radio.say('firstSlide');
       if (car.cold > 0.5) radio.say('firstCold');
+      if (foundry?.onBelt) radio.say('firstBelt');
+      if (foundry?.pulled) radio.say('firstMagnet');
       if (car.water === 'float') { radio.say('firstFloat'); if (!car.wrecked) jobs.emit('float', { dt }); }
       hud.garageButton(canGarage() && !car.wrecked, canGarage() ? 'Open the garage (G)' : base ? 'The garage is at base (drive home)' : 'The garage is at base (teleport home from a teleporter pad)');
       if (boss && !SETTINGS.dev.noEnemies) {
@@ -654,6 +672,9 @@ async function main() {
       // Stuck in the blood-mud: say why, and what helps.
       const n = car.stats.mudTires || 0;
       hud.water('🩸 STUCK IN THE MUD 🩸', `Too heavy (${Math.round(car.totalMass)} kg)! Go lighter, bolt on Mud Tires (${n}/4), or use the boardwalks`, 'sink');
+    } else if (foundry?.pulled && !car.wrecked && playing) {
+      // A magnet has hold of the car.
+      hud.water('🧲 MAGNET PULL 🧲', `All your metal parts (${car.stats.count}) make it pull harder · Degaussers ${car.stats.degaussers || 0}/2`, 'sink');
     } else if (iceSheet && !car.wrecked && playing && car.cold > 0.15) {
       // Ice Hell: the engine is freezing.
       const h = car.stats.heaters || 0;
@@ -669,6 +690,7 @@ async function main() {
       }
     }
     water?.update(dt);
+    foundry?.update(dt);
     blood?.update(dt);
     iceSheet?.update(dt);
     spray.update(dt);
@@ -725,7 +747,7 @@ async function main() {
   });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry };
 }
 
 // A full-screen message with buttons (graphics trouble).

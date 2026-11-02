@@ -81,7 +81,15 @@ export function createGround(scene, physics, region, hazards = null) {
   // (The Hellgate rises next to the arena, on the side you come from: see main.js.)
   const gateOff = arena && arena.style !== 'island' ? (arena.radius + 25) / (Math.hypot(arena.x, arena.z) || 1) : 0;
   const gateX = arena ? arena.x - arena.x * gateOff : 0, gateZ = arena ? arena.z - arena.z * gateOff : 0;
-  const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 ||
+  // Iron Foundry machinery: keep scenery off the belts, rails and towers.
+  const lines = [...(region.belts || []).map((b) => ({ ...b, pad: b.width / 2 + 6 })), ...(region.rails || []).map((r) => ({ ...r, pad: 6 }))];
+  const spots = [...(region.turrets || []), ...(region.magnets || []).map((m) => [m.x, m.z]), ...(region.crushers || []).map((c) => [c.x, c.z])];
+  const onMachinery = (x, z) => spots.some(([sx, sz]) => (x - sx) ** 2 + (z - sz) ** 2 < 144) || lines.some((l) => {
+    const [ax, az] = l.from, [bx, bz] = l.to, len = Math.hypot(bx - ax, bz - az), tx = (bx - ax) / len, tz = (bz - az) / len;
+    const t = Math.min(len, Math.max(0, (x - ax) * tx + (z - az) * tz));
+    return Math.hypot(x - ax - tx * t, z - az - tz * t) < l.pad;
+  });
+  const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 || onMachinery(x, z) ||
     (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2) ||
     (arena && gateOff && (x - gateX) ** 2 + (z - gateZ) ** 2 < 16 ** 2) ||
     (hazards && hazards.lavaAt(x, z, 4)) ||
@@ -98,6 +106,7 @@ export function createGround(scene, physics, region, hazards = null) {
   else if (arena?.style === 'lake') createLakeShore(scene, physics, arena, p, rand);
   else if (arena?.style === 'pool') createBogPool(scene, physics, arena, p, rand);
   else if (arena?.style === 'glacier') createGlacier(scene, physics, arena, p, rand);
+  else if (arena?.style === 'yard') createFoundryYard(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half };
@@ -139,6 +148,69 @@ function buildingGeometry(p) {
 
 // Each prop type: a shape, a material, how to sit on the ground, and its crash shape.
 const PROP_BUILDERS = {
+  // ---- Iron Foundry ----
+  smokestack: (p) => {
+    const steel = p.steel ?? 0x4a4c52, dark = 0x1e1e22, glowc = p.lava ?? 0xff6010;
+    const g = mergeGeometries([
+      coloredBox(4, 3, 4, 0, 0, 0, dark),
+      ...[0, 1, 2, 3, 4].map((k) => coloredBox(2.2 - k * 0.12, 4, 2.2 - k * 0.12, 0, 3 + k * 4, 0, k % 2 ? steel : dark)),
+      coloredBox(2.0, 0.4, 2.0, 0, 23, 0, glowc),
+    ]);
+    return {
+      geometry: g,
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.8 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.7, 1.3), s); m.rotation.y = rand() * 6; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cuboid(2 * m.scale.x, 1.5 * m.scale.y, 2 * m.scale.z).setTranslation(0, 1.5 * m.scale.y, 0),
+      colorJitter: 0.15,
+    };
+  },
+  // A steel girder frame (an unfinished building)
+  girder: (p) => {
+    const steel = p.steel ?? 0x6a4a3a;
+    const parts = [];
+    for (const [x, z] of [[-4, -4], [4, -4], [-4, 4], [4, 4]]) parts.push(coloredBox(0.6, 12, 0.6, x, 0, z, steel));
+    for (const y of [5.5, 11.4]) {
+      parts.push(coloredBox(8.6, 0.6, 0.6, 0, y, -4, steel), coloredBox(8.6, 0.6, 0.6, 0, y, 4, steel));
+      parts.push(coloredBox(0.6, 0.6, 8.6, -4, y, 0, steel), coloredBox(0.6, 0.6, 8.6, 4, y, 0, steel));
+    }
+    return {
+      geometry: mergeGeometries(parts),
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.6, metalness: 0.4 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.6, 1.4), s); m.rotation.y = Math.floor(rand() * 4) * Math.PI / 2; },
+      // (only the four legs are solid: drive through the middle)
+      collider: (RAPIER, m) => [[-4, -4], [4, -4], [-4, 4], [4, 4]].map(([x, z]) => {
+        const v = new THREE.Vector3(x * m.scale.x, 0, z * m.scale.z).applyQuaternion(m.quaternion);
+        return RAPIER.ColliderDesc.cuboid(0.35 * m.scale.x, 6 * m.scale.y, 0.35 * m.scale.z).setTranslation(v.x, 6 * m.scale.y, v.z);
+      }),
+      colorJitter: 0.2,
+    };
+  },
+  // Oil drums. THE OIL. Stacks of it.
+  barrels: (p) => {
+    const parts = [];
+    const drum = (x, y, z, c) => { const g = new THREE.CylinderGeometry(0.45, 0.45, 1.3, 10).translate(x, y + 0.65, z).toNonIndexed(); const col = new THREE.Color(c), arr = new Float32Array(g.attributes.position.count * 3); for (let i = 0; i < arr.length; i += 3) arr.set([col.r, col.g, col.b], i); g.setAttribute('color', new THREE.BufferAttribute(arr, 3)); return g; };
+    parts.push(drum(0, 0, 0, 0x8a1a12), drum(1, 0, 0.1, 0x1a1a1e), drum(0.5, 0, 0.95, 0x8a1a12), drum(0.5, 1.3, 0.35, 0xc8a020));
+    return {
+      geometry: mergeGeometries(parts),
+      material: litMaterial({ color: 0xffffff, vertexColors: true, flatShading: true, roughness: 0.6, metalness: 0.3 }),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.setScalar(s); m.rotation.y = rand() * 6; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(1.3 * m.scale.y, 1.0 * m.scale.x).setTranslation(0.5 * m.scale.x, 1.3 * m.scale.y, 0.4 * m.scale.z),
+      colorJitter: 0.2,
+    };
+  },
+  // A heap of twisted scrap metal
+  scrapPile: (p) => ({
+    geometry: ROCK_GEO,
+    material: litMaterial({ color: p.steel ?? 0x5a5c62, flatShading: true, roughness: 0.5, metalness: 0.6 }),
+    shadows: true,
+    place: (m, s, rand) => { m.scale.set(s * rand.range(1, 2), s * rand.range(0.4, 0.8), s * rand.range(1, 2)); m.position.y = m.scale.y * 0.3; m.rotation.set(rand() * 3, rand() * 6, rand() * 3); },
+    collider: (RAPIER, m) => RAPIER.ColliderDesc.ball(Math.min(m.scale.x, m.scale.z) * 0.6).setTranslation(0, m.scale.y * 0.2, 0),
+    colorJitter: 0.3,
+  }),
+
   // ---- Ice Hell ----
   iceSpire: (p) => {
     const g = mergeGeometries([
@@ -725,5 +797,48 @@ function createGlacier(scene, physics, arena, p, rand) {
     m.castShadow = true;
     group.add(m);
     world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 1.3).setTranslation(m.position.x, h / 2, m.position.z), body);
+  }
+}
+
+// Foundry yard arena (Iron Foundry): a cast-iron floor ringed by a wall of
+// smokestacks and furnaces (gaps to drive through), glowing slag pools at
+// the edges, the Iron Colossus standing in the middle.
+function createFoundryYard(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  const ay = terrain.height(ax, az);
+  group.position.set(ax, ay, az);
+  scene.add(group);
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 8, 40).rotateX(-Math.PI / 2),
+    litMaterial({ color: 0x2a2a2e, roughness: 0.6, metalness: 0.5, polygonOffset: true, polygonOffsetFactor: -1 }));
+  floor.position.y = 0.05;
+  floor.receiveShadow = true;
+  group.add(floor);
+  const glowMat = new THREE.MeshBasicMaterial({ color: p.lava ?? 0xff6010 });
+  for (let n = 0; n < 12; n++) { // floor seams glowing with heat
+    const a = (n / 12) * Math.PI * 2;
+    const seam = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.06, R * 0.8), glowMat);
+    seam.position.set(Math.sin(a) * R * 0.45, 0.08, Math.cos(a) * R * 0.45);
+    seam.rotation.y = a;
+    group.add(seam);
+  }
+  const dark = litMaterial({ color: 0x1e1e22, flatShading: true, roughness: 0.8 });
+  const steel = litMaterial({ color: p.steel ?? 0x4a4c52, flatShading: true, roughness: 0.6, metalness: 0.4 });
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, ay, az));
+  const count = 28;
+  for (let n = 0; n < count; n++) {
+    if (n % 7 < 2) continue; // gaps
+    const a = (n / count) * Math.PI * 2;
+    const h = 14 + rand() * 16;
+    const x = Math.sin(a) * (R + 10), z = Math.cos(a) * (R + 10);
+    const stack = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.4, h, 8), n % 2 ? dark : steel);
+    stack.position.set(x, h / 2, z);
+    stack.castShadow = true;
+    group.add(stack);
+    const top = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.3, 8), glowMat);
+    top.position.set(x, h + 0.1, z);
+    group.add(top);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 2.2).setTranslation(x, h / 2, z), body);
   }
 }

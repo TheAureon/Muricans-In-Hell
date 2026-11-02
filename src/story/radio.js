@@ -7,7 +7,7 @@ import { CAST, RADIO } from './story.js';
 const SEEN_KEY = 'helldrive.story';
 // Conversations that interrupt whatever is being said.
 const WAIT = 60; // seconds a small conversation can wait for the radio to be free
-const IMPORTANT = new Set(['start', 'lavaArrive', 'boneArrive', 'titanAwake', 'titanDead', 'colossusDead', 'boneKingAwake', 'boneKingDead', 'floodArrive', 'leviathanAwake', 'leviathanDead', 'swampArrive', 'bogMotherAwake', 'bogMotherDead', 'iceArrive', 'wardenAwake', 'wardenDead', 'teleporterFound', 'wrecked']);
+const IMPORTANT = new Set(['start', 'lavaArrive', 'boneArrive', 'titanAwake', 'titanDead', 'colossusDead', 'boneKingAwake', 'boneKingDead', 'floodArrive', 'leviathanAwake', 'leviathanDead', 'swampArrive', 'bogMotherAwake', 'bogMotherDead', 'iceArrive', 'wardenAwake', 'wardenDead', 'foundryArrive', 'ironColossusAwake', 'ironColossusDead', 'teleporterFound', 'wrecked']);
 
 export class Radio {
   constructor(audio) {

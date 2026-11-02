@@ -18,6 +18,7 @@ const M = {
   cool: new THREE.MeshBasicMaterial({ color: 0x60d0ff }),
   float: mat(0xff7a20, { roughness: 0.5, metalness: 0 }),
   glowHot: new THREE.MeshBasicMaterial({ color: 0xff7020 }),
+  copper: mat(0xb06a30, { metalness: 0.6, roughness: 0.35 }),
 };
 
 function add(group, geometry, material, x = 0, y = 0, z = 0) {
@@ -208,6 +209,31 @@ export const PART_TYPES = {
       add(g, new THREE.BoxGeometry(0.44, 0.3, 0.44), M.dark, 0, -0.08, 0);
       for (let k = -1; k <= 1; k++) add(g, new THREE.BoxGeometry(0.4, 0.14, 0.06), M.glowHot, 0, 0.12, k * 0.13); // glowing fins
       add(g, new THREE.CylinderGeometry(0.04, 0.04, 0.2, 5), M.steel, 0.15, 0.25, 0.15);                      // little chimney
+    },
+  },
+  jammer: {
+    name: 'Radar Jammer',
+    icon: '📡',
+    desc: 'Scrambles the Iron Foundry turrets: each one makes their shells land 3 m further off.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.3, 0.2, 0.3), M.dark, 0, -0.15, 0);
+      add(g, new THREE.CylinderGeometry(0.03, 0.03, 0.3, 5), M.steel, 0, 0.05, 0);
+      const dish = new THREE.Group();
+      dish.position.y = 0.22;
+      add(dish, new THREE.CylinderGeometry(0.24, 0.05, 0.1, 10), M.steel).rotation.x = 0.5;
+      add(dish, new THREE.SphereGeometry(0.04, 6, 4), M.cool, 0, 0.1, 0.06);
+      g.add(dish);
+      g.userData.fan = dish; // (spins slowly... well, quickly)
+    },
+  },
+  degausser: {
+    name: 'Degausser',
+    icon: '🧲',
+    desc: 'A humming coil that cancels magnetism. Each one blocks half the Foundry magnets\' pull (2 = immune).',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.42, 0.14, 0.42), M.dark, 0, -0.17, 0);
+      for (let k = 0; k < 3; k++) add(g, new THREE.TorusGeometry(0.15, 0.05, 5, 10), M.copper, 0, -0.04 + k * 0.1, 0).rotation.x = Math.PI / 2;
+      add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.4, 6), M.cool, 0, 0.05, 0);
     },
   },
   weight: {

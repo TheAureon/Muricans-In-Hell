@@ -65,7 +65,7 @@ export class Boss {
     this.hp = this.B.health;
     this.state = this.defeated ? 'dead' : 'dormant';
     this.action = null;
-    this.cd = { slam: 0, stomp: 4, throw: 2 };
+    this.cd = { slam: 0, stomp: 4, throw: 2, flame: 3 };
     this.summoned = { a: false, b: false };
     this.flash = 0;
     this.phase = 0;
@@ -186,6 +186,7 @@ export class Boss {
       // Pick an attack, or keep walking at you.
       if (dist < 11 && this.cd.slam <= 0) this.#start('slam', 0.9);
       else if (dist < B.stompRadius * 0.75 && this.cd.stomp <= 0) this.#start('stomp', 1.0);
+      else if (B.flameRange && dist < B.flameRange && this.cd.flame <= 0) this.#start('flame', 0.7);
       else if (dist > 16 && this.cd.throw <= 0) this.#start('throw', 0.8);
       else {
         this.yaw = turnToward(this.yaw, Math.atan2(toCar.x, toCar.z), (enraged ? 1.3 : 0.9) * dt);
@@ -229,6 +230,25 @@ export class Boss {
       this.yaw = turnToward(this.yaw, Math.atan2(toCar.x, toCar.z), 0.8 * dt);
       return;
     }
+    // Flamethrower (Iron Colossus): a cone of fire for a couple of seconds.
+    if (a.type === 'flame') {
+      this.yaw = turnToward(this.yaw, Math.atan2(toCar.x, toCar.z), 0.6 * dt);
+      const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+      const ang = Math.acos(THREE.MathUtils.clamp(toCar.dot(fwd) / (dist || 1), -1, 1));
+      if (dist < B.flameRange && ang < 0.4 && !car.wrecked && (a.tick = (a.tick || 0) - dt) <= 0) {
+        a.tick = 0.25;
+        car.igniteAt(car.currPos.clone().addScaledVector(fwd, -1).setY(car.currPos.y + 0.5), B.flameDps, 2.5);
+      }
+      if (this.flameTip && this.ctx.flames) {
+        const tip = this.flameTip.getWorldPosition(new THREE.Vector3());
+        for (let n = 0; n < 5; n++) {
+          const v = fwd.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.5, -0.12 + (Math.random() - 0.5) * 0.25, (Math.random() - 0.5) * 0.5)).normalize().multiplyScalar(18 + Math.random() * 10);
+          this.ctx.flames.spawn(tip, v, 0.4 + Math.random() * 0.5, 0.9);
+        }
+      }
+      if (a.t > a.windup + 2.4) { this.action = null; this.cd.flame = 7; }
+      return;
+    }
     if (!a.done) {
       a.done = true;
       const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
@@ -262,12 +282,12 @@ export class Boss {
         const onLand = kind === 'lavaBomb' && this.ctx.hazards
           ? (at) => this.ctx.hazards.addPool(at.x, at.z, B.poolRadius, B.poolTime) : null;
         this.ctx.projectiles.throwAt(kind, hand, B.throwDamage, B.throwSplash, flight, onLand);
-        // Lava bombs come in threes, spread around you.
-        if (kind === 'lavaBomb') {
-          for (const side of [-1, 1]) {
-            const h2 = hand.clone().addScaledVector(new THREE.Vector3(fwd.z, 0, -fwd.x), side * 2);
-            this.ctx.projectiles.throwAt(kind, h2, B.throwDamage, B.throwSplash, flight * (0.75 + Math.random() * 0.5), onLand);
-          }
+        // Lava bombs come in threes, missiles in volleys, spread around you.
+        const extra = (this.cfg.throwCount || (kind === 'lavaBomb' ? 3 : 1)) - 1;
+        for (let n = 0; n < extra; n++) {
+          const side = (n % 2 ? 1 : -1) * (1 + Math.floor(n / 2));
+          const h2 = hand.clone().addScaledVector(new THREE.Vector3(fwd.z, 0, -fwd.x), side * 2);
+          this.ctx.projectiles.throwAt(kind, h2, B.throwDamage, B.throwSplash, flight * (0.75 + Math.random() * 0.5), onLand, kind === 'missile' ? 4 : 0);
         }
       }
     }
@@ -360,6 +380,7 @@ export class Boss {
       if (a.type === 'slam') { armR = after ? -0.3 : -2.8 * wind; armL = after ? -0.3 : -2.6 * wind; lean = after ? 0.4 : -0.15 * wind; }
       if (a.type === 'stomp') { legL = after ? 0 : -1.0 * wind; lean = after ? 0.1 : -0.1 * wind; }
       if (a.type === 'throw') { armR = after ? -1.2 : 2.2 * wind - 0.5; lean = after ? 0.2 : -0.2 * wind; }
+      if (a.type === 'flame') { armL = -1.45 * wind; }
     }
     const k = 1 - Math.exp(-12 * dt);
     m.legL.rotation.x += (legL - m.legL.rotation.x) * k;
@@ -397,6 +418,15 @@ export class Boss {
     const upper = new THREE.Group(); // everything above the hips (lowers when sitting)
     root.add(upper);
 
+    // The Iron Colossus is a machine (its own body, same joints).
+    if (L.mech) {
+      const { legs, arms } = this.#mech(upper, add, L, eye);
+      this.parts = { upper, ...legs, ...arms };
+      this.root = root;
+      root.position.copy(this.arenaCenter || new THREE.Vector3());
+      scene.add(root);
+      return;
+    }
     // The Bone King is a real skeleton (its own body, same joints).
     if (L.skeleton) {
       const { legs, arms } = this.#skeleton(root, upper, add, L, eye);
@@ -477,6 +507,74 @@ export class Boss {
   // burning inside, glowing eye sockets, a hanging jaw, skull pauldrons, a
   // tattered royal cape, and a bone club. Same joints as the other bosses
   // (hips at y 3.2, shoulders at y 6.4), so all the attacks animate.
+  // THE IRON COLOSSUS: a walking war machine with a demon chained inside its
+  // furnace. Armored legs, a cockpit grille with the furnace glowing through,
+  // smokestacks, missile pods on its shoulders, a cannon for a right arm
+  // and a flamethrower claw for a left.
+  #mech(upper, add, L, eye) {
+    const steel = this.matAsh;                                                    // (flashes when hit)
+    const dark = litMaterial({ color: L.dark, flatShading: true, roughness: 0.6, metalness: 0.5 });
+    const hazard = litMaterial({ color: 0xe0b020, flatShading: true, roughness: 0.6 });
+    const fire = this.matLava;
+    const box = (w, h, d) => new THREE.BoxGeometry(w, h, d);
+    const cyl = (r1, r2, h, s = 8) => new THREE.CylinderGeometry(r1, r2, h, s);
+    const legs = {};
+    for (const [name, x] of [['legL', 1.4], ['legR', -1.4]]) {
+      const hip = new THREE.Group();
+      hip.position.set(x, 3.4, 0);
+      add(hip, cyl(0.6, 0.6, 1.0).rotateZ(Math.PI / 2), dark, 0, 0, 0);          // hip joint
+      add(hip, box(1.1, 1.6, 1.2), steel, 0, -0.9, 0);                            // thigh
+      add(hip, cyl(0.5, 0.5, 1.2).rotateZ(Math.PI / 2), dark, 0, -1.8, 0.1);      // knee
+      add(hip, box(1.3, 1.6, 1.4), steel, 0, -2.6, 0.15);                         // shin
+      add(hip, box(1.4, 0.3, 0.2), hazard, 0, -2.2, 0.86);                        // hazard stripe
+      add(hip, box(1.8, 0.5, 2.6), dark, 0, -3.2, 0.4);                           // big flat foot
+      for (const tx of [-0.6, 0, 0.6]) add(hip, box(0.4, 0.35, 0.6), dark, tx, -3.25, 1.9); // toes
+      upper.add(hip);
+      legs[name] = hip;
+    }
+    add(upper, box(3.6, 1.2, 2.4), dark, 0, 3.6, 0);                              // pelvis
+    add(upper, box(4.6, 3.4, 3.2), steel, 0, 5.6, 0);                             // torso
+    add(upper, box(3.0, 1.8, 0.2), fire, 0, 5.6, 1.65);                           // furnace glow behind...
+    for (let k = 0; k < 5; k++) add(upper, box(0.18, 1.9, 0.2), dark, -1.2 + k * 0.6, 5.6, 1.75); // ...the grille
+    for (const sx of [-1, 1]) add(upper, box(0.5, 0.3, 0.12), eye, sx * 0.5, 6.1, 1.6); // the demon's eyes in there
+    add(upper, box(4.8, 0.3, 3.4), hazard, 0, 4.0, 0);
+    for (const sx of [-0.9, 0.9]) {                                                // smokestacks
+      add(upper, cyl(0.35, 0.45, 2.6), dark, sx, 8.0, -1.2);
+      add(upper, cyl(0.38, 0.38, 0.12), fire, sx, 9.3, -1.2);
+    }
+    // Head: a small armored sensor turret with a glowing visor
+    add(upper, box(1.6, 1.1, 1.5), dark, 0, 7.8, 0.2);
+    add(upper, box(1.3, 0.25, 0.1), eye, 0, 7.9, 0.96);
+    add(upper, cyl(0.05, 0.05, 1.4), steel, 0.5, 8.9, 0);                          // antenna
+    // Missile pods on its shoulders
+    for (const sx of [-1, 1]) {
+      add(upper, box(1.8, 1.2, 2.0), dark, sx * 2.9, 7.6, -0.2);
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 2; c++) add(upper, cyl(0.2, 0.2, 0.2).rotateX(Math.PI / 2), fire, sx * 2.9 + (c - 0.5) * 0.7, 7.4 + r * 0.5, 0.82);
+    }
+    const arms = {};
+    for (const [name, x] of [['armL', 2.9], ['armR', -2.9]]) {
+      const sh = new THREE.Group();
+      sh.position.set(x, 6.4, 0);
+      add(sh, box(1.8, 1.4, 1.8), steel, 0, 0, 0);                                // shoulder armor
+      add(sh, box(1.0, 2.4, 1.0), dark, 0, -1.8, 0);                              // upper arm
+      if (name === 'armR') {
+        add(sh, cyl(0.6, 0.6, 3.6), steel, 0, -4.4, 0);                           // CANNON
+        add(sh, cyl(0.4, 0.4, 0.4), dark, 0, -6.3, 0);
+        add(sh, cyl(0.3, 0.3, 0.1), fire, 0, -6.55, 0);
+      } else {
+        add(sh, box(1.2, 2.4, 1.2), steel, 0, -4.0, 0);                           // forearm
+        add(sh, cyl(0.25, 0.4, 1.2), dark, 0, -5.6, 0.3);                         // flamethrower nozzle
+        for (const cx of [-0.5, 0.5]) add(sh, new THREE.ConeGeometry(0.18, 1.2, 4).rotateX(Math.PI), hazard, cx, -5.6, -0.3); // claw
+        this.flameTip = new THREE.Object3D();
+        this.flameTip.position.set(0, -6.3, 0.3);
+        sh.add(this.flameTip);
+      }
+      upper.add(sh);
+      arms[name] = sh;
+    }
+    return { legs, arms };
+  }
+
   #skeleton(root, upper, add, L, eye) {
     const bone = this.matAsh;                                                     // (flashes when hit)
     const old = litMaterial({ color: L.dark, flatShading: true, roughness: 0.85 });

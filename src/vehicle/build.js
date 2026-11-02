@@ -222,7 +222,7 @@ export class Build {
 
   // ---- What the build adds up to ----
   stats() {
-    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0, fans = 0, pontoons = 0, mudTires = 0, spikeTires = 0, heaters = 0;
+    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0, fans = 0, pontoons = 0, mudTires = 0, spikeTires = 0, heaters = 0, jammers = 0, degaussers = 0;
     // Missing body sections make the car lighter (and shift its balance).
     for (const id of this.missing) {
       const m = SETTINGS.chassis[id].mass, c = sectionCenter(id);
@@ -244,6 +244,8 @@ export class Build {
       if (rec.type === 'mudTire') mudTires++;
       if (rec.type === 'spikeTire') spikeTires++;
       if (rec.type === 'heater') heaters++;
+      if (rec.type === 'jammer') jammers++;
+      if (rec.type === 'degausser') degaussers++;
       if (s.ramBonus) {
         const side = `${rec.normal[0]},${rec.normal[2]}`;
         if (side in ramBonus) ramBonus[side] += s.ramBonus;
@@ -265,6 +267,8 @@ export class Build {
       mudTires,
       spikeTires,
       heaters,
+      jammers,
+      degaussers,
     };
   }
 

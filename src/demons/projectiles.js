@@ -35,6 +35,18 @@ export class Projectiles {
         mat: litMaterial({ color: 0xd8cfb8, flatShading: true }),
         trail: 0x8a8070,
       },
+      shell: { // Iron Foundry turrets: small, fast and flat
+        geo: new THREE.CylinderGeometry(0.1, 0.14, 0.7, 6).rotateX(Math.PI / 2),
+        mat: new THREE.MeshBasicMaterial({ color: 0xffd060 }),
+        trail: 0x6a6460,
+        aligned: true,
+      },
+      missile: { // the Iron Colossus's rockets
+        geo: new THREE.CylinderGeometry(0.22, 0.3, 1.6, 6).rotateX(Math.PI / 2),
+        mat: litMaterial({ color: 0x3a3a40, flatShading: true }),
+        trail: 0xff8030,
+        aligned: true,
+      },
       bloodGlob: { // Mire Toads and the Bog Mother spit these
         geo: new THREE.IcosahedronGeometry(0.5, 1),
         mat: new THREE.MeshBasicMaterial({ color: 0xa01010 }),
@@ -56,10 +68,12 @@ export class Projectiles {
 
   // Throw from `from` so it lands where the car will be in `flightTime` s.
   // onLand(point) is called where it lands (e.g. to leave a lava pool).
-  throwAt(kind, from, damage, splash, flightTime = 1.3, onLand = null) {
+  // miss = how far off it may land (m), e.g. when Radar Jammers confuse turrets.
+  throwAt(kind, from, damage, splash, flightTime = 1.3, onLand = null, miss = 0) {
     const car = this.car;
     const lv = car.body.linvel();
     const target = car.currPos.clone().add(new THREE.Vector3(lv.x, 0, lv.z).multiplyScalar(flightTime * 0.85));
+    if (miss) { const a = Math.random() * Math.PI * 2, r = miss * Math.sqrt(Math.random()); target.x += Math.cos(a) * r; target.z += Math.sin(a) * r; }
     target.y = terrain.height(target.x, target.z) + 0.4;
     const vel = target.clone().sub(from).divideScalar(flightTime);
     vel.y += 0.5 * GRAVITY * flightTime;
@@ -79,7 +93,7 @@ export class Projectiles {
       else { p.mesh.rotation.x += dt * 5; p.mesh.rotation.z += dt * 3; }
       if ((p.trailTimer -= dt) <= 0) {
         p.trailTimer = 0.04;
-        const fiery = p.kind === 'fireball' || p.kind === 'lavaBomb';
+        const fiery = p.kind === 'fireball' || p.kind === 'lavaBomb' || p.kind === 'missile';
         const trail = fiery ? this.fx.sparks : this.fx.dust;
         trail.spawn(p.mesh.position, new THREE.Vector3((Math.random() - 0.5), 0.5, (Math.random() - 0.5)), p.kind === 'fireball' ? 0.15 : 0.35, 0.5);
       }

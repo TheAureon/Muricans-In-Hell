@@ -216,6 +216,8 @@ export const SETTINGS = {
     mudTire:  { mass: 45, hp: 80 },                 // a fat paddle tire: less stuck in blood-mud (see "mud")
     spikeTire: { mass: 45, hp: 80 },                // a studded tire: grip on ice (see "ice")
     heater:   { mass: 70, hp: 70 },                 // keeps the engine warm (see "cold")
+    jammer:   { mass: 35, hp: 50 },                 // radar jammer: turrets miss more (see "foundry")
+    degausser: { mass: 60, hp: 70 },                // shields you from the magnets (see "foundry")
   },
 
   // ---------------------------------------------------------------
@@ -223,7 +225,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40, ironHusk: 12 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -247,6 +249,8 @@ export const SETTINGS = {
     mudTire:    { unlock: 500, price: 70 },
     spikeTire:  { unlock: 600, price: 70 },
     heater:     { unlock: 600, price: 80 },
+    jammer:     { unlock: 700, price: 80 },
+    degausser:  { unlock: 700, price: 90 },
     cannon:     { unlock: 500, price: 150 },
   },
 
@@ -342,6 +346,29 @@ export const SETTINGS = {
     topSpeed: 0.35,    // top speed lost when fully frozen
   },
 
+  // ---------------------------------------------------------------
+  //  THE IRON FOUNDRY'S MACHINERY
+  // ---------------------------------------------------------------
+  foundry: {
+    turretRange: 75,     // gun towers shoot at you this close (m)
+    turretDamage: 7,     // per shell
+    turretInterval: 0.35, // seconds between shells in a burst
+    turretBurst: 4,      // shells per burst
+    turretPause: 2.2,    // seconds between bursts
+    turretMiss: 1.2,     // how far off their shells land anyway (m)
+    jammerMiss: 3,       // each Radar Jammer adds this much miss (m)
+    turretHp: 220,
+    turretSouls: 15,     // souls for blowing one up
+    crusherDamage: 45,   // caught under a crusher (x1.5)
+    cartDamage: 25,      // hit by a runaway ore cart
+    cartSpeed: 11,       // m/s
+    magnetOn: 4,         // seconds a magnet pulls...
+    magnetOff: 3.5,      // ...and rests
+    magnetPull: 5,       // how hard it pulls a bare car (m/s)
+    magnetPerPart: 0.3,  // extra pull per bolted-on part (metal!)
+    degausserShield: 0.5, // each Degausser blocks this much pull (2 = immune)
+  },
+
   // The car's own body sections: hit points and weight (kg). When one
   // breaks off it drops as that actual piece: pick it up (E) and put it
   // back in the garage, or bolt it on somewhere it doesn't belong.
@@ -418,6 +445,9 @@ export const SETTINGS = {
     drowned: { health: 60, mass: 70, chaseSpeed: 5.5, noticeRange: 70, attackDamage: 5, attackInterval: 1.2, packMin: 8, packMax: 16 },
     // Swollen gas-bag: waddles up and POPS next to you. Killing it pops it too,
     // so shoot it from afar: ramming one blows up in your face.
+    // IRON FOUNDRY
+    // Half demon, half machine: armored, a furnace in its gut, a claw and a pipe for arms.
+    ironHusk: { health: 160, mass: 260, chaseSpeed: 7, noticeRange: 80, attackDamage: 12, attackInterval: 1.4, packMin: 2, packMax: 5 },
     // ICE HELL
     // A hooded ghost of frost: fast, and its touch chills your engine (chill = cold added per hit).
     frostWraith: { health: 35, mass: 40, chaseSpeed: 13, noticeRange: 95, attackDamage: 4, attackInterval: 0.9, packMin: 4, packMax: 8, chill: 0.06 },
@@ -510,6 +540,25 @@ export const SETTINGS = {
       breathChill: 0.3,        // cold added per second in the breath
       leash: 220,
       souls: 3600,
+    },
+    // Iron Foundry: a giant demon-powered war machine. Walks like the
+    // others, stomps, slams, fires missile volleys, and flamethrowers you
+    // up close.
+    ironColossus: {
+      health: 9500,
+      walkSpeed: 4.0,
+      enragedSpeed: 6.0,
+      slamDamage: 55,
+      slamRadius: 6,
+      slamBurn: 0,
+      stompDamage: 32,
+      stompRadius: 40,
+      throwDamage: 26,        // each missile
+      throwSplash: 5,
+      flameRange: 26,         // flamethrower reach (m)
+      flameDps: 14,           // fire damage per second to what it hits
+      leash: 200,
+      souls: 4500,
     },
     bogMother: {
       health: 7000,

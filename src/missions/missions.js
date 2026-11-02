@@ -266,4 +266,42 @@ export const MISSIONS = [
     reward: { souls: 600 },
     done: [['doc', 'Ice, sorrow, and... antifreeze. Hell\'s own antifreeze. I\'m keeping some.']],
   },
+
+  // ---------------- THE IRON FOUNDRY ----------------
+  {
+    id: 'foundrySource', giver: 'doc', region: 'iron_foundry',
+    title: 'Hell Magic, Industrial',
+    brief: 'The hell-magic source is north-west, at the end of the north belt (watch the crushers).',
+    offer: [['doc', 'Hell magic, north-west. Ride the north belt most of the way. Time the crushers. Please time the crushers.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 700 },
+    done: [['doc', 'Linked. And you\'re still in one piece. Mostly one piece.']],
+  },
+  {
+    id: 'turretBreaker', giver: 'doc', region: 'iron_foundry',
+    title: 'Scrap Metal',
+    brief: 'The gun towers make the whole foundry a shooting gallery. Blow up ten of them.',
+    offer: [['doc', 'Those gun towers. Ten of them. Blow them up and the foundry gets a lot quieter. Jammers help, by the way.']],
+    goals: [{ kind: 'kill', demon: 'turret', count: 10, label: 'Destroy turrets' }],
+    reward: { souls: 900 },
+    done: [['doc', 'Good work. Their targeting chips are... ooh. I can use these.']],
+  },
+  {
+    id: 'sabotage', giver: 'doc', region: 'iron_foundry', after: ['foundrySource'],
+    title: 'Sabotage',
+    brief: 'Plant Doc\'s little surprises at three refinery valves, out among the machines.',
+    offer: [['doc', 'Three refinery valves. I\'ve marked them. Drive up to each one and I\'ll do the rest.'], ['you', 'What\'s the rest?'], ['doc', 'Science. Loud science.']],
+    goals: [{ kind: 'reach', label: 'Sabotage the valves', points: [{ x: 600, z: 150 }, { x: -720, z: -250 }, { x: 150, z: 850 }] }],
+    reward: { souls: 1100 },
+    done: [['doc', 'Three valves rigged. When the Colossus goes down, this whole place loses pressure.'], ['you', 'Loud science.'], ['doc', 'Loud science.']],
+  },
+  {
+    id: 'huskHunt', giver: 'doc', region: 'iron_foundry',
+    title: 'Spare Parts',
+    brief: 'The Iron Husks are half machine. Doc wants their parts.',
+    offer: [['doc', 'Those Iron Husks are half machine. Fifteen of them, and I can build you something nice.']],
+    goals: [{ kind: 'kill', demon: 'ironHusk', count: 15, label: 'Take down Iron Husks' }],
+    reward: { souls: 800 },
+    done: [['doc', 'Demon-forged pistons. Your engine is going to love these.']],
+  },
 ];

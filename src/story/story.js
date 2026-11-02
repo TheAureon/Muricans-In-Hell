@@ -135,6 +135,20 @@ export const RADIO = {
     ['you', 'Somebody\'s been pumping oil OUT of Hell?'],
     ['doc', 'There\'s a stamp on it. \'Property of the Throne.\' Hank, I think we\'ve found who\'s been raising gas prices.'],
   ],
+  foundryArrive: [
+    ['you', 'Doc. It\'s a factory. A whole hell-factory.'],
+    ['doc', 'The Throne\'s refinery. This is where Hell\'s oil goes. Turrets, crushers, magnets... it\'s a death trap with a parking lot.'],
+    ['doc', 'Radar Jammers make the turrets miss. Degaussers stop the magnets. I put both in the garage.'],
+  ],
+  firstBelt: [['you', 'The floor is MOVING.'], ['doc', 'Conveyor belt. Ride it or fight it. And watch for crushers over them.']],
+  firstMagnet: [['you', 'Something is PULLING the car!'], ['doc', 'Electromagnet! All that armor is metal, Hank. The more you\'ve bolted on, the harder it pulls.']],
+  nearIronColossus: [['doc', 'Big power signature in the foundry yard. It\'s... a machine. With a demon inside it, driving.']],
+  ironColossusAwake: [['you', 'It\'s a giant robot, Doc!'], ['doc', 'Missiles, a cannon AND a flamethrower. Keep moving. Shoot the furnace.']],
+  ironColossusDead: [
+    ['doc', 'It\'s scrap. And the refinery\'s order book was inside it. Every barrel goes up a canyon. To the Throne.'],
+    ['you', 'So we follow the barrels.'],
+    ['doc', 'We follow the barrels. Bring a lot of armor. The canyon... screams.'],
+  ],
   leviathanDead: [
     ['doc', 'It\'s sinking. Good riddance.'],
     ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
@@ -149,6 +163,7 @@ export const BOSS_DEATH = {
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
+  ironColossus: { line: 'SYSTEM... FAILURE.', voice: { pitch: 0.1, rate: 0.5 } }, // (placeholder: tell Claude what it should do)
   frozenWarden: { roar: true }, // (placeholder: shatters with a roar; tell Claude what it should do)
   bogMother: { line: 'My... babies...', voice: { pitch: 0.3, rate: 0.6 } }, // (placeholder: tell Claude what she should do)
 };
