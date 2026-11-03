@@ -342,4 +342,42 @@ export const MISSIONS = [
     reward: { souls: 1200 },
     done: [['doc', 'All three are pinging. The oil goes past the Harpy Queen\'s nest... and out into a desert of mirrors.']],
   },
+
+  // ---------------- THE MIRROR WASTES ----------------
+  {
+    id: 'mirrorSource', giver: 'doc', region: 'mirror_wastes',
+    title: 'Hell Magic, Reflected',
+    brief: 'The hell-magic source is in a wide alcove on the way. Maybe. If it isn\'t a reflection.',
+    offer: [['doc', 'Hell magic in an alcove up the canyon. Or a reflection of it. Only one way to find out.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 900 },
+    done: [['doc', 'Linked. It was real. I think. The teleporter says so, anyway.']],
+  },
+  {
+    id: 'mirrorBreaker', giver: 'doc', region: 'mirror_wastes',
+    title: 'Seven Years Bad Luck',
+    brief: 'Shatter fifteen REAL mirrors (ram them or shoot them). The fake ones don\'t count.',
+    offer: [['doc', 'Every real mirror out there is a window for the Throne to watch us. Break fifteen. Real ones.'], ['you', 'That\'s a lot of bad luck.'], ['doc', 'We\'re in Hell, Hank. It can\'t get much worse.']],
+    goals: [{ kind: 'kill', demon: 'mirror', count: 15, label: 'Shatter real mirrors' }],
+    reward: { souls: 1100 },
+    done: [['doc', 'Fifteen windows closed. It\'s gone very quiet in here.']],
+  },
+  {
+    id: 'portalHop', giver: 'doc', region: 'mirror_wastes', after: ['mirrorSource'],
+    title: 'Through the Looking Glass',
+    brief: 'Doc wants to map the teleport mirrors. Go through five of them.',
+    offer: [['doc', 'Those framed mirrors move you around. Go through five so I can map where they lead.']],
+    goals: [{ kind: 'teleports', count: 5, label: 'Go through teleport mirrors' }],
+    reward: { souls: 1000 },
+    done: [['doc', 'Mapped. It\'s a loop... with a door to the great mirror at the end. That\'s where it is. Whatever \'it\' is.']],
+  },
+  {
+    id: 'selfHelp', giver: 'doc', region: 'mirror_wastes',
+    title: 'Know Thyself',
+    brief: 'Your reflections keep climbing out of the mirrors. Shatter three of them.',
+    offer: [['doc', 'Three of your reflections. Shatter them. Try not to take it personally.']],
+    goals: [{ kind: 'kill', demon: 'mirrorClone', count: 3, label: 'Shatter your reflections' }],
+    reward: { souls: 1200 },
+    done: [['you', 'That felt weird.'], ['doc', 'Therapy is cheaper than gas these days. We should both try it.']],
+  },
 ];

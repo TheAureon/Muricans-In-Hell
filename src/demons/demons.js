@@ -124,6 +124,8 @@ export class Demons {
       d.hp = stats.health;
       d.stun = d.ramCd = d.flash = d.lunge = 0;
       d.charging = d.chargeCd = 0; // (a reused Bone Ram must not start mid-charge)
+      // Mirror Wastes: some demons are only reflections (harmless, shatter at a touch).
+      d.illusion = !!this.region.mirror && Math.random() < (this.region.mirror.illusions ?? 0);
       d.hatch = stats.hatchTime || 0;
       d.attackCd = Math.random() * stats.attackInterval;
       d.yaw = Math.random() * 6;
@@ -202,6 +204,7 @@ export class Demons {
   damage(d, amount, source, push) {
     if (d.isBoss || d.isTarget) return d.takeHit(amount, source, push);
     if (!d.alive) return false;
+    if (d.illusion) { this.#shatterIllusion(d); return false; }
     const dealt = Math.min(amount, d.hp);
     d.hp -= amount;
     d.flash = 1;
@@ -228,6 +231,13 @@ export class Demons {
     }
     this.#remove(d);
     if (d.def.bomber) this.#pop(d);
+  }
+
+  // A demon that was only a reflection: it shatters like glass. No souls.
+  #shatterIllusion(d) {
+    this.#remove(d);
+    this.fx.gore.explode(d.pos.clone().setY(d.pos.y + d.def.height * 0.5), new THREE.Vector3(0, 3, 0), [0xd8dce8, 0xa8acb8, 0x8a60ff], 0.7);
+    this.fx.audio.hit();
   }
 
   // How high a demon stands: on the ground, or (flyers) up in the air
@@ -386,7 +396,7 @@ export class Demons {
         if (faceCar || Math.hypot(d.vel.x, d.vel.z) > 0.5) d.yaw = lerpAngle(d.yaw, wantYaw, 1 - Math.exp(-10 * dt));
 
         // ---- Ranged attack: lob a fireball ----
-        if (d.def.behavior === 'ranged' && awake && d.stun <= 0 && d.attackCd <= 0 && dist < st.shootRange && dist > 6) {
+        if (d.def.behavior === 'ranged' && awake && !d.illusion && d.stun <= 0 && d.attackCd <= 0 && dist < st.shootRange && dist > 6) {
           d.attackCd = st.attackInterval * (0.8 + Math.random() * 0.4);
           d.lunge = 1;
           const mouth = d.pos.clone().add(new THREE.Vector3(Math.sin(d.yaw) * 0.6, 2.1, Math.cos(d.yaw) * 0.6));
@@ -411,6 +421,7 @@ export class Demons {
       if (px < -reach || pz < -reach) continue;
       const touching = px > 0 && pz > 0;
 
+      if (touching && d.illusion) { this.#shatterIllusion(d); continue; } // (you drove through a reflection)
       if (touching) {
         // Which side of the car did we hit? (the side we're least deep into)
         const hitSide = px < pz ? `${sideX},0` : `0,${sideZ}`;
@@ -476,6 +487,7 @@ export class Demons {
       }
 
       // ---- Claw / bite / smash ----
+      if (d.illusion) continue; // reflections can't hurt you
       if (st.grab && d.stun <= 0 && d.attackCd <= 0) { // a harpy: grab a part and fly off with it
         d.attackCd = st.attackInterval * (0.8 + Math.random() * 0.4);
         d.lunge = 1;

@@ -58,7 +58,7 @@ export function createScene(region) {
   scene.add(sun.target);
 
   // (Indoors, like the Iron Foundry, there's a roof instead: no sky.)
-  if (!region.indoor) {
+  if (!region.indoor && !region.noSky) {
     scene.add(createSkyDome(p));
     scene.add(createDistantMountains(p));
   }

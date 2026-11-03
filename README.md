@@ -48,7 +48,20 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 8, Screaming Canyon** (new): a long winding canyon between high
+**Region 9, the Mirror Wastes** (new): a canyon of polished glass and
+chrome under a sky that is one enormous **mirror** (on Medium/High graphics
+it really reflects the world, upside down above you). Mirrors stand along
+the road: some are real (ram them hard or shoot them to shatter them), some
+are only reflections (drive straight through). Now and then a real one
+spits out a **mirror clone**: a dark chrome copy of your own car, with your
+guns, that hunts you. Framed **teleport mirrors** across the road send you
+somewhere else, and some of the demons are only reflections too (harmless;
+they shatter). The boss, **the Reflection**, is a giant copy of your own
+car (your exact build when it wakes, three times the size) that rams you,
+fires your own guns back at you, charges, and calls its smaller
+reflections.
+
+**Region 8, Screaming Canyon**: a long winding canyon between high
 red walls, where the oil convoys go up to the Throne. **Chasms** cut across
 the canyon floor: hit the ramps fast and jump them (fall in and you're
 wrecked). Stretches of narrow **ledges** where half the floor has fallen
@@ -195,7 +208,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry, Screaming Canyon) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry, Screaming Canyon, Mirror Wastes) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

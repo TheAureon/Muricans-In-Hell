@@ -165,6 +165,21 @@ export const RADIO = {
     ['you', 'Mirrors. In Hell.'],
     ['doc', 'Whatever the Throne is, it doesn\'t want to be found. Be careful what you see out there.'],
   ],
+  mirrorArrive: [
+    ['you', 'Doc... there\'s a car up there. On the ceiling. Driving upside down.'],
+    ['doc', 'That\'s you, Hank. The whole sky is a mirror. So is everything else, by the look of it.'],
+    ['doc', 'Some of those mirrors are real and some are just reflections. And some of them are... doors. Trust nothing.'],
+  ],
+  firstFake: [['you', 'I just drove THROUGH a mirror!'], ['doc', 'A reflection of a mirror. Of course. Why not.']],
+  firstPortal: [['you', 'Where am I? I was just... over there.'], ['doc', 'Teleport mirror. Your signal jumped half a kilometer. Fascinating. Terrifying. Mostly fascinating.']],
+  firstClone: [['you', 'Doc. There\'s another me. In another me-car. Shooting at me.'], ['doc', 'A reflection that climbed out. Shoot it, it\'s glass. Just... aim for the one that isn\'t you.']],
+  nearReflection: [['doc', 'There\'s a huge mirror ahead. Empty. And something big just drove out of it.']],
+  reflectionAwake: [['you', 'It\'s MY car. It\'s my car, but HUGE.'], ['doc', 'Your exact build, Hank. Every part. It knows everything you know. Drive better than yourself.']],
+  reflectionDead: [
+    ['doc', 'It shattered. And behind that mirror... a road. Paved in gold. Going up.'],
+    ['you', 'The Throne.'],
+    ['doc', 'The Throne. Whoever sits on it has been pumping Hell dry and selling it to us at fifteen bucks a gallon. Let\'s go have a word.'],
+  ],
   leviathanDead: [
     ['doc', 'It\'s sinking. Good riddance.'],
     ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
@@ -179,6 +194,7 @@ export const BOSS_DEATH = {
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
+  reflection: { line: 'Copy... that.', voice: { pitch: 0.4, rate: 0.7 } }, // (placeholder: shadow-Hank's last words; tell Claude what it should say)
   harpyQueen: { roar: true }, // (placeholder: a last screech as she falls; tell Claude what she should do)
   ironColossus: { line: 'SYSTEM... FAILURE.', voice: { pitch: 0.1, rate: 0.5 } }, // (placeholder: tell Claude what it should do)
   frozenWarden: { roar: true }, // (placeholder: shatters with a roar; tell Claude what it should do)

@@ -383,6 +383,23 @@ export const SETTINGS = {
     slideEvery: [8, 14], // seconds between rockslides
     boulderDamage: 35,   // a boulder rolling into you
   },
+  // ---------------------------------------------------------------
+  //  MIRROR WASTES
+  // ---------------------------------------------------------------
+  mirror: {
+    monolithHp: 120,     // shots to shatter a real mirror
+    shatterKmh: 45,      // ram a real mirror this fast and it shatters
+    shatterDamage: 15,   // (and it cuts you a bit)
+    cloneChance: 0.35,   // chance a real mirror near you spits out a clone, each try
+    cloneEvery: [18, 30], // seconds between tries
+    maxClones: 2,
+    cloneHp: 260,
+    cloneSpeed: 26,      // m/s
+    cloneDamage: 22,     // ram
+    shellDamage: 6,      // each shot from a reflection's guns
+    shellMiss: 2,
+    cloneSouls: 40,      // souls for shattering a clone
+  },
   // Jump Jets: each one, while you're in the air, pushes you forward
   // (thrust, m/s per second, when you hold the gas), holds you up (lift: a
   // share of gravity) and lets you steer. Stack a few for long jumps.
@@ -584,6 +601,15 @@ export const SETTINGS = {
     },
     // Screaming Canyon: a giant winged hag. Circles, swoops to rip parts off
     // your car, shrieks shockwaves, calls flocks, perches on spires.
+    // Mirror Wastes: a giant chrome copy of your own car (3x size).
+    reflection: {
+      health: 10000,
+      scale: 3,
+      speed: 22,
+      ramDamage: 45,
+      leash: 220,
+      souls: 6000,
+    },
     harpyQueen: {
       health: 9000,
       swoopDamage: 30,        // when her swoop catches you (and she rips a part off)

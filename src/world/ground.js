@@ -4,6 +4,7 @@ import { litMaterial } from '../core/graphics.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { makeRandom } from '../core/random.js';
 import { terrain } from './terrain.js';
+import { mirrorMaterial, mirrorEnv } from './mirrorWorld.js';
 
 export function createGround(scene, physics, region, hazards = null) {
   const { RAPIER, world } = physics;
@@ -50,7 +51,10 @@ export function createGround(scene, physics, region, hazards = null) {
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const ground = new THREE.Mesh(geo, litMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
+  // (Mirror Wastes: the whole ground is polished glass and chrome)
+  const ground = new THREE.Mesh(geo, region.mirror
+    ? litMaterial({ vertexColors: true, flatShading: true, roughness: 0.12, metalness: 0.85, envMap: mirrorEnv() })
+    : litMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
   ground.receiveShadow = true;
   scene.add(ground);
 
@@ -110,6 +114,7 @@ export function createGround(scene, physics, region, hazards = null) {
   else if (arena?.style === 'glacier') createGlacier(scene, physics, arena, p, rand);
   else if (arena?.style === 'yard') createFoundryYard(scene, physics, arena, p, rand);
   else if (arena?.style === 'eyrie') createEyrie(scene, physics, arena, p, rand);
+  else if (arena?.style === 'mirrorBowl') createMirrorBowl(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half, keepClear };
@@ -151,6 +156,26 @@ function buildingGeometry(p) {
 
 // Each prop type: a shape, a material, how to sit on the ground, and its crash shape.
 const PROP_BUILDERS = {
+  // ---- Mirror Wastes ----
+  // A cluster of mirror-glass shards jutting out of the ground.
+  glassShard: () => {
+    const parts = [];
+    for (let k = 0; k < 5; k++) {
+      const h = 2 + (k % 3) * 1.4, a = k * 1.3;
+      const g = new THREE.ConeGeometry(0.5 + (k % 2) * 0.3, h, 3).translate(Math.sin(a) * 0.7, h / 2, Math.cos(a) * 0.7);
+      g.rotateZ((k - 2) * 0.12);
+      parts.push(g.toNonIndexed());
+    }
+    return {
+      geometry: mergeGeometries(parts),
+      material: mirrorMaterial(0xc8ccd8, 0.05),
+      shadows: true,
+      place: (m, s, rand) => { m.scale.set(s, s * rand.range(0.8, 1.5), s); m.rotation.y = rand() * 6; },
+      collider: (RAPIER, m) => RAPIER.ColliderDesc.cylinder(1.5 * m.scale.y, 0.9 * m.scale.x).setTranslation(0, 1.5 * m.scale.y, 0),
+      colorJitter: 0.1,
+    };
+  },
+
   // ---- Iron Foundry ----
   smokestack: (p) => {
     const steel = p.steel ?? 0x4a4c52, dark = 0x1e1e22, glowc = p.lava ?? 0xff6010;
@@ -930,4 +955,45 @@ function createEyrie(scene, physics, arena, p, rand) {
     b.castShadow = true;
     group.add(b);
   }
+}
+
+// Mirror bowl arena (Mirror Wastes): a ring of tall mirror slabs around a
+// polished floor, with a huge empty mirror frame at the far side (where the
+// Reflection climbed out).
+function createMirrorBowl(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+  const mirror = mirrorMaterial(0xd0d4e0, 0.03);
+  const frame = mirrorMaterial(0x2a2430, 0.25);
+  const glow = new THREE.MeshBasicMaterial({ color: p.lava ?? 0x9a70ff });
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  for (let n = 0; n < 20; n++) {
+    if (n % 5 === 0) continue; // gaps
+    const a = (n / 20) * Math.PI * 2;
+    const x = Math.sin(a) * (R + 6), z = Math.cos(a) * (R + 6), y = terrain.height(ax + x, az + z);
+    const h = 16 + rand() * 10;
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(14, h, 1), mirror);
+    slab.position.set(x, y + h / 2 - 0.5, z);
+    slab.rotation.y = a;
+    slab.castShadow = true;
+    group.add(slab);
+    world.createCollider(RAPIER.ColliderDesc.cuboid(7, h / 2, 0.6).setTranslation(x, y + h / 2, z).setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) }), body);
+  }
+  // The great empty frame
+  const away = Math.atan2(ax, az);
+  const fx = Math.sin(away) * (R - 10), fz = Math.cos(away) * (R - 10), fy = terrain.height(ax + fx, az + fz);
+  for (const [px, py, sx, sy] of [[-14, 15, 2, 30], [14, 15, 2, 30], [0, 30, 30, 2]]) {
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(sx, sy, 2), frame);
+    bar.position.set(fx + Math.cos(away) * px, fy + py, fz - Math.sin(away) * px);
+    bar.rotation.y = away;
+    bar.castShadow = true;
+    group.add(bar);
+  }
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(28, 0.5, 0.5), glow);
+  rim.position.set(fx, fy + 0.3, fz);
+  rim.rotation.y = away;
+  group.add(rim);
 }

@@ -66,6 +66,11 @@ export const GOALS = {
     on: { air: (g, e) => e.dt },
     show: (n, t) => `${n.toFixed(1)}/${t}s`,
   },
+  teleports: {
+    total: (g) => g.count,
+    label: () => 'Go through teleport mirrors',
+    on: { teleport: () => 1 },
+  },
   drift: {
     total: (g) => g.seconds,
     label: () => 'Drift',

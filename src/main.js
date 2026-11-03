@@ -17,6 +17,9 @@ import { BogMother } from './demons/bogMother.js';
 import { FrozenWarden } from './demons/frozenWarden.js';
 import { HarpyQueen } from './demons/harpyQueen.js';
 import { CanyonHazards } from './world/canyonHazards.js';
+import { Reflection } from './demons/reflection.js';
+import { Mirrors } from './world/mirrors.js';
+import { setupMirrorEnv, createMirrorCeiling } from './world/mirrorWorld.js';
 import { createBoardwalks } from './world/boardwalk.js';
 import { Foundry } from './world/foundry.js';
 import { createFactoryHall } from './world/factoryHall.js';
@@ -75,9 +78,11 @@ async function main() {
     showProblem('GRAPHICS CRASHED', `The browser lost the 3D graphics (it happens when the graphics card runs out of memory or its driver hiccups). Your progress is saved.${GFX.name !== 'low' ? ' If it keeps happening, try Low graphics.' : ''}`,
       [['RELOAD', () => location.reload()], ...(GFX.name !== 'low' ? [['RELOAD ON LOW GRAPHICS', reloadOnLow]] : [])]);
   });
+  if (region.mirror) setupMirrorEnv(renderer); // (the chrome reflections of the Mirror Wastes)
   const hazards = new Hazards(scene, region);
   const groundInfo = createGround(scene, physics, region, hazards);
   if (region.indoor) createFactoryHall(scene, physics, region, groundInfo.keepClear); // (the Iron Foundry's roof, columns and walls)
+  if (region.mirror) createMirrorCeiling(scene, region); // (the Mirror Wastes' mirrored sky)
   const water = terrain.waterLevel != null ? new Water(scene, physics, region) : null; // (Flooded City)
   // Blood Swamp: pools of blood where the mud is deepest, and boardwalks.
   const blood = terrain.bogLevel != null ? new Water(scene, physics, region, { level: terrain.bogLevel, color: region.palette.blood, opacity: 0.86 }) : null;
@@ -141,8 +146,25 @@ async function main() {
   }) : null;
   if (foundry) demons.targets = foundry.turrets; // (shootable like demons)
   // Screaming Canyon: wind gusts and rockslides (the chasms are in the terrain).
-  const canyonHazards = region.canyon ? new CanyonHazards(scene, region, { dust, gore, audio, chase, demons }) : null;
+  const canyonHazards = region.canyon && region.canyon.hazards !== false ? new CanyonHazards(scene, region, { dust, gore, audio, chase, demons }) : null;
   if (canyonHazards) canyonHazards.onSlide = () => { if (mode === 'play') radio.say('firstRockslide'); };
+  // Mirror Wastes: mirrors (real and fake), mirror clones, teleport mirrors.
+  const mirrors = region.mirror ? new Mirrors(scene, physics, region, car, {
+    projectiles, gore, sparks, audio, chase, hud,
+    onCloneKilled: (c) => {
+      if (mode !== 'play') return;
+      stats.kill('gun');
+      souls.burst(c.pos.clone().setY(c.pos.y + 1), SETTINGS.mirror.cloneSouls ?? 40);
+      jobs.emit('kill', { type: 'mirrorClone', source: 'gun' });
+    },
+  }) : null;
+  if (mirrors) {
+    Object.defineProperty(demons, 'targets', { get: () => mirrors.targets }); // (shootable like demons)
+    mirrors.onTeleport = () => { radio.say('firstPortal'); jobs.emit('teleport'); };
+    mirrors.onFake = () => radio.say('firstFake');
+    mirrors.onClone = () => radio.say('firstClone');
+    mirrors.onShatter = () => { if (mode === 'play') jobs.emit('kill', { type: 'mirror', source: 'gun' }); };
+  }
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   if (SETTINGS.dev.creative && creativeStash) {
     // Came here by a creative-mode jump: bring the creative build along.
@@ -198,10 +220,11 @@ async function main() {
 
   // The region's boss (and what happens when you beat it).
   // (Most bosses walk; the Leviathan swims and the Bog Mother squats in her pool.)
-  const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden, harpyQueen: HarpyQueen }[region.boss?.type] || Boss;
+  const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden, harpyQueen: HarpyQueen, reflection: Reflection }[region.boss?.type] || Boss;
   const boss = region.boss ? new BossKind(scene, physics, {
     region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards, flames,
     onShriek: () => canyonHazards?.rockslide(car), // (the Harpy Queen's shriek shakes rocks loose)
+    sparks, mirrors,
     dust: water || blood ? spray : dust, // (splashes in the water / blood)
     // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
     onDying: () => {
@@ -358,6 +381,7 @@ async function main() {
       hazards.clearPools();
       foundry?.reset();
       canyonHazards?.reset();
+      mirrors?.reset();
       souls.clear();
       scrap.clear();
       stats.reset();
@@ -449,6 +473,7 @@ async function main() {
       demons.fixedUpdate(PHYSICS_STEP, car);
       foundry?.fixedUpdate(PHYSICS_STEP, car);
       if (playing) canyonHazards?.fixedUpdate(PHYSICS_STEP, car);
+      if (playing) mirrors?.fixedUpdate(PHYSICS_STEP);
       if (!SETTINGS.dev.noEnemies) boss?.fixedUpdate(PHYSICS_STEP, car);
       car.applyCrashDamage();
       accumulator -= PHYSICS_STEP;
@@ -476,6 +501,7 @@ async function main() {
         car.spawn.copy(respawnPoint());
         foundry?.reset();
         canyonHazards?.reset();
+        mirrors?.reset();
         car.respawn();
         scrap.clear();
         projectiles.clear();
@@ -507,6 +533,7 @@ async function main() {
     car.render(alpha, dt, aimPoint);
     demons.render(alpha, dt);
     if (!SETTINGS.dev.noEnemies) boss?.render(alpha, dt);
+    mirrors?.render(alpha, dt);
     if (!playing) director.update(dt);
     else {
       chase.update(car, dt, input.wheel);
@@ -770,7 +797,7 @@ async function main() {
   });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors };
 }
 
 // A full-screen message with buttons (graphics trouble).
