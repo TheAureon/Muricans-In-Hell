@@ -48,7 +48,19 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 7, the Iron Foundry** (new): the Throne's industrial hell where
+**Region 8, Screaming Canyon** (new): a long winding canyon between high
+red walls, where the oil convoys go up to the Throne. **Chasms** cut across
+the canyon floor: hit the ramps fast and jump them (fall in and you're
+wrecked). Stretches of narrow **ledges** where half the floor has fallen
+away. **Screaming wind** gusts shove you sideways (much harder in the air),
+and **rockslides** send boulders crashing down the walls at you. New part:
+**Jump Jets** (thrust, lift and steering in the air). New demon: **Harpies**,
+flying hags that swoop down and rip parts off your car. The boss, **the
+Harpy Queen**, nests in a great bowl at the canyon's end: she circles,
+swoops to rip parts off, shrieks shockwaves that bring rocks down, calls
+her flock, and perches on the rock spires (shoot her then).
+
+**Region 7, the Iron Foundry**: the Throne's industrial hell where
 Hell's oil is refined, all inside one gigantic, low, crowded factory hall:
 a steel roof 24 m up with trusses and red skylights, a forest of support
 columns, pipe runs along the ceiling, pipe bridges you drive under, gantry
@@ -183,7 +195,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry, Screaming Canyon) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

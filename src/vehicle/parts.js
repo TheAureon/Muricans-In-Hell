@@ -236,6 +236,19 @@ export const PART_TYPES = {
       add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.4, 6), M.cool, 0, 0.05, 0);
     },
   },
+  jumpJet: {
+    name: 'Jump Jet',
+    icon: '🚀',
+    desc: 'A rocket nozzle that fires while you\'re in the air: forward thrust (hold gas), a little lift, and air steering. Stack them for long jumps.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.3, 0.16, 0.3), M.dark, 0, -0.17, 0);
+      add(g, new THREE.CylinderGeometry(0.16, 0.12, 0.3, 8), M.steel, 0, 0, 0);
+      add(g, new THREE.CylinderGeometry(0.12, 0.2, 0.18, 8), M.dark, 0, 0.22, 0);   // bell nozzle
+      const flame = add(g, new THREE.ConeGeometry(0.13, 0.5, 8), M.flame, 0, 0.55, 0);
+      flame.visible = false;
+      g.userData.jetFlame = flame;
+    },
+  },
   weight: {
     name: 'Lead Weight',
     icon: '🏋️',

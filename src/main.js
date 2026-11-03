@@ -15,6 +15,8 @@ import { Boss } from './demons/boss.js';
 import { Leviathan } from './demons/leviathan.js';
 import { BogMother } from './demons/bogMother.js';
 import { FrozenWarden } from './demons/frozenWarden.js';
+import { HarpyQueen } from './demons/harpyQueen.js';
+import { CanyonHazards } from './world/canyonHazards.js';
 import { createBoardwalks } from './world/boardwalk.js';
 import { Foundry } from './world/foundry.js';
 import { createFactoryHall } from './world/factoryHall.js';
@@ -138,6 +140,9 @@ async function main() {
     },
   }) : null;
   if (foundry) demons.targets = foundry.turrets; // (shootable like demons)
+  // Screaming Canyon: wind gusts and rockslides (the chasms are in the terrain).
+  const canyonHazards = region.canyon ? new CanyonHazards(scene, region, { dust, gore, audio, chase, demons }) : null;
+  if (canyonHazards) canyonHazards.onSlide = () => { if (mode === 'play') radio.say('firstRockslide'); };
   const bullets = new Bullets(scene, { demons, dust, gore, audio });
   if (SETTINGS.dev.creative && creativeStash) {
     // Came here by a creative-mode jump: bring the creative build along.
@@ -193,9 +198,10 @@ async function main() {
 
   // The region's boss (and what happens when you beat it).
   // (Most bosses walk; the Leviathan swims and the Bog Mother squats in her pool.)
-  const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden }[region.boss?.type] || Boss;
+  const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden, harpyQueen: HarpyQueen }[region.boss?.type] || Boss;
   const boss = region.boss ? new BossKind(scene, physics, {
     region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards, flames,
+    onShriek: () => canyonHazards?.rockslide(car), // (the Harpy Queen's shriek shakes rocks loose)
     dust: water || blood ? spray : dust, // (splashes in the water / blood)
     // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
     onDying: () => {
@@ -351,6 +357,7 @@ async function main() {
       gore.clear();
       hazards.clearPools();
       foundry?.reset();
+      canyonHazards?.reset();
       souls.clear();
       scrap.clear();
       stats.reset();
@@ -441,6 +448,7 @@ async function main() {
       car.afterStep(); // crash damage from hitting rocks
       demons.fixedUpdate(PHYSICS_STEP, car);
       foundry?.fixedUpdate(PHYSICS_STEP, car);
+      if (playing) canyonHazards?.fixedUpdate(PHYSICS_STEP, car);
       if (!SETTINGS.dev.noEnemies) boss?.fixedUpdate(PHYSICS_STEP, car);
       car.applyCrashDamage();
       accumulator -= PHYSICS_STEP;
@@ -467,6 +475,7 @@ async function main() {
         // is remembered.
         car.spawn.copy(respawnPoint());
         foundry?.reset();
+        canyonHazards?.reset();
         car.respawn();
         scrap.clear();
         projectiles.clear();
@@ -607,6 +616,9 @@ async function main() {
       if (car.cold > 0.5) radio.say('firstCold');
       if (foundry?.onBelt) radio.say('firstBelt');
       if (foundry?.pulled) radio.say('firstMagnet');
+      if (canyonHazards?.windBlowing) radio.say('firstWind');
+      if (terrain.canyon && !car.grounded && car.speed > 15) radio.say('firstJump');
+      if (terrain.canyon && !car.grounded && !car.wrecked) jobs.emit('air', { dt });
       if (car.water === 'float') { radio.say('firstFloat'); if (!car.wrecked) jobs.emit('float', { dt }); }
       hud.garageButton(canGarage() && !car.wrecked, canGarage() ? 'Open the garage (G)' : base ? 'The garage is at base (drive home)' : 'The garage is at base (teleport home from a teleporter pad)');
       if (boss && !SETTINGS.dev.noEnemies) {
@@ -674,6 +686,8 @@ async function main() {
       // Stuck in the blood-mud: say why, and what helps.
       const n = car.stats.mudTires || 0;
       hud.water('🩸 STUCK IN THE MUD 🩸', `Too heavy (${Math.round(car.totalMass)} kg)! Go lighter, bolt on Mud Tires (${n}/4), or use the boardwalks`, 'sink');
+    } else if ((canyonHazards?.windWarning || canyonHazards?.windBlowing) && !car.wrecked && playing) {
+      hud.water('💨 SCREAMING WIND 💨', canyonHazards.windWarning ? 'A gust is coming: brace yourself!' : `It's shoving you sideways${car.grounded ? '' : ' (much harder in the air!)'}`, 'sink');
     } else if (foundry?.pulled && !car.wrecked && playing) {
       // A magnet has hold of the car.
       hud.water('🧲 MAGNET PULL 🧲', `All your metal parts (${car.stats.count}) make it pull harder · Degaussers ${car.stats.degaussers || 0}/2`, 'sink');
@@ -693,6 +707,13 @@ async function main() {
     }
     water?.update(dt);
     foundry?.update(dt);
+    canyonHazards?.update(dt, car.position);
+    // Down a chasm: that's the end of this car.
+    if (terrain.canyon && playing && !car.wrecked && car.currPos.y < SETTINGS.canyon.fallDepth) {
+      car.wrecked = true;
+      hud.toast('Fell into the chasm!', 'bad');
+      radio.say('firstFall');
+    }
     blood?.update(dt);
     iceSheet?.update(dt);
     spray.update(dt);

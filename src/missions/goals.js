@@ -60,6 +60,12 @@ export const GOALS = {
     on: { float: (g, e) => e.dt },
     show: (n, t) => `${Math.floor(n)}/${t}s`,
   },
+  airTime: {
+    total: (g) => g.seconds,
+    label: () => 'Time in the air',
+    on: { air: (g, e) => e.dt },
+    show: (n, t) => `${n.toFixed(1)}/${t}s`,
+  },
   drift: {
     total: (g) => g.seconds,
     label: () => 'Drift',

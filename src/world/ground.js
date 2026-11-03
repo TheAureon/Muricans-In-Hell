@@ -38,6 +38,7 @@ export function createGround(scene, physics, region, hazards = null) {
       const h = (pos.getY(i0) + pos.getY(i0 + 1) + pos.getY(i0 + 2)) / 3;
       if (ny < 0.82) c.lerp(cliff, Math.min(1, (0.82 - ny) * 5));
       c.lerp(peak, Math.min(0.7, Math.max(0, (h - 35) / 60)));
+      if (h < -15) c.lerp(new THREE.Color(p.abyss ?? 0x100404), Math.min(1, (-15 - h) / 30)); // down a chasm: dark, with a red glow far below
       if (terrain.waterLevel != null && h < terrain.waterLevel + 0.1) c.lerp(new THREE.Color(p.bed ?? 0x1a2018), 0.8); // muddy bottom
       if (terrain.bogLevel != null) { // blood-mud: dark and wet
         const cx = (pos.getX(i0) + pos.getX(i0 + 1) + pos.getX(i0 + 2)) / 3, cz = (pos.getZ(i0) + pos.getZ(i0 + 1) + pos.getZ(i0 + 2)) / 3;
@@ -56,7 +57,7 @@ export function createGround(scene, physics, region, hazards = null) {
   // ---- Physics ground: one big flat slab ----
   // (Under water regions it sits below the deepest water: the car follows
   // the carved ground itself, like hills.)
-  const floorY = terrain.waterLevel != null || terrain.bogLevel != null ? -6 : 0;
+  const floorY = terrain.canyon ? -100 : terrain.waterLevel != null || terrain.bogLevel != null ? -6 : 0;
   const groundBody = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(0, floorY - 1, 0));
   world.createCollider(RAPIER.ColliderDesc.cuboid(size / 2, 1, size / 2).setFriction(0.8), groundBody);
 
@@ -90,6 +91,7 @@ export function createGround(scene, physics, region, hazards = null) {
     return Math.hypot(x - ax - tx * t, z - az - tz * t) < l.pad;
   });
   const keepClear = (x, z) => x * x + z * z < region.clearRadiusAtStart ** 2 || onMachinery(x, z) ||
+    (terrain.canyon && terrain.canyon.pit(x, z)) ||
     (arena && (x - arena.x) ** 2 + (z - arena.z) ** 2 < (arena.radius + 15) ** 2) ||
     (arena && gateOff && (x - gateX) ** 2 + (z - gateZ) ** 2 < 16 ** 2) ||
     (hazards && hazards.lavaAt(x, z, 4)) ||
@@ -107,6 +109,7 @@ export function createGround(scene, physics, region, hazards = null) {
   else if (arena?.style === 'pool') createBogPool(scene, physics, arena, p, rand);
   else if (arena?.style === 'glacier') createGlacier(scene, physics, arena, p, rand);
   else if (arena?.style === 'yard') createFoundryYard(scene, physics, arena, p, rand);
+  else if (arena?.style === 'eyrie') createEyrie(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half, keepClear };
@@ -881,5 +884,50 @@ function createFoundryYard(scene, physics, arena, p, rand) {
     top.position.set(x, h + 0.1, z);
     group.add(top);
     world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 2.2).setTranslation(x, h / 2, z), body);
+  }
+}
+
+// Eyrie arena (Screaming Canyon): the Harpy Queen's nest. Tall rock
+// spires around the bowl (she perches on them), each crowned with a nest
+// of bones, and a giant nest in the middle.
+function createEyrie(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  group.position.set(ax, 0, az);
+  scene.add(group);
+  const rock = litMaterial({ color: p.cliff ?? 0x5a3020, flatShading: true, roughness: 0.95 });
+  const bone = litMaterial({ color: p.bone, flatShading: true, roughness: 0.8 });
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, 0, az));
+  const spire = new THREE.CylinderGeometry(2.2, 5, 1, 6).translate(0, 0.5, 0);
+  arena.spires = [];
+  for (let n = 0; n < 7; n++) {
+    const a = (n / 7) * Math.PI * 2 + 0.3;
+    const r = R * (0.55 + (n % 2) * 0.2);
+    const x = Math.sin(a) * r, z = Math.cos(a) * r, h = 16 + (n % 3) * 6;
+    const y = terrain.height(ax + x, az + z);
+    const m = new THREE.Mesh(spire, rock);
+    m.position.set(x, y, z);
+    m.scale.set(1, h, 1);
+    m.castShadow = true;
+    group.add(m);
+    for (let k = 0; k < 8; k++) { // a nest of bones on top
+      const b = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 4, 4), bone);
+      b.position.set(x + Math.sin(k) * 1.6, y + h + 0.3, z + Math.cos(k) * 1.6);
+      b.rotation.set(Math.PI / 2, k * 0.8, 0.3);
+      group.add(b);
+    }
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 3.6).setTranslation(x, y + h / 2, z), body);
+    arena.spires.push({ x: ax + x, z: az + z, top: y + h + 1 });
+  }
+  // The great nest in the middle: a ring of huge bones and branches
+  const wood = litMaterial({ color: p.deadTree, flatShading: true, roughness: 1 });
+  for (let k = 0; k < 40; k++) {
+    const a = (k / 40) * Math.PI * 2;
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 12, 5), k % 3 ? wood : bone);
+    b.position.set(Math.sin(a) * 9, terrain.height(ax, az) + 1.2 + (k % 2) * 0.8, Math.cos(a) * 9);
+    b.rotation.set(Math.PI / 2 + (rand() - 0.5) * 0.4, a + Math.PI / 2 + (rand() - 0.5) * 0.6, 0);
+    b.castShadow = true;
+    group.add(b);
   }
 }

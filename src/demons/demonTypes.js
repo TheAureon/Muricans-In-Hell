@@ -9,6 +9,7 @@
 //   ramBurn:  true = ramming it sets the side you hit it with on fire
 //   charger:  true = lowers its head and charges at you (double speed, big hit)
 //   bomber:   true = pops when it dies or reaches you (popDamage in a popRadius)
+//   flying:   true = flies (flyHeight up) and swoops down when close
 //   (stats with burnDps/burnTime = its attacks set your car on fire)
 //   anim:     how it moves ('waddle', 'gallop', 'stomp', 'sway', 'roll'):
 //             the demon shader swings its legs/arms/head/tail to match
@@ -21,7 +22,7 @@ import {
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
   createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
   createDrownedGeometry, DROWNED_GORE, createBloaterGeometry, BLOATER_GORE,
-  createIronHuskGeometry, IRON_HUSK_GORE,
+  createIronHuskGeometry, IRON_HUSK_GORE, createHarpyGeometry, HARPY_GORE,
   createFrostWraithGeometry, FROST_WRAITH_GORE, createFrostBruteGeometry, FROST_BRUTE_GORE,
   createLeechGeometry, LEECH_GORE, createMireToadGeometry, MIRE_TOAD_GORE, createEggSacGeometry, EGG_SAC_GORE,
 } from './demonModels.js';
@@ -95,6 +96,13 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.bloater,
     createGeometry: createBloaterGeometry, goreColors: BLOATER_GORE,
     radius: 0.85, height: 2.2, poolSize: 20,
+  },
+  // ---- Screaming Canyon ----
+  harpy: {
+    name: 'Harpy', behavior: 'melee', anim: 'sway', flying: true,
+    stats: () => SETTINGS.demons.harpy,
+    createGeometry: createHarpyGeometry, goreColors: HARPY_GORE,
+    radius: 0.6, height: 2.0, poolSize: 60,
   },
   // ---- Iron Foundry ----
   ironHusk: {

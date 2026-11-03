@@ -455,3 +455,38 @@ export function createIronHuskGeometry() {
     ]),
   ]);
 }
+
+// HARPY: a flying hag. Grey skin, a mane of white hair, glowing eyes, big
+// black-purple feathered wings for arms, bird legs with hooked talons.
+export const HARPY_GORE = [0x9aa0a8, 0x2a1a3a, 0xe8e4dc, 0x7a1010];
+export function createHarpyGeometry() {
+  const SKIN = 0x9aa0a8, FEATHER = 0x2a1a3a, FEATHER2 = 0x40284e, HAIR = 0xe8e4dc, TALON = 0x1a1410, EYE = glow(0xffe060), MOUTH = 0x1a0606;
+  const wing = (s) => {
+    const parts = [piece(box(1.0, 0.1, 0.16), SKIN, s * 0.65, 1.55, -0.05)];   // arm bone
+    for (let k = 0; k < 6; k++) {                                            // long feathers, fanning out
+      const len = 0.9 - k * 0.08;
+      parts.push(piece(box(0.22, 0.04, len), k % 2 ? FEATHER : FEATHER2, s * (0.3 + k * 0.2), 1.52, -0.05 - len / 2, 0, -s * (0.1 + k * 0.05), 0));
+    }
+    parts.push(...[0, 1, 2].map((k) => piece(cone(0.025, 0.18, 3), TALON, s * 1.18, 1.55, 0.05 + k * 0.05, Math.PI / 2))); // claws at the wing tip
+    return limb(s > 0 ? PART.wingL : PART.wingR, [s * 0.18, 1.55, -0.05], parts);
+  };
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.12, 1.05, 0], [
+      piece(box(0.12, 0.35, 0.14), FEATHER, s * 0.12, 0.9, 0),               // feathered thigh
+      piece(box(0.05, 0.4, 0.05), TALON, s * 0.12, 0.55, 0.04),              // bird shin
+      ...[-0.06, 0, 0.06].map((dx) => piece(cone(0.025, 0.2, 3), TALON, s * 0.12 + dx, 0.33, 0.12, Math.PI / 2 + 0.6)), // talons
+    ])),
+    piece(box(0.36, 0.5, 0.26), SKIN, 0, 1.35, 0),                            // gaunt body
+    piece(box(0.4, 0.3, 0.3), FEATHER, 0, 1.1, 0),                            // feathered hips
+    piece(cone(0.2, 0.6, 4), FEATHER, 0, 1.0, -0.3, -1.2),                     // tail feathers
+    ...wing(1), ...wing(-1),
+    ...limb(PART.head, [0, 1.65, 0.03], [
+      piece(box(0.24, 0.28, 0.24), SKIN, 0, 1.8, 0.05),
+      piece(box(0.16, 0.06, 0.04), MOUTH, 0, 1.72, 0.18),
+      piece(cone(0.04, 0.16, 3), SKIN, 0, 1.8, 0.2, Math.PI / 2),            // hooked nose
+      piece(box(0.06, 0.04, 0.03), EYE, 0.06, 1.85, 0.17), piece(box(0.06, 0.04, 0.03), EYE, -0.06, 1.85, 0.17),
+      piece(box(0.32, 0.5, 0.18), HAIR, 0, 1.75, -0.1),                       // wild white hair
+      piece(box(0.3, 0.08, 0.3), HAIR, 0, 1.96, 0.02),
+    ]),
+  ]);
+}

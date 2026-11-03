@@ -218,6 +218,7 @@ export const SETTINGS = {
     heater:   { mass: 70, hp: 70 },                 // keeps the engine warm (see "cold")
     jammer:   { mass: 35, hp: 50 },                 // radar jammer: turrets miss more (see "foundry")
     degausser: { mass: 60, hp: 70 },                // shields you from the magnets (see "foundry")
+    jumpJet:  { mass: 45, hp: 60 },                 // thrust, lift and steering in the AIR (see "canyon")
   },
 
   // ---------------------------------------------------------------
@@ -225,7 +226,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40, ironHusk: 12 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40, ironHusk: 12, harpy: 6 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -251,6 +252,7 @@ export const SETTINGS = {
     heater:     { unlock: 600, price: 80 },
     jammer:     { unlock: 700, price: 80 },
     degausser:  { unlock: 700, price: 90 },
+    jumpJet:    { unlock: 800, price: 90 },
     cannon:     { unlock: 500, price: 150 },
   },
 
@@ -369,6 +371,23 @@ export const SETTINGS = {
     degausserShield: 0.5, // each Degausser blocks this much pull (2 = immune)
   },
 
+  // ---------------------------------------------------------------
+  //  SCREAMING CANYON
+  // ---------------------------------------------------------------
+  canyon: {
+    fallDepth: -12,      // fall below this height (down a chasm) and you're wrecked
+    windEvery: [7, 13],  // seconds between screaming gusts (random in this range)
+    windTime: 2.5,       // how long a gust blows
+    windPush: 6,         // how hard it shoves you sideways (m/s)
+    windAirMult: 2.2,    // ...and how much harder while you're in the air
+    slideEvery: [8, 14], // seconds between rockslides
+    boulderDamage: 35,   // a boulder rolling into you
+  },
+  // Jump Jets: each one, while you're in the air, pushes you forward
+  // (thrust, m/s per second, when you hold the gas), holds you up (lift: a
+  // share of gravity) and lets you steer. Stack a few for long jumps.
+  jets: { thrust: 9, lift: 0.15, steer: 0.8 },
+
   // The car's own body sections: hit points and weight (kg). When one
   // breaks off it drops as that actual piece: pick it up (E) and put it
   // back in the garage, or bolt it on somewhere it doesn't belong.
@@ -445,6 +464,9 @@ export const SETTINGS = {
     drowned: { health: 60, mass: 70, chaseSpeed: 5.5, noticeRange: 70, attackDamage: 5, attackInterval: 1.2, packMin: 8, packMax: 16 },
     // Swollen gas-bag: waddles up and POPS next to you. Killing it pops it too,
     // so shoot it from afar: ramming one blows up in your face.
+    // SCREAMING CANYON
+    // Flying hags: circle up high, then swoop down and RIP A PART OFF your car (grab).
+    harpy: { health: 40, mass: 30, chaseSpeed: 15, noticeRange: 130, attackDamage: 8, attackInterval: 2.6, packMin: 3, packMax: 6, flyHeight: 8, grab: true },
     // IRON FOUNDRY
     // Half demon, half machine: armored, a furnace in its gut, a claw and a pipe for arms.
     ironHusk: { health: 160, mass: 260, chaseSpeed: 7, noticeRange: 80, attackDamage: 12, attackInterval: 1.4, packMin: 2, packMax: 5 },
@@ -559,6 +581,17 @@ export const SETTINGS = {
       flameDps: 14,           // fire damage per second to what it hits
       leash: 200,
       souls: 4500,
+    },
+    // Screaming Canyon: a giant winged hag. Circles, swoops to rip parts off
+    // your car, shrieks shockwaves, calls flocks, perches on spires.
+    harpyQueen: {
+      health: 9000,
+      swoopDamage: 30,        // when her swoop catches you (and she rips a part off)
+      swoopSpeed: 38,         // m/s
+      shriekDamage: 25,       // the shockwave of her shriek
+      shriekRadius: 45,
+      leash: 220,
+      souls: 5200,
     },
     bogMother: {
       health: 7000,

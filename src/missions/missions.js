@@ -304,4 +304,42 @@ export const MISSIONS = [
     reward: { souls: 800 },
     done: [['doc', 'Demon-forged pistons. Your engine is going to love these.']],
   },
+
+  // ---------------- SCREAMING CANYON ----------------
+  {
+    id: 'canyonSource', giver: 'doc', region: 'screaming_canyon',
+    title: 'Hell Magic, Windy',
+    brief: 'The hell-magic source is in a wide alcove halfway up the canyon. Jump the chasms to get there.',
+    offer: [['doc', 'Hell magic, in an alcove halfway up the canyon. Jump the chasms. All of them. Don\'t fall in any.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 800 },
+    done: [['doc', 'Linked. Now if you fall in a chasm, at least you\'ll come back somewhere halfway.']],
+  },
+  {
+    id: 'airtime', giver: 'doc', region: 'screaming_canyon',
+    title: 'Frequent Flyer',
+    brief: 'Doc is studying the canyon\'s updrafts. Spend 15 seconds in the air (jumps add up).',
+    offer: [['doc', 'The updrafts here are fascinating. Spend fifteen seconds in the air. Total. Jumps count.'], ['you', 'Finally a job I was born for.']],
+    goals: [{ kind: 'airTime', seconds: 15, label: 'Time in the air' }],
+    reward: { souls: 800 },
+    done: [['doc', 'Fifteen seconds of flight. In a muscle car. I\'m writing a paper.']],
+  },
+  {
+    id: 'harpyHunt', giver: 'doc', region: 'screaming_canyon',
+    title: 'Pest Control',
+    brief: 'The harpies keep stealing parts off the car. Bring down twenty of them.',
+    offer: [['doc', 'The harpies are stealing our parts. OUR parts, Hank. Shoot down twenty of them.']],
+    goals: [{ kind: 'kill', demon: 'harpy', count: 20, label: 'Shoot down harpies' }],
+    reward: { souls: 900 },
+    done: [['doc', 'And they had our parts in their nests. And somebody\'s wedding ring. And a trombone.']],
+  },
+  {
+    id: 'convoyTrail', giver: 'doc', region: 'screaming_canyon', after: ['canyonSource'],
+    title: 'Follow the Barrels',
+    brief: 'Plant trackers at three spots along the convoy route, deep in the canyon.',
+    offer: [['doc', 'The barrel convoys go up this canyon. Plant three trackers along the route and we\'ll see exactly where the oil goes.']],
+    goals: [{ kind: 'reach', label: 'Plant trackers', points: [{ x: -600, z: -400 }, { x: 100, z: -850 }, { x: 820, z: -330 }] }],
+    reward: { souls: 1200 },
+    done: [['doc', 'All three are pinging. The oil goes past the Harpy Queen\'s nest... and out into a desert of mirrors.']],
+  },
 ];

@@ -112,6 +112,7 @@ export class Car {
     this.partObjects = new Map(); // part cell key -> [3D objects]
     this.saws = [];
     this.fans = [];
+    this.jetFlames = [];
     // Fire: pieces that are burning (piece id -> { t: seconds left, dps }).
     this.burns = new Map();
     this.onLava = 0;      // 0..1: how much of the car is over lava right now
@@ -147,6 +148,7 @@ export class Car {
     this.boosterFlames = [];
     this.saws = [];
     this.fans = [];
+    this.jetFlames = [];
     const up = new THREE.Vector3(0, 1, 0);
 
     // Body sections: hide the ones that fell off
@@ -178,6 +180,7 @@ export class Car {
       if (g.userData.flame) this.boosterFlames.push(g.userData.flame);
       if (g.userData.saw) this.saws.push(g.userData.saw);
       if (g.userData.fan) this.fans.push(g.userData.fan);
+      if (g.userData.jetFlame) this.jetFlames.push(g.userData.jetFlame);
       if (def?.isGun) {
         const t = createGunTurret(def.weapon || 'gun');
         t.group.position.set(c.x + n.x * 0.12, c.y + n.y * 0.12 + 0.05, c.z + n.z * 0.12);
@@ -224,6 +227,16 @@ export class Car {
       list.push({ id: 'p:' + p.key, kind: 'part', key: p.key, hp: p.hp, maxHp: pieceStats(p.type).hp, center, cells });
     }
     return list;
+  }
+
+  // A harpy grabs a bolted-on part and rips it right off (if there are
+  // any; otherwise it's just a hit). Returns true if something came off.
+  grabPart(worldPoint, fallbackDamage) {
+    const parts = this.pieces().filter((pc) => pc.kind === 'part');
+    if (!parts.length) { this.takeDamage(fallbackDamage, worldPoint); return false; }
+    const pc = parts[Math.floor(Math.random() * parts.length)];
+    this.damagePiece(pc, pc.hp + 1);
+    return true;
   }
 
   // Something hit the car at this world position: the nearest piece takes it.
@@ -649,7 +662,15 @@ export class Car {
 
       _v.copy(_fwd).multiplyScalar(vf).addScaledVector(_right, vs);
       this.body.setLinvel({ x: _v.x + slideX, y: lv.y, z: _v.z + slideZ }, true);
+    } else if (this.stats.jets && !this.wrecked) {
+      // In the air with Jump Jets: thrust, lift and air steering.
+      const J = S.jets, n = this.stats.jets;
+      const push = this.throttle > 0 ? J.thrust * n * dt : 0;
+      this.body.setLinvel({ x: lv.x + _fwd.x * push, y: lv.y + S.car.gravity * Math.min(0.6, J.lift * n) * dt, z: lv.z + _fwd.z * push }, true);
+      this.body.setAngvel({ x: 0, y: -this.steer * J.steer * Math.min(2, n) , z: 0 }, true);
+      this.jetsFiring = this.throttle > 0;
     }
+    if (this.grounded || !this.stats.jets) this.jetsFiring = false;
 
     this.forwardSpeed = vf;
     this.sidewaysSpeed = vs;
@@ -781,6 +802,7 @@ export class Car {
     // --- Saw blades spin, tread rollers roll ---
     for (const s of this.saws) s.rotation.z += dt * 25;
     for (const f of this.fans) f.rotation.y += dt * 30;
+    for (const f of this.jetFlames) { f.visible = !!this.jetsFiring; f.scale.y = 0.8 + Math.random() * 0.5; }
     for (const t of this.model.treads) if (t.group.visible) for (const r of t.rollers) r.rotation.x = this.wheelSpin;
 
     // --- Booster flames flicker when on the gas ---

@@ -116,7 +116,9 @@ export class Demons {
       const a = Math.random() * Math.PI * 2;
       const r = Math.sqrt(Math.random()) * (2 + count * 0.6 * t.def.radius);
       d.pos.set(center.x + Math.cos(a) * r, 0, center.z + Math.sin(a) * r);
-      d.pos.y = terrain.height(d.pos.x, d.pos.z);
+      if (terrain.canyon?.pit(d.pos.x, d.pos.z)) d.pos.set(center.x, 0, center.z); // (not down a chasm)
+      d.alt = undefined;
+      d.pos.y = this.#groundY(d);
       d.prev.copy(d.pos);
       d.vel.set(0, 0, 0);
       d.hp = stats.health;
@@ -155,6 +157,7 @@ export class Demons {
       c.x = THREE.MathUtils.clamp(c.x, -this.mapHalf, this.mapHalf);
       c.z = THREE.MathUtils.clamp(c.z, -this.mapHalf, this.mapHalf);
       if (Math.hypot(c.x - carPos.x, c.z - carPos.z) < 50) continue;
+      if (!terrain.spawnable(c.x, c.z)) continue; // (Screaming Canyon: only on the canyon floor)
       // Keep the arena clear (and the lava moat around an island arena).
       if (this.boss && Math.hypot(c.x - this.boss.arenaCenter.x, c.z - this.boss.arenaCenter.z) < this.boss.arenaRadius + 20 + (this.region.boss?.arena?.moat || 0)) continue;
       if (this.hazards?.lavaAt(c.x, c.z, 8)) continue; // not in a lava river
@@ -225,6 +228,13 @@ export class Demons {
     }
     this.#remove(d);
     if (d.def.bomber) this.#pop(d);
+  }
+
+  // How high a demon stands: on the ground, or (flyers) up in the air
+  // (never down in a chasm).
+  #groundY(d) {
+    const g = terrain.height(d.pos.x, d.pos.z);
+    return d.def.flying ? Math.max(g, -1) + (d.alt ?? d.def.stats().flyHeight) + Math.sin(d.phase * 0.5) * 0.4 : g;
   }
 
   // A Bloater bursts: hurts the car and every demon nearby (chain reactions!).
@@ -308,7 +318,8 @@ export class Demons {
 
       // ---- Flying through the air after a hit ----
       const gy = terrain.height(d.pos.x, d.pos.z);
-      d.airborne = d.pos.y > gy + 0.01 || d.vel.y > 0;
+      if (d.def.flying) d.vel.y = 0; // (flyers don't tumble, they just get shoved)
+      d.airborne = !d.def.flying && (d.pos.y > gy + 0.01 || d.vel.y > 0);
       if (d.airborne) {
         d.vel.y -= GRAVITY * dt;
         d.pos.addScaledVector(d.vel, dt);
@@ -362,7 +373,14 @@ export class Demons {
         d.vel.z += THREE.MathUtils.clamp(tz - d.vel.z, -accel, accel);
         d.pos.x += d.vel.x * dt;
         d.pos.z += d.vel.z * dt;
-        d.pos.y = terrain.height(d.pos.x, d.pos.z); // walk on the ground (hills too)
+        // Walkers don't step off into a chasm (Screaming Canyon).
+        if (!d.def.flying && terrain.canyon?.pit(d.pos.x, d.pos.z)) { d.pos.x = d.prev.x; d.pos.z = d.prev.z; d.vel.x *= -0.5; d.vel.z *= -0.5; }
+        // Flyers circle up high and swoop down when they're close.
+        if (d.def.flying) {
+          const want = awake ? st.flyHeight * THREE.MathUtils.clamp((dist - 5) / 25, 0.08, 1) : st.flyHeight;
+          d.alt = (d.alt ?? st.flyHeight) + THREE.MathUtils.clamp(want - (d.alt ?? st.flyHeight), -9 * dt, 6 * dt);
+        }
+        d.pos.y = this.#groundY(d); // walk on the ground (hills too) / fly above it
         const faceCar = awake && d.def.behavior === 'ranged';
         const wantYaw = faceCar ? Math.atan2(toCar.x, toCar.z) : Math.atan2(d.vel.x, d.vel.z);
         if (faceCar || Math.hypot(d.vel.x, d.vel.z) > 0.5) d.yaw = lerpAngle(d.yaw, wantYaw, 1 - Math.exp(-10 * dt));
@@ -377,7 +395,7 @@ export class Demons {
         }
       }
       if (this.base?.pushOut(d.pos, r)) { d.vel.x *= 0.2; d.vel.z *= 0.2; } // Doc's walls + wards
-      if (!d.airborne) d.pos.y = terrain.height(d.pos.x, d.pos.z); // (stay on the ground after a shove)
+      if (!d.airborne) d.pos.y = this.#groundY(d); // (stay on the ground after a shove)
       if (d.body) d.body.setNextKinematicTranslation({ x: d.pos.x, y: d.pos.y, z: d.pos.z });
 
       // ---- Touching the car? ----
@@ -408,7 +426,7 @@ export class Demons {
         // Push light demons out so they're not inside the car.
         if (!d.def.heavy) {
           d.pos.addScaledVector(_n, px < pz ? px : pz);
-          if (!d.airborne) d.pos.y = terrain.height(d.pos.x, d.pos.z);
+          if (!d.airborne) d.pos.y = this.#groundY(d);
         }
 
         if (impact > 2 && d.ramCd <= 0) {
@@ -458,6 +476,14 @@ export class Demons {
       }
 
       // ---- Claw / bite / smash ----
+      if (st.grab && d.stun <= 0 && d.attackCd <= 0) { // a harpy: grab a part and fly off with it
+        d.attackCd = st.attackInterval * (0.8 + Math.random() * 0.4);
+        d.lunge = 1;
+        if (car.grabPart(_v.copy(d.pos), st.attackDamage)) this.fx.hud.toast('A harpy ripped a part off!', 'bad');
+        d.alt = st.flyHeight; // and back up into the sky
+        this.fx.audio.claw();
+        continue;
+      }
       if (d.def.bomber && d.stun <= 0) { // reached you: POP
         this.#remove(d);
         this.#pop(d);

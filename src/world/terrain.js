@@ -34,6 +34,10 @@ export const terrain = {
   // level of the frozen sheets.
   ice(x, z) { return current.ice ? current.ice.mud(x, z) : 0; },
   get iceLevel() { return current.ice?.level ?? null; },
+  // CANYON (Screaming Canyon): can demons stand here (on the canyon floor,
+  // not up on the cliffs or down a chasm)? And the canyon's middle line.
+  spawnable(x, z) { return current.canyon ? current.canyon.spawnable(x, z) : true; },
+  get canyon() { return current.canyon || null; },
   get canals() { return current.water?.canals || []; },
   // Where a ray first hits the ground (null if it doesn't within maxDist).
   raycast(origin, dir, maxDist = 500) {
@@ -65,6 +69,7 @@ export function setupTerrain(region) {
   current = !T.hills && !T.mountains ? flatTerrain() : hillyTerrain(region);
   if (region.water) current = floodedTerrain(current, region.water);
   if (region.bog) current = boggyTerrain(current, region.bog, region.id);
+  if (region.canyon) current = canyonTerrain(region.canyon);
   // Ice sheets are made the same way as the swamp's mud patches (frozen
   // instead of wet).
   if (region.ice) { current = boggyTerrain(current, region.ice, region.id + 'ice'); current.ice = current.bog; current.bog = null; }
@@ -264,5 +269,106 @@ function boggyTerrain(base, B, seed) {
     visualHeight: bottom,
     bog: { mud, level, walks },
     water: base.water,
+  };
+}
+
+// A long winding canyon cut into a high plateau (Screaming Canyon).
+//   canyon: { path: [[x, z], ...] (the middle of the canyon floor),
+//     width: [min, max] half-width of the floor, wall (plateau height),
+//     gaps: [{ at (0..1 along the path), len }]  chasms across the floor,
+//           with a launch ramp on each side
+//     ledges: [{ from, to (0..1), side (+1/-1) }]  stretches where one side
+//           of the floor drops away and only a narrow ledge is left
+//     bowls: [{ x, z, r }]  wide round open spaces (teleporter, boss) }
+// The chasms are bottomless (well, 80 m): fall in and you're wrecked.
+function canyonTerrain(C) {
+  const segs = [];
+  let total = 0;
+  for (let i = 0; i < C.path.length - 1; i++) {
+    const [ax, az] = C.path[i], [bx, bz] = C.path[i + 1];
+    const len = Math.hypot(bx - ax, bz - az);
+    segs.push({ ax, az, len, s0: total, tx: (bx - ax) / len, tz: (bz - az) / len });
+    total += len;
+  }
+  const [wMin, wMax] = C.width ?? [24, 40];
+  const wall = C.wall ?? 55, slope = 26, PIT = -80;
+  const gaps = (C.gaps || []).map((g) => ({ s: g.at * total, half: g.len / 2 }));
+  const ledges = (C.ledges || []).map((l) => ({ s0: l.from * total, s1: l.to * total, side: l.side }));
+  const bowls = C.bowls || [];
+  const G = 80, grid = new Map();
+  for (const sg of segs) {
+    const pad = wMax + slope + 40;
+    const bx = sg.ax + sg.tx * sg.len, bz = sg.az + sg.tz * sg.len;
+    for (let gx = Math.floor((Math.min(sg.ax, bx) - pad) / G); gx <= Math.floor((Math.max(sg.ax, bx) + pad) / G); gx++) {
+      for (let gz = Math.floor((Math.min(sg.az, bz) - pad) / G); gz <= Math.floor((Math.max(sg.az, bz) + pad) / G); gz++) {
+        const k = gx * 100003 + gz;
+        if (!grid.has(k)) grid.set(k, []);
+        grid.get(k).push(sg);
+      }
+    }
+  }
+  const smooth = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
+  const halfWidth = (s) => wMin + (wMax - wMin) * (0.5 + 0.5 * Math.sin(s / 310 + 1));
+  // Where are we relative to the canyon? { d (to the middle line), lat (signed), s (along) }
+  const locate = (x, z) => {
+    let best = null;
+    for (const sg of grid.get(Math.floor(x / G) * 100003 + Math.floor(z / G)) || []) {
+      const px = x - sg.ax, pz = z - sg.az;
+      const al = Math.min(sg.len, Math.max(0, px * sg.tx + pz * sg.tz));
+      const ox = px - sg.tx * al, oz = pz - sg.tz * al, d = Math.hypot(ox, oz);
+      if (!best || d < best.d) best = { d, lat: ox * sg.tz - oz * sg.tx, s: sg.s0 + al };
+    }
+    return best;
+  };
+  const plateau = (x, z) => wall + Math.sin(x / 83) * Math.cos(z / 71) * 9 + Math.sin(x / 31 + z / 47) * 4;
+  const info = (x, z) => {
+    const L = locate(x, z);
+    let wallT = 1, s = 0, lat = 0, w = wMin;
+    if (L) { s = L.s; lat = L.lat; w = halfWidth(s); wallT = smooth((L.d - w) / slope); }
+    let inBowl = false;
+    for (const b of bowls) {
+      const db = Math.hypot(x - b.x, z - b.z);
+      const t = smooth((db - b.r) / 30);
+      if (t < wallT) { wallT = t; inBowl = db < b.r + 10; }
+    }
+    let floor = Math.sin(x / 60) * Math.sin(z / 70) * 1.2;
+    let pit = false;
+    if (L && !inBowl && wallT < 0.6) {
+      for (const g of gaps) {
+        const a = Math.abs(s - g.s);
+        if (a < g.half) pit = true;
+        else if (a < g.half + 22) floor += 5 * (1 - (a - g.half) / 22); // launch ramp
+      }
+      for (const l of ledges) {
+        if (s < l.s0 || s > l.s1) continue;
+        const fade = Math.min(1, (s - l.s0) / 40, (l.s1 - s) / 40); // narrows in, widens out
+        const edge = -w + 16 + (2 * w - 16) * (1 - fade);          // only a 16 m ledge left at its narrowest
+        if (l.side * lat > edge) pit = true;
+      }
+    }
+    return { wallT, pit, floor };
+  };
+  return {
+    flat: false,
+    height(x, z) {
+      const { wallT, pit, floor } = info(x, z);
+      if (pit) return PIT;
+      return floor * (1 - wallT) + plateau(x, z) * wallT;
+    },
+    canyon: {
+      path: C.path, total, segs,
+      spawnable: (x, z) => { const i = info(x, z); return !i.pit && i.wallT < 0.25; },
+      pit: (x, z) => info(x, z).pit,
+      // The canyon's direction at (x, z) (for the wind)
+      dirAt: (x, z) => {
+        let best = null, bd = Infinity;
+        for (const sg of grid.get(Math.floor(x / G) * 100003 + Math.floor(z / G)) || []) {
+          const px = x - sg.ax, pz = z - sg.az, al = Math.min(sg.len, Math.max(0, px * sg.tx + pz * sg.tz));
+          const d = Math.hypot(px - sg.tx * al, pz - sg.tz * al);
+          if (d < bd) { bd = d; best = sg; }
+        }
+        return best ? { x: best.tx, z: best.tz } : { x: 0, z: 1 };
+      },
+    },
   };
 }

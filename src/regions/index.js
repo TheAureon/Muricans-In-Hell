@@ -7,8 +7,9 @@ import floodedCity from './floodedCity.js';
 import bloodSwamp from './bloodSwamp.js';
 import iceHell from './iceHell.js';
 import ironFoundry from './ironFoundry.js';
+import screamingCanyon from './screamingCanyon.js';
 
-export const REGIONS = [ashPlains, lavaRivers, boneMountains, floodedCity, bloodSwamp, iceHell, ironFoundry];
+export const REGIONS = [ashPlains, lavaRivers, boneMountains, floodedCity, bloodSwamp, iceHell, ironFoundry, screamingCanyon];
 export const STARTING_REGION = REGIONS[0];
 export const regionById = (id) => REGIONS.find((r) => r.id === id) || STARTING_REGION;
 export const nextRegion = (r) => REGIONS[REGIONS.indexOf(r) + 1] || null;

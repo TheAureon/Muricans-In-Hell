@@ -149,6 +149,22 @@ export const RADIO = {
     ['you', 'So we follow the barrels.'],
     ['doc', 'We follow the barrels. Bring a lot of armor. The canyon... screams.'],
   ],
+  canyonArrive: [
+    ['you', 'Doc. This canyon is... screaming at me.'],
+    ['doc', 'Wind through the rock. Or the damned. Probably both. The barrel convoys go up this canyon to the Throne.'],
+    ['doc', 'There are chasms across the road. Hit the ramps fast and jump. Jump Jets are in the garage if you want to fly further.'],
+  ],
+  firstJump: [['you', 'WOOOO!'], ['doc', 'Land it, Hank. LAND IT.']],
+  firstFall: [['doc', 'Hank? HANK!'], ['doc', '...I\'m sure he\'s fine. I\'ll get the spare car ready. Just in case.']],
+  firstWind: [['you', 'The wind is pushing me off the road!'], ['doc', 'Steer into it. And don\'t jump while it\'s howling unless you want to see the bottom of a chasm.']],
+  firstRockslide: [['doc', 'Rockslide! Boulders coming down ahead of you!'], ['you', 'I see them. I SEE them.']],
+  nearHarpyQueen: [['doc', 'The canyon opens up ahead. There\'s a nest. A very big nest.']],
+  harpyQueenAwake: [['you', 'That is a very big bird lady.'], ['doc', 'She\'ll swoop to rip parts off. Swerve when she dives, shoot her when she perches!']],
+  harpyQueenDead: [
+    ['doc', 'She\'s down. And past her nest the canyon opens onto... glass? A whole desert of mirrors.'],
+    ['you', 'Mirrors. In Hell.'],
+    ['doc', 'Whatever the Throne is, it doesn\'t want to be found. Be careful what you see out there.'],
+  ],
   leviathanDead: [
     ['doc', 'It\'s sinking. Good riddance.'],
     ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
@@ -163,6 +179,7 @@ export const BOSS_DEATH = {
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
+  harpyQueen: { roar: true }, // (placeholder: a last screech as she falls; tell Claude what she should do)
   ironColossus: { line: 'SYSTEM... FAILURE.', voice: { pitch: 0.1, rate: 0.5 } }, // (placeholder: tell Claude what it should do)
   frozenWarden: { roar: true }, // (placeholder: shatters with a roar; tell Claude what it should do)
   bogMother: { line: 'My... babies...', voice: { pitch: 0.3, rate: 0.6 } }, // (placeholder: tell Claude what she should do)
