@@ -52,7 +52,7 @@ export function createGround(scene, physics, region, hazards = null) {
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   // (Mirror Wastes: the whole ground is polished glass and chrome)
-  const ground = new THREE.Mesh(geo, region.mirror
+  const ground = new THREE.Mesh(geo, region.mirror && region.mirror.glassFloor !== false
     ? litMaterial({ vertexColors: true, flatShading: true, roughness: 0.12, metalness: 0.85, envMap: mirrorEnv() })
     : litMaterial({ vertexColors: true, flatShading: true, roughness: 1 }));
   ground.receiveShadow = true;
@@ -115,6 +115,7 @@ export function createGround(scene, physics, region, hazards = null) {
   else if (arena?.style === 'yard') createFoundryYard(scene, physics, arena, p, rand);
   else if (arena?.style === 'eyrie') createEyrie(scene, physics, arena, p, rand);
   else if (arena?.style === 'mirrorBowl') createMirrorBowl(scene, physics, arena, p, rand);
+  else if (arena?.style === 'palace') createPalace(scene, physics, arena, p, rand);
   else if (arena) createArena(scene, physics, arena, p, rand);
 
   return { size, half, keepClear };
@@ -996,4 +997,75 @@ function createMirrorBowl(scene, physics, arena, p, rand) {
   rim.position.set(fx, fy + 0.3, fz);
   rim.rotation.y = away;
   group.add(rim);
+}
+
+// The palace (The Throne): a throne room open to the burning sky. A gold
+// floor, a red carpet up to the Throne, a ring of huge black columns with
+// fire braziers, and a curved back wall with the company banner:
+// INFERNAL PETROLEUM INC.
+function createPalace(scene, physics, arena, p, rand) {
+  const { RAPIER, world } = physics;
+  const { x: ax, z: az, radius: R } = arena;
+  const group = new THREE.Group();
+  const ay = terrain.height(ax, az);
+  group.position.set(ax, ay, az);
+  scene.add(group);
+  const gold = litMaterial({ color: p.gold ?? 0xf0c040, flatShading: true, roughness: 0.3, metalness: 0.85 });
+  const black = litMaterial({ color: 0x141016, flatShading: true, roughness: 0.4, metalness: 0.3 });
+  const fire = new THREE.MeshBasicMaterial({ color: 0xff7a20 });
+  const floor = new THREE.Mesh(new THREE.CircleGeometry(R + 10, 48).rotateX(-Math.PI / 2),
+    litMaterial({ color: 0x5a3a10, roughness: 0.35, metalness: 0.7, polygonOffset: true, polygonOffsetFactor: -1 }));
+  floor.position.y = 0.06;
+  floor.receiveShadow = true;
+  group.add(floor);
+  // Red carpet from the way in up to the throne
+  const away = Math.atan2(ax, az);
+  const carpet = new THREE.Mesh(new THREE.PlaneGeometry(9, R * 1.8).rotateX(-Math.PI / 2), litMaterial({ color: 0x8a0a0a, roughness: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }));
+  carpet.position.y = 0.1;
+  carpet.rotation.y = away;
+  group.add(carpet);
+  // Ring of columns with fire braziers
+  const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed().setTranslation(ax, ay, az));
+  for (let n = 0; n < 24; n++) {
+    const a = (n / 24) * Math.PI * 2;
+    const rel = Math.abs(((a - away + Math.PI) % (Math.PI * 2)) - Math.PI);
+    if (rel > Math.PI - 0.45) continue; // the way in
+    const x = Math.sin(a) * (R + 4), z = Math.cos(a) * (R + 4), h = 28;
+    const col = new THREE.Mesh(new THREE.CylinderGeometry(1.8, 2.2, h, 10), black);
+    col.position.set(x, h / 2, z);
+    col.castShadow = true;
+    group.add(col);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(2.8, 2.0, 1.6, 10), gold);
+    cap.position.set(x, h + 0.8, z);
+    group.add(cap);
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(1.6, 3.5, 8), fire);
+    flame.position.set(x, h + 3.4, z);
+    group.add(flame);
+    world.createCollider(RAPIER.ColliderDesc.cylinder(h / 2, 2.1).setTranslation(x, h / 2, z), body);
+  }
+  // The back wall, curving behind the throne, with the company banner
+  for (let n = -4; n <= 4; n++) {
+    const a = away + n * 0.13;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(14, 34, 3), black);
+    wall.position.set(Math.sin(a) * (R + 12), 17, Math.cos(a) * (R + 12));
+    wall.rotation.y = a;
+    wall.castShadow = true;
+    group.add(wall);
+    world.createCollider(RAPIER.ColliderDesc.cuboid(7, 17, 1.5).setTranslation(wall.position.x, 17, wall.position.z).setRotation({ x: 0, y: Math.sin(a / 2), z: 0, w: Math.cos(a / 2) }), body);
+  }
+  const cv = document.createElement('canvas');
+  cv.width = 1024; cv.height = 256;
+  const c2 = cv.getContext('2d');
+  c2.fillStyle = '#7a0606'; c2.fillRect(0, 0, 1024, 256);
+  c2.strokeStyle = '#f0c040'; c2.lineWidth = 12; c2.strokeRect(10, 10, 1004, 236);
+  c2.fillStyle = '#f0c040'; c2.font = 'bold 92px Arial Black, Impact, sans-serif'; c2.textAlign = 'center';
+  c2.fillText('INFERNAL PETROLEUM', 512, 125);
+  c2.font = 'bold 44px Arial Black, Impact, sans-serif';
+  c2.fillText('INC.  ·  FUELING DAMNATION SINCE FOREVER', 512, 200);
+  const tex = new THREE.CanvasTexture(cv);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const banner = new THREE.Mesh(new THREE.PlaneGeometry(56, 14), new THREE.MeshBasicMaterial({ map: tex }));
+  banner.position.set(Math.sin(away) * (R + 10.2), 26, Math.cos(away) * (R + 10.2));
+  banner.rotation.y = away + Math.PI;
+  group.add(banner);
 }

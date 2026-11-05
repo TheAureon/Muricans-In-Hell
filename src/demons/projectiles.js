@@ -47,6 +47,11 @@ export class Projectiles {
         trail: 0xff8030,
         aligned: true,
       },
+      oilBarrel: { // the Devil's flaming oil barrels (they leave burning oil)
+        geo: new THREE.CylinderGeometry(0.7, 0.7, 1.6, 10),
+        mat: litMaterial({ color: 0x8a1010, flatShading: true, roughness: 0.4, metalness: 0.3 }),
+        trail: 0xff6010,
+      },
       bloodGlob: { // Mire Toads and the Bog Mother spit these
         geo: new THREE.IcosahedronGeometry(0.5, 1),
         mat: new THREE.MeshBasicMaterial({ color: 0xa01010 }),
@@ -93,7 +98,7 @@ export class Projectiles {
       else { p.mesh.rotation.x += dt * 5; p.mesh.rotation.z += dt * 3; }
       if ((p.trailTimer -= dt) <= 0) {
         p.trailTimer = 0.04;
-        const fiery = p.kind === 'fireball' || p.kind === 'lavaBomb' || p.kind === 'missile';
+        const fiery = p.kind === 'fireball' || p.kind === 'lavaBomb' || p.kind === 'missile' || p.kind === 'oilBarrel';
         const trail = fiery ? this.fx.sparks : this.fx.dust;
         trail.spawn(p.mesh.position, new THREE.Vector3((Math.random() - 0.5), 0.5, (Math.random() - 0.5)), p.kind === 'fireball' ? 0.15 : 0.35, 0.5);
       }

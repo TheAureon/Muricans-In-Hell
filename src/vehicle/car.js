@@ -502,10 +502,11 @@ export class Car {
     const tp = this.body.translation();
     this.ice = terrain.ice(tp.x, tp.z);
     const iceK = this.ice * (1 - this.spikeShield); // how much the ice actually affects you
-    if (terrain.iceLevel != null && !this.wrecked) {
+    if (terrain.iceLevel != null && !this.wrecked && (terrain.coldEverywhere || this.ice > 0.05 || this.cold > 0)) {
       const C = S.cold;
       const sp = Math.hypot(this.body.linvel().x, this.body.linvel().z);
-      this.cold += C.buildup * (1 - this.heatShieldCold) * dt - C.warmup * Math.min(1, sp / this.stats.topSpeed) * dt;
+      const freezing = terrain.coldEverywhere || this.ice > 0.05 ? 1 : 0; // (off the ice in the Throne: it only thaws)
+      this.cold += C.buildup * freezing * (1 - this.heatShieldCold) * dt - C.warmup * Math.max(1 - freezing, Math.min(1, sp / this.stats.topSpeed)) * dt;
       this.cold = THREE.MathUtils.clamp(this.cold, 0, 1);
     } else this.cold = 0;
     const topSpeed = this.stats.topSpeed * (1 - this.cold * S.cold.topSpeed);

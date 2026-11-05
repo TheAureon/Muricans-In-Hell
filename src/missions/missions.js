@@ -380,4 +380,33 @@ export const MISSIONS = [
     reward: { souls: 1200 },
     done: [['you', 'That felt weird.'], ['doc', 'Therapy is cheaper than gas these days. We should both try it.']],
   },
+
+  // ---------------- THE THRONE ----------------
+  {
+    id: 'throneSource', giver: 'doc', region: 'the_throne',
+    title: 'Hell Magic, Final',
+    brief: 'The last hell-magic source, halfway up the golden road. You\'ll want a way home if this goes badly.',
+    offer: [['doc', 'One last hell-magic source, halfway up the road. Link it. If this goes badly, I want you coming back halfway, not from the bottom.']],
+    goals: [{ kind: 'teleporter', label: 'Find the hell-magic source' }],
+    reward: { souls: 1500 },
+    done: [['doc', 'Linked. Last one. Feels strange to say that.']],
+  },
+  {
+    id: 'hostileTakeover', giver: 'doc', region: 'the_throne',
+    title: 'Hostile Takeover',
+    brief: 'Infernal Petroleum Security is everywhere. Lay off twenty of them.',
+    offer: [['doc', 'Those suits with shotguns are Infernal Petroleum Security. Let\'s do some downsizing. Twenty of them.']],
+    goals: [{ kind: 'kill', demon: 'security', count: 20, label: 'Lay off Security' }],
+    reward: { souls: 1500 },
+    done: [['you', 'Consider yourselves terminated.'], ['doc', 'I\'m going to pretend you didn\'t say that.']],
+  },
+  {
+    id: 'theGauntlet', giver: 'doc', region: 'the_throne', after: ['throneSource'],
+    title: 'The Gauntlet',
+    brief: 'Plant Doc\'s trackers in the ice, the mud and the mirrors along the road.',
+    offer: [['doc', 'I need readings from the ice, the mud and the mirrors on this road. Plant a tracker in each. Then we know what we\'re walking into.']],
+    goals: [{ kind: 'reach', label: 'Plant trackers', points: [{ x: 126, z: 1097 }, { x: -721, z: 1139 }, { x: 232, z: -834 }] }],
+    reward: { souls: 2000 },
+    done: [['doc', 'All three pinging. Everything on this road feeds the palace. Cut off the head, and the whole thing stops.']],
+  },
 ];

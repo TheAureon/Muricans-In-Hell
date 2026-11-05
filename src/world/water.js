@@ -5,15 +5,19 @@
 import * as THREE from 'three';
 import { litMaterial } from '../core/graphics.js';
 import { terrain } from './terrain.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 export class Water {
   // (Also used for the Blood Swamp's pools of blood: pass level and color.)
-  constructor(scene, physics, region, { level = terrain.waterLevel, color = region.palette.water, opacity = 0.9 } = {}) {
+  // disks: [{ x, z, r }] = only these round patches instead of one sheet over
+  // everything (the Throne, which has both ice and blood on one road).
+  constructor(scene, physics, region, { level = terrain.waterLevel, color = region.palette.water, opacity = 0.9, disks = null } = {}) {
     this.level = level;
     this.time = 0;
     const p = region.palette;
     const size = region.terrain.size;
-    const geo = new THREE.PlaneGeometry(size, size, 1, 1).rotateX(-Math.PI / 2);
+    let geo = new THREE.PlaneGeometry(size, size, 1, 1).rotateX(-Math.PI / 2);
+    if (disks) geo = mergeGeometries(disks.map((d) => new THREE.CircleGeometry(d.r + 8, 40).rotateX(-Math.PI / 2).translate(d.x, 0, d.z)));
     this.mat = litMaterial({ color, transparent: true, opacity, roughness: 0.1, metalness: 0.25, depthWrite: false });
     this.base = new THREE.Color(color);
     this.mesh = new THREE.Mesh(geo, this.mat);

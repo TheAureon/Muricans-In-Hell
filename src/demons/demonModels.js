@@ -490,3 +490,34 @@ export function createHarpyGeometry() {
     ]),
   ]);
 }
+
+// SECURITY (Infernal Petroleum): a horned demon bouncer in a black suit and
+// sunglasses, red skin, an earpiece, and a shotgun.
+export const SECURITY_GORE = [0x141418, 0xb01818, 0xf0ece4, 0x7a1010];
+export function createSecurityGeometry() {
+  const SUIT = 0x141418, SKIN = 0xb01818, SHIRT = 0xf0ece4, SHADES = 0x050505, GOLD = 0xf0c040, GUN = 0x2a2a30, HORN = 0x1a1414;
+  return merged([
+    ...[1, -1].flatMap((s) => limb(s > 0 ? PART.legL : PART.legR, [s * 0.2, 1.0, 0], [
+      piece(box(0.24, 0.95, 0.26), SUIT, s * 0.2, 0.52, 0),
+      piece(box(0.26, 0.1, 0.4), SHADES, s * 0.2, 0.05, 0.06),
+    ])),
+    piece(box(0.75, 0.9, 0.42), SUIT, 0, 1.5, 0),                               // big shoulders
+    piece(box(0.2, 0.7, 0.04), SHIRT, 0, 1.6, 0.22),
+    piece(box(0.08, 0.55, 0.05), SHADES, 0, 1.6, 0.24),                         // black tie
+    ...limb(PART.armL, [0.45, 1.85, 0], [
+      piece(box(0.2, 0.75, 0.22), SUIT, 0.47, 1.5, 0.05),
+      piece(box(0.18, 0.18, 0.18), SKIN, 0.47, 1.05, 0.08),
+    ]),
+    ...limb(PART.armR, [-0.45, 1.85, 0], [
+      piece(box(0.2, 0.75, 0.22), SUIT, -0.47, 1.5, 0.05),
+      piece(box(0.1, 0.12, 0.9), GUN, -0.47, 1.15, 0.4),                         // shotgun
+      piece(box(0.12, 0.15, 0.3), GOLD, -0.47, 1.12, 0.1),
+    ]),
+    ...limb(PART.head, [0, 1.95, 0], [
+      piece(box(0.4, 0.42, 0.38), SKIN, 0, 2.15, 0.02),
+      piece(box(0.42, 0.1, 0.06), SHADES, 0, 2.2, 0.22),                        // sunglasses
+      piece(box(0.04, 0.12, 0.04), SHADES, 0.22, 2.1, 0.05),                    // earpiece
+      piece(cone(0.06, 0.35, 4), HORN, 0.14, 2.45, 0, 0, 0, -0.4), piece(cone(0.06, 0.35, 4), HORN, -0.14, 2.45, 0, 0, 0, 0.4),
+    ]),
+  ]);
+}

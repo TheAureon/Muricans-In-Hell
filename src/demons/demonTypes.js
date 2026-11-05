@@ -22,7 +22,7 @@ import {
   createMagmaBruteGeometry, MAGMA_BRUTE_GORE,
   createBoneRamGeometry, BONE_RAM_GORE, createBoneArcherGeometry, BONE_ARCHER_GORE,
   createDrownedGeometry, DROWNED_GORE, createBloaterGeometry, BLOATER_GORE,
-  createIronHuskGeometry, IRON_HUSK_GORE, createHarpyGeometry, HARPY_GORE,
+  createIronHuskGeometry, IRON_HUSK_GORE, createHarpyGeometry, HARPY_GORE, createSecurityGeometry, SECURITY_GORE,
   createFrostWraithGeometry, FROST_WRAITH_GORE, createFrostBruteGeometry, FROST_BRUTE_GORE,
   createLeechGeometry, LEECH_GORE, createMireToadGeometry, MIRE_TOAD_GORE, createEggSacGeometry, EGG_SAC_GORE,
 } from './demonModels.js';
@@ -96,6 +96,13 @@ export const DEMON_TYPES = {
     stats: () => SETTINGS.demons.bloater,
     createGeometry: createBloaterGeometry, goreColors: BLOATER_GORE,
     radius: 0.85, height: 2.2, poolSize: 20,
+  },
+  // ---- The Throne ----
+  security: {
+    name: 'Security', behavior: 'ranged', anim: 'stomp',
+    stats: () => SETTINGS.demons.security,
+    createGeometry: createSecurityGeometry, goreColors: SECURITY_GORE,
+    radius: 0.5, height: 2.5, poolSize: 50,
   },
   // ---- Screaming Canyon ----
   harpy: {

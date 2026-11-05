@@ -423,3 +423,14 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #water-warn small { display: block; font: 12px system-ui; color: #fff; text-shadow: 0 1px 3px #000; }
 #water-warn.sink b { color: #ff7050; text-shadow: 0 0 12px #f20, 0 3px 0 #400; }
 #water-warn.sink { animation: pulse 0.6s infinite; }
+
+/* ---- Credits ---- */
+#credits { position: fixed; inset: 0; z-index: 40; background: #000; opacity: 0; transition: opacity 0.8s; overflow: hidden; cursor: pointer; }
+#credits.on { opacity: 1; }
+#credits .c-roll { position: absolute; left: 0; right: 0; top: 0; text-align: center; color: #f0e0d0; font-family: system-ui, sans-serif; }
+#credits .c-row { margin: 10px 0; }
+#credits .c-row b { display: block; font: 22px 'Arial Black', Impact, sans-serif; color: #ff5020; letter-spacing: 2px; text-shadow: 0 0 14px #ff200080; }
+#credits .c-row span { display: block; font-size: 16px; color: #f0e0d0c0; margin-top: 2px; }
+#credits .c-row.c-head b { font-size: 34px; margin-top: 18px; }
+#credits .c-gap { height: 60px; }
+#credits .c-skip { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: 2px; color: #fff6; }

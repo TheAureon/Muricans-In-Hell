@@ -103,9 +103,11 @@ function garageRoom(scene) {
 // ------------------------------------------------------------------ scenes
 const SCENES = {
   // 1. Gas at $14.99: Hank stares at the price sign.
-  gas() {
+  // (opts.from / opts.to: where the price starts and ends up; the ending runs it DOWN)
+  gas(opts = {}) {
     const scene = stage({ bg: 0x1c0606, fog: [0x1c0606, 10, 60], ground: 0x0c0a0a, groundRough: 0.25 });
-    let regular = 14.49;
+    let regular = opts.from ?? 14.49;
+    const target = opts.to ?? 14.99;
     const sign = canvasTexture(1024, 620, (cx, w, h) => {
       cx.fillStyle = '#c8202a'; cx.fillRect(0, 0, w, h);
       cx.fillStyle = '#111'; cx.fillRect(24, 140, w - 48, h - 164);
@@ -157,7 +159,11 @@ const SCENES = {
         cam.lookAt(-1.0, 2.1, -6);
         hank.update(t);
         em(dt);
-        if ((tick += dt) > 0.35 && regular < 14.99) { tick = 0; regular = Math.min(14.99, regular + 0.05); sign.redraw(); }
+        if ((tick += dt) > (target < regular ? 0.06 : 0.35) && Math.abs(regular - target) > 0.001) {
+          tick = 0;
+          regular = target > regular ? Math.min(target, regular + 0.05) : Math.max(target, regular - 0.25);
+          sign.redraw();
+        }
         signGlow.intensity = 36 + Math.random() * 8;
       },
     };
@@ -424,11 +430,13 @@ const SCENES = {
 let flash = () => {};
 
 // ------------------------------------------------------------------ player
-export function playIntro() {
+// panels: which story to play (the intro by default; the ending too).
+// logo: the big title shown on the last panel.
+export function playIntro(panels = INTRO, { logo = 'HELLDRIVERS' } = {}) {
   return new Promise((resolve) => {
     const el = document.createElement('div');
     el.id = 'intro';
-    el.innerHTML = `<canvas></canvas><div class="i-fade"></div><div class="i-logo">HELLDRIVERS</div>
+    el.innerHTML = `<canvas></canvas><div class="i-fade"></div><div class="i-logo">${logo}</div>
       <div class="i-cap"><h2></h2><p></p><div class="i-quote"></div></div>
       <div class="i-nav"><span class="i-dots"></span><span>CLICK / SPACE: next &nbsp;·&nbsp; ESC: skip</span></div>`;
     document.body.appendChild(el);
@@ -496,18 +504,18 @@ export function playIntro() {
     };
     const show = (n) => {
       i = n;
-      if (i >= INTRO.length) return finish();
-      const s = INTRO[i];
+      if (i >= panels.length) return finish();
+      const s = panels[i];
       freeScene(current);
       fade.className = 'i-fade'; void fade.offsetWidth; fade.className = 'i-fade black';
-      current = SCENES[s.art]?.() || SCENES.go();
+      current = SCENES[s.art]?.(s) || SCENES.go(s);
       current.camera.aspect = window.innerWidth / window.innerHeight;
       current.camera.updateProjectionMatrix();
       t = 0;
-      el.classList.toggle('last', s.art === 'go');
+      el.classList.toggle('last', i === panels.length - 1);
       h2.textContent = s.title;
       quote.innerHTML = '';
-      dots.innerHTML = INTRO.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+      dots.innerHTML = panels.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
       let c = 0;
       p.textContent = '';
       clearInterval(typing);
@@ -526,8 +534,8 @@ export function playIntro() {
       if (done) return;
       if (typing) {
         clearInterval(typing); typing = null;
-        p.textContent = INTRO[i].text;
-        showQuote(INTRO[i]);
+        p.textContent = panels[i].text;
+        showQuote(panels[i]);
         return;
       }
       show(i + 1);

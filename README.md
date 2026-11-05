@@ -48,7 +48,21 @@ flashes and glowing eyes/lava. High adds soft shadows, bloom and explosion
 flashes. Demons are animated on the graphics card (legs, arms, heads, tails
 and wings all move), so hundreds of them stay cheap to draw.
 
-**Region 9, the Mirror Wastes** (new): a canyon of polished glass and
+**Region 10, THE THRONE** (the finale): a golden road up a burning canyon
+to the Devil's palace, through a gauntlet of everything so far: lava
+channels, ice sheets (with the freezing cold), blood-mud, Foundry
+machinery (turrets, magnets, crushers, a belt running against you),
+mirrors (real, fake, and your reflection), chasms, screaming wind and
+rockslides, and the worst demons of every region plus Infernal Petroleum
+**Security** (suits, sunglasses, shotguns). At the top: **the Devil, CEO of
+Infernal Petroleum Inc.**, in three phases: on his throne of oil barrels
+(flaming oil barrels, fire-pillar lines, Security), then "You're FIRED"
+(he stands up and comes at you: slams, stomps), then his TRUE FORM (wings,
+fire breath, burning oil raining down). Beat him for the ending, the
+credits, and then Hell is yours to drive around: the base pad can send
+you to any linked region (Q picks which).
+
+**Region 9, the Mirror Wastes**: a canyon of polished glass and
 chrome under a sky that is one enormous **mirror** (on Medium/High graphics
 it really reflects the world, upside down above you). Mirrors stand along
 the road: some are real (ram them hard or shoot them to shatter them), some
@@ -208,7 +222,7 @@ src/
   settings.js         ALL the tweakable feel numbers
   style.css           look of the on-screen text
   core/               input, physics setup, sound, random numbers, graphics quality
-  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry, Screaming Canyon, Mirror Wastes) + the travel order
+  regions/            one data file per region (Ash Plains, Lava Rivers, Bone Mountains, Flooded City, Blood Swamp, Ice Hell, Iron Foundry, Screaming Canyon, Mirror Wastes, The Throne) + the travel order
   story/              the story text (story.js), the radio, the intro panels
   missions/           the jobs (missions.js), goal kinds (goals.js), the job tracker
   world/              sky, ground, scenery, lava (hazards), Hellgates, lighting, effects, gore, scrap

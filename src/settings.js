@@ -226,7 +226,7 @@ export const SETTINGS = {
   // ---------------------------------------------------------------
   progression: {
     // Souls each demon drops. Ram kills pay extra (ramBonus x).
-    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40, ironHusk: 12, harpy: 6 },
+    souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40, ironHusk: 12, harpy: 6, security: 15 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
     // Getting wrecked restarts the run. true = keep souls, unlocks and
@@ -481,6 +481,10 @@ export const SETTINGS = {
     drowned: { health: 60, mass: 70, chaseSpeed: 5.5, noticeRange: 70, attackDamage: 5, attackInterval: 1.2, packMin: 8, packMax: 16 },
     // Swollen gas-bag: waddles up and POPS next to you. Killing it pops it too,
     // so shoot it from afar: ramming one blows up in your face.
+    // THE THRONE
+    // Infernal Petroleum Security: suits, sunglasses, shotguns. Keep their distance and blast you.
+    security: { health: 120, mass: 140, chaseSpeed: 7, noticeRange: 110, attackDamage: 9, attackInterval: 1.6, packMin: 3, packMax: 5,
+                shootRange: 55, preferredRange: 28, fleeRange: 10, splash: 2, projectile: 'shell' },
     // SCREAMING CANYON
     // Flying hags: circle up high, then swoop down and RIP A PART OFF your car (grab).
     harpy: { health: 40, mass: 30, chaseSpeed: 15, noticeRange: 130, attackDamage: 8, attackInterval: 2.6, packMin: 3, packMax: 6, flyHeight: 8, grab: true },
@@ -601,6 +605,25 @@ export const SETTINGS = {
     },
     // Screaming Canyon: a giant winged hag. Circles, swoops to rip parts off
     // your car, shrieks shockwaves, calls flocks, perches on spires.
+    // The Throne: THE DEVIL, CEO of Infernal Petroleum. Three phases (see devil.js).
+    devil: {
+      health: 15000,
+      walkSpeed: 4.5,         // phase 2
+      trueSpeed: 7.5,         // phase 3 (true form)
+      slamDamage: 60,
+      slamRadius: 7,
+      stompDamage: 32,
+      stompRadius: 44,
+      throwDamage: 26,        // flaming oil barrels...
+      throwSplash: 5,
+      poolRadius: 6,          // ...leave burning oil (m)
+      poolTime: 8,            // for this long (s)
+      pillarDamage: 30,       // lines of fire pillars
+      pillarSpeed: 30,
+      fireDps: 12,            // what his fire does to your car (per second)
+      leash: 260,
+      souls: 10000,
+    },
     // Mirror Wastes: a giant chrome copy of your own car (3x size).
     reflection: {
       health: 10000,

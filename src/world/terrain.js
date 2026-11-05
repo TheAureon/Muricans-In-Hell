@@ -34,6 +34,8 @@ export const terrain = {
   // level of the frozen sheets.
   ice(x, z) { return current.ice ? current.ice.mud(x, z) : 0; },
   get iceLevel() { return current.ice?.level ?? null; },
+  // Is the cold everywhere (Ice Hell), or only out on the ice (the Throne)?
+  get coldEverywhere() { return !!current.ice && !current.ice.localOnly; },
   // CANYON (Screaming Canyon): can demons stand here (on the canyon floor,
   // not up on the cliffs or down a chasm)? And the canyon's middle line.
   spawnable(x, z) { return current.canyon ? current.canyon.spawnable(x, z) : true; },
@@ -66,13 +68,12 @@ export const terrain = {
 // Set up the terrain for a region (call once, before building the world).
 export function setupTerrain(region) {
   const T = region.terrain || {};
-  current = !T.hills && !T.mountains ? flatTerrain() : hillyTerrain(region);
+  current = region.canyon ? canyonTerrain(region.canyon) : !T.hills && !T.mountains ? flatTerrain() : hillyTerrain(region);
   if (region.water) current = floodedTerrain(current, region.water);
   if (region.bog) current = boggyTerrain(current, region.bog, region.id);
-  if (region.canyon) current = canyonTerrain(region.canyon);
   // Ice sheets are made the same way as the swamp's mud patches (frozen
-  // instead of wet).
-  if (region.ice) { current = boggyTerrain(current, region.ice, region.id + 'ice'); current.ice = current.bog; current.bog = null; }
+  // instead of wet). (Both can be in one region: the Throne has everything.)
+  if (region.ice) { const base = current; current = boggyTerrain(base, region.ice, region.id + 'ice'); current.ice = current.bog; current.bog = base.bog; }
   return terrain;
 }
 
@@ -252,23 +253,28 @@ function boggyTerrain(base, B, seed) {
   const pools = B.pools || [];
   const carve = B.carve ?? 0.7;
   const level = B.level ?? -0.3;
-  const bottom = (x, z) => {
+  // (returns the height, and whether this spot is in the mud at all)
+  const bottomAndMud = (x, z) => {
     const m = mud(x, z);
-    let h = base.height(x, z) - carve * m * m;
+    let h = base.height(x, z) - carve * m * m, inPool = false;
     for (const pl of pools) {
       const d = Math.hypot(x - pl.x, z - pl.z);
-      if (d < pl.r) h -= (pl.depth ?? 1) * smooth(1 - d / pl.r);
+      if (d < pl.r) { h -= (pl.depth ?? 1) * smooth(1 - d / pl.r); inPool = true; }
     }
-    return h;
+    return [h, m > 0 || inPool];
   };
+  const bottom = (x, z) => bottomAndMud(x, z)[0];
   return {
     flat: false,
     // You (and the demons) slosh along just under the blood's surface;
-    // heavy cars sink further in (see car.js).
-    height: (x, z) => Math.max(bottom(x, z), level - 0.12),
-    visualHeight: bottom,
-    bog: { mud, level, walks },
+    // heavy cars sink further in (see car.js). (Only in the mud: a chasm
+    // next to it stays a chasm.)
+    height: (x, z) => { const [h, wet] = bottomAndMud(x, z); return wet ? Math.max(h, level - 0.12) : h; },
+    visualHeight: (x, z) => (base.visualHeight ? Math.min(base.visualHeight(x, z), bottom(x, z)) : bottom(x, z)),
+    bog: { mud, level, walks, localOnly: !!B.localOnly },
     water: base.water,
+    canyon: base.canyon,
+    ice: base.ice,
   };
 }
 
@@ -331,7 +337,7 @@ function canyonTerrain(C) {
       const t = smooth((db - b.r) / 30);
       if (t < wallT) { wallT = t; inBowl = db < b.r + 10; }
     }
-    let floor = Math.sin(x / 60) * Math.sin(z / 70) * 1.2;
+    let floor = Math.sin(x / 60) * Math.sin(z / 70) * (C.floorBumps ?? 1.2);
     let pit = false;
     if (L && !inBowl && wallT < 0.6) {
       for (const g of gaps) {

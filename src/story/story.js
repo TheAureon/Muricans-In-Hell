@@ -58,6 +58,50 @@ export const INTRO = [
   },
 ];
 
+// The ending, after the Devil goes down (same player as the intro).
+export const ENDING = [
+  {
+    art: 'gas', from: 14.99, to: 0.99,
+    title: 'REGULAR: $0.99 / GALLON',
+    text: 'With the Throne empty, Infernal Petroleum stopped pumping. Up on Earth, gas prices crashed overnight. Nobody ever found out why.',
+  },
+  {
+    art: 'base',
+    title: 'BACK AT THE GARAGE',
+    text: 'Two guys, one car, and a whole Hell full of oil.',
+    quote: { who: 'doc', line: '"So. What do we do with an entire Hell full of oil?"' },
+  },
+  {
+    art: 'go',
+    title: 'THE END?',
+    text: 'Hank put the kettle on. Then he got back in the car. Hell still has roads, after all.',
+    quote: { who: 'you', line: '"...Road trip?"' },
+  },
+];
+
+// The credits that roll after the ending.
+export const CREDITS = [
+  ['HELLDRIVERS', ''],
+  ['A game by', 'TheAureon'],
+  ['Story', 'TheAureon'],
+  ['Built with', 'Claude'],
+  ['', ''],
+  ['Starring', ''],
+  ['Hank "Redline" Mercer', 'retired F1 champion, ex-military, full-time menace'],
+  ['Dr. Wendell "Doc" Pike', 'genius engineer, no sense of self-preservation'],
+  ['', ''],
+  ['And the management', ''],
+  ['The Ash Titan', 'The Magma Colossus'],
+  ['The Bone King', 'The Drowned Leviathan'],
+  ['The Bog Mother', 'The Frozen Warden'],
+  ['The Iron Colossus', 'The Harpy Queen'],
+  ['The Reflection', 'The Devil, CEO of Infernal Petroleum Inc.'],
+  ['', ''],
+  ['No demons were harmed', '(that is a lie)'],
+  ['', ''],
+  ['THANKS FOR PLAYING', 'Hell is still out there. Keep driving.'],
+];
+
 // Radio chatter during play. Each plays once (ever). Lines are said in
 // order; who = 'doc' or 'you'.
 export const RADIO = {
@@ -180,6 +224,14 @@ export const RADIO = {
     ['you', 'The Throne.'],
     ['doc', 'The Throne. Whoever sits on it has been pumping Hell dry and selling it to us at fifteen bucks a gallon. Let\'s go have a word.'],
   ],
+  throneArrive: [
+    ['you', 'A golden road. Going up.'],
+    ['doc', 'Everything Hell has thrown at us is on that road, Hank. Lava, ice, mud, machines, mirrors. All of it.'],
+    ['doc', 'And at the top, whoever\'s been charging us fifteen bucks a gallon. Let\'s go get a refund.'],
+  ],
+  nearDevil: [['doc', 'The palace is just ahead. One signal inside. Massive. And... it\'s wearing a tie?']],
+  devilAwake: [['you', 'It\'s the Devil. In a SUIT.'], ['doc', 'CEO of Infernal Petroleum. Hank, this is the guy. Take him down!']],
+  devilDead: [['doc', 'He\'s... gone. The pumps are stopping. All of them. Hank. We did it.'], ['you', 'Gas is gonna be SO cheap.']],
   leviathanDead: [
     ['doc', 'It\'s sinking. Good riddance.'],
     ['you', 'Doc... the water\'s draining. There\'s a pipe down there. A big one.'],
@@ -194,6 +246,7 @@ export const BOSS_DEATH = {
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
   boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
+  devil: { line: 'This isn\'t over... I have SHAREHOLDERS...', voice: { pitch: 0.1, rate: 0.6 } }, // (placeholder: tell Claude his real last words)
   reflection: { line: 'Copy... that.', voice: { pitch: 0.4, rate: 0.7 } }, // (placeholder: shadow-Hank's last words; tell Claude what it should say)
   harpyQueen: { roar: true }, // (placeholder: a last screech as she falls; tell Claude what she should do)
   ironColossus: { line: 'SYSTEM... FAILURE.', voice: { pitch: 0.1, rate: 0.5 } }, // (placeholder: tell Claude what it should do)

@@ -18,6 +18,9 @@ import { FrozenWarden } from './demons/frozenWarden.js';
 import { HarpyQueen } from './demons/harpyQueen.js';
 import { CanyonHazards } from './world/canyonHazards.js';
 import { Reflection } from './demons/reflection.js';
+import { Devil } from './demons/devil.js';
+import { createGoldenRoad } from './world/goldenRoad.js';
+import { showCredits } from './ui/credits.js';
 import { Mirrors } from './world/mirrors.js';
 import { setupMirrorEnv, createMirrorCeiling } from './world/mirrorWorld.js';
 import { createBoardwalks } from './world/boardwalk.js';
@@ -41,7 +44,7 @@ import { setupTerrain, terrain } from './world/terrain.js';
 import { Teleporter } from './world/teleporter.js';
 import { Radio, speakLine } from './story/radio.js';
 import { playIntro } from './story/intro.js';
-import { BOSS_DEATH } from './story/story.js';
+import { BOSS_DEATH, ENDING } from './story/story.js';
 import { createTuningPanel } from './ui/tuning.js';
 import { Garage } from './ui/garage.js';
 import { Progress } from './core/progress.js';
@@ -82,13 +85,14 @@ async function main() {
   const hazards = new Hazards(scene, region);
   const groundInfo = createGround(scene, physics, region, hazards);
   if (region.indoor) createFactoryHall(scene, physics, region, groundInfo.keepClear); // (the Iron Foundry's roof, columns and walls)
-  if (region.mirror) createMirrorCeiling(scene, region); // (the Mirror Wastes' mirrored sky)
+  if (region.mirror && region.mirror.ceiling !== false) createMirrorCeiling(scene, region); // (the Mirror Wastes' mirrored sky)
+  if (region.goldenRoad) createGoldenRoad(scene, region, hazards); // (The Throne)
   const water = terrain.waterLevel != null ? new Water(scene, physics, region) : null; // (Flooded City)
   // Blood Swamp: pools of blood where the mud is deepest, and boardwalks.
-  const blood = terrain.bogLevel != null ? new Water(scene, physics, region, { level: terrain.bogLevel, color: region.palette.blood, opacity: 0.86 }) : null;
+  const blood = terrain.bogLevel != null ? new Water(scene, physics, region, { level: terrain.bogLevel, color: region.palette.blood, opacity: 0.86, disks: region.bog.localOnly ? region.bog.pools : null }) : null;
   createBoardwalks(scene, region);
   // Ice Hell: the glassy ice sheets.
-  const iceSheet = terrain.iceLevel != null ? new Water(scene, physics, region, { level: terrain.iceLevel, color: region.palette.ice, opacity: 0.96 }) : null;
+  const iceSheet = terrain.iceLevel != null ? new Water(scene, physics, region, { level: terrain.iceLevel, color: region.palette.ice, opacity: 0.96, disks: region.ice.localOnly ? region.ice.pools : null }) : null;
 
   // Doc's walled base (Ash Plains) and this region's teleporter, if any.
   const base = region.base ? new Base(scene, physics, region.base) : null;
@@ -209,7 +213,7 @@ async function main() {
   // The Hellgate to the next region: next to the arena, on the side you
   // come from. It opens when the boss dies (or right away if you beat it before).
   let gate = null;
-  if (region.boss) {
+  if (region.boss && !region.finale) { // (no Hellgate after the Throne: that's the end of the road)
     const A = region.boss.arena;
     const center = new THREE.Vector3(A.x, 0, A.z);
     const towardStart = center.clone().negate().normalize();
@@ -220,11 +224,12 @@ async function main() {
 
   // The region's boss (and what happens when you beat it).
   // (Most bosses walk; the Leviathan swims and the Bog Mother squats in her pool.)
-  const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden, harpyQueen: HarpyQueen, reflection: Reflection }[region.boss?.type] || Boss;
+  const BossKind = { leviathan: Leviathan, bogMother: BogMother, frozenWarden: FrozenWarden, harpyQueen: HarpyQueen, reflection: Reflection, devil: Devil }[region.boss?.type] || Boss;
   const boss = region.boss ? new BossKind(scene, physics, {
     region, car, demons, projectiles, gore, audio, hud, chase, stats, hazards, flames,
     onShriek: () => canyonHazards?.rockslide(car), // (the Harpy Queen's shriek shakes rocks loose)
     sparks, mirrors,
+    speak: (text) => speakLine(text, { pitch: 0.1, rate: 0.65 }, audio), // (the Devil talks)
     dust: water || blood ? spray : dust, // (splashes in the water / blood)
     // Its last moment: the Ash Titan roars, the Magma Colossus... talks.
     onDying: () => {
@@ -235,6 +240,15 @@ async function main() {
     onDefeated: () => {
       setTimeout(() => radio.say(region.radio?.bossDead), 1500);
       if (region.radio?.afterBoss) setTimeout(() => radio.say(region.radio.afterBoss), 16000);
+      if (region.finale) { // THE END
+        hud.victory('HELL IS FREE', `${boss.name} is dead. Infernal Petroleum is out of business.`);
+        souls.burst(boss.pos.clone().setY(4), boss.B.souls);
+        progress.cleared[region.id] = true;
+        progress.save();
+        jobs.emit('boss');
+        setTimeout(playEnding, 9000);
+        return;
+      }
       const sealedName = PLANNED_REGIONS[REGIONS.indexOf(region) + 1];
       hud.victory(region.name.replace(/^The /, '').toUpperCase(), next
         ? `${boss.name} is dead. A HELLGATE has opened: follow the arrow to ${next.name}!`
@@ -397,6 +411,20 @@ async function main() {
     }, 320);
   }
 
+  let padPick = 0; // which linked region the base pad sends you to
+  // THE ENDING: the story's last pages, then the credits, then back to the
+  // game (Hell is still there to drive around).
+  async function playEnding() {
+    car.invulnerable = true;
+    demons.clearAround(car.currPos, 1e9);
+    radio.clear();
+    await playIntro(ENDING, { logo: 'THE END?' });
+    await showCredits();
+    car.invulnerable = false;
+    demons.populate(car.currPos);
+    hud.banner('HELL IS YOURS', 'Keep driving: every region is still out there. Teleport between them from the base pad (Q to pick).', 10);
+  }
+
   const timer = new THREE.Timer();
   let accumulator = 0;
   let dustTimer = 0;
@@ -427,12 +455,14 @@ async function main() {
         toggleGarage();
         input.mouse.down = false;
       }
-      // Teleport: from a region's pad home to base, or from the base pad out.
+      // Teleport: from a region's pad home to base, or from the base pad out
+      // (Q picks which region, once you've linked more than one).
+      const linked = REGIONS.filter((r) => progress.teleporters[r.id]);
+      if (input.wasPressed('KeyQ') && base?.onPad(car.currPos) && linked.length > 1) padPick = (padPick + 1) % linked.length;
       if (input.wasPressed('KeyF') && !car.wrecked && !garage.open && !jobLog.open) { // (F = mirror in the garage)
         if (tele?.onPad(car.currPos)) travelTo(REGIONS[0], 'base');
         else if (base?.onPad(car.currPos)) {
-          const linked = REGIONS.filter((r) => progress.teleporters[r.id]);
-          if (linked.length) travelTo(linked[linked.length - 1], 'teleporter');
+          if (linked.length) travelTo(linked[(linked.length - 1 + padPick) % linked.length], 'teleporter');
           else hud.toast('No teleporters linked yet. Doc needs a hell-magic source out there first.', 'warn');
         }
       }
@@ -677,7 +707,7 @@ async function main() {
       if (tele?.onPad(car.currPos)) prompt = "[F] Teleport home to Doc's garage";
       else if (base?.onPad(car.currPos)) {
         const linked = REGIONS.filter((r) => progress.teleporters[r.id]);
-        prompt = linked.length ? `[F] Teleport to ${linked[linked.length - 1].name}` : 'Teleporter pad (no teleporters linked yet)';
+        prompt = linked.length ? `[F] Teleport to ${linked[(linked.length - 1 + padPick) % linked.length].name}${linked.length > 1 ? '   ·   [Q] another region' : ''}` : 'Teleporter pad (no teleporters linked yet)';
       } else if (base?.inHangar(car.currPos)) prompt = '[G] Open the garage';
       else if (healing) prompt = 'Healing… (hell magic)';
       hud.setPrompt(prompt);
