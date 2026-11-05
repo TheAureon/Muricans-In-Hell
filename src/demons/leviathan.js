@@ -20,6 +20,8 @@ import { terrain } from '../world/terrain.js';
 
 const SEGS = 13;          // neck pieces from the water to the head
 const UNDER_Y = -16;      // how far down it hides
+const SINK_TIME = 7;      // seconds from the killing blow until it's gone below
+const smoothstep = (t) => { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); };
 
 export class Leviathan {
   constructor(scene, physics, ctx) {
@@ -113,9 +115,22 @@ export class Leviathan {
       return;
     }
     if (this.state === 'dying') {
+      // It thrashes, its neck topples onto the water (SPLASH), and it slowly
+      // sinks out of sight in a stream of bubbles.
+      const before = this.timer;
       this.timer += dt;
-      this.rise = Math.max(0, 1 - this.timer / 2.6);
-      if (this.timer > 2.6 && !this.exploded) this.#explode();
+      if (before < 3.6 && this.timer >= 3.6) {
+        this.#splash(this.head.clone().setY(this.level), 70);
+        this.#splash(this.neckPts[Math.floor(SEGS / 2)].clone().setY(this.level), 40);
+        this.ctx.audio.wreck();
+        this.ctx.chase.addShake(1);
+      }
+      if (this.timer > 3.6 && Math.random() < dt * 30) {
+        const p = this.neckPts[Math.floor(Math.random() * SEGS)];
+        this.ctx.dust.spawn(new THREE.Vector3(p.x + (Math.random() - 0.5) * 4, this.level + 0.1, p.z + (Math.random() - 0.5) * 4),
+          new THREE.Vector3((Math.random() - 0.5) * 1.5, 1.5 + Math.random() * 2.5, (Math.random() - 0.5) * 1.5), 0.3 + Math.random() * 0.5, 1.1);
+      }
+      if (this.timer > SINK_TIME && !this.exploded) this.#explode();
       return;
     }
     const frac = this.hp / B.health;
@@ -286,14 +301,12 @@ export class Leviathan {
     this.exploded = true;
     this.defeated = true;
     this.state = 'dead';
-    const L = this.cfg.look || {};
-    const colors = [L.skin ?? 0x2a4a48, L.dark ?? 0x14242a, L.glow ?? 0x60ffd0, 0x7a1010];
-    for (let k = 0; k < 4; k++) {
-      this.ctx.gore.explode(this.pos.clone().setY(this.level + 1 + k), new THREE.Vector3((Math.random() - 0.5) * 12, 7, (Math.random() - 0.5) * 12), colors, 4);
+    // Gone under for good: one last burst of bubbles where it went down.
+    for (let i = 0; i < 40; i++) {
+      const p = this.pos.clone().add(new THREE.Vector3((Math.random() - 0.5) * 16, 0, 6 + Math.random() * 18).applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw));
+      this.ctx.dust.spawn(p.setY(this.level + 0.1), new THREE.Vector3((Math.random() - 0.5) * 2, 2 + Math.random() * 4, (Math.random() - 0.5) * 2), 0.4 + Math.random() * 0.6, 1.4);
     }
-    this.#splash(this.pos, 60);
-    this.ctx.audio.wreck();
-    this.ctx.chase.addShake(1.2);
+    this.ctx.audio.thump();
     this.root.visible = false;
     this.#park();
     this.ctx.onDefeated?.();
@@ -318,7 +331,12 @@ export class Leviathan {
       if (a.type === 'slam') { rear = after ? 0 : wind; lunge = after ? Math.max(0, 1 - (a.t - a.windup) / 0.6) : 0; open = after ? 0.6 : 0.2 + wind * 0.5; }
       if (a.type === 'spit') { rear = after ? 0 : wind * 0.35; open = after ? 0.8 : wind * 0.8; }
     }
-    if (this.state === 'dying') { open = 0.9; }
+    // Dying: thrash, topple forward onto the water, then sink
+    const T = this.state === 'dying' ? this.timer : 0;
+    const topple = this.state === 'dying' ? smoothstep((T - 1.4) / 2.2) : 0;
+    const sink = this.state === 'dying' ? smoothstep((T - 3.6) / (SINK_TIME - 3.6)) : 0;
+    const thrash = this.state === 'dying' ? (1 - topple) * Math.min(1, T * 2) : 0;
+    if (this.state === 'dying') { open = 0.9 - sink * 0.6; this.matGlow.emissiveIntensity *= 1 - sink; }
     const sway = Math.sin(now * 1.1) * 0.6;
     for (let i = 0; i < SEGS; i++) {
       const t = i / (SEGS - 1);
@@ -326,10 +344,12 @@ export class Leviathan {
       let fz = t * 9 - rear * t * t * 5 + lunge * t * t * 14;
       let y = Math.sin(t * Math.PI * 0.55) * 13 * (1 - lunge * t * 0.8) + rear * t * 4;
       y = y * rise + UNDER_Y * (1 - rise) + (t < 0.15 ? -3 * (1 - t / 0.15) : 0);
-      const fx = Math.sin(t * Math.PI * 1.5 + now * 0.9) * 1.2 * t + sway * t;
+      // toppled: lying stretched out along the water; sinking: going under
+      fz = THREE.MathUtils.lerp(fz, t * 26, topple);
+      y = THREE.MathUtils.lerp(y, 0.2 - (t < 0.15 ? 2 : 0), topple) - sink * 16;
+      const fx = Math.sin(t * Math.PI * 1.5 + now * 0.9) * 1.2 * t + sway * t + Math.sin(now * 11 + i * 0.7) * 1.6 * t * thrash;
       const seg = this.segs[i];
       seg.position.set(fx, y, fz);
-      if (this.state === 'dying') seg.position.x += Math.sin(now * 12 + i) * 0.6 * (1 - rise);
     }
     this.root.updateMatrixWorld(true);
     for (let i = 0; i < SEGS; i++) {
@@ -338,11 +358,11 @@ export class Leviathan {
     }
     const h = this.segs[SEGS - 1];
     this.headGroup.position.copy(h.position);
-    this.headGroup.rotation.set(-0.25 + lunge * 0.9 - rear * 0.5, Math.sin(now * 0.7) * 0.15, 0);
+    this.headGroup.rotation.set(THREE.MathUtils.lerp(-0.25 + lunge * 0.9 - rear * 0.5 - thrash * 0.6 * Math.sin(now * 9), 1.1, topple), Math.sin(now * 0.7) * 0.15 + Math.sin(now * 8) * 0.5 * thrash, topple * 0.6);
     this.jaw.rotation.x = open;
     // The humps of its body behind, rolling through the water
     this.humps.forEach((hp, k) => {
-      hp.position.y = this.level - this.pos.y - 1.6 + Math.sin(now * 1.4 + k * 1.3) * 0.6 * rise + (1 - rise) * -6;
+      hp.position.y = this.level - this.pos.y - 1.6 + Math.sin(now * 1.4 + k * 1.3) * 0.6 * rise + (1 - rise) * -6 - sink * 12;
     });
     // World positions for hit checks / effects
     this.root.updateMatrixWorld(true);
