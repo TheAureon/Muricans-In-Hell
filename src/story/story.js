@@ -244,7 +244,7 @@ export const RADIO = {
 export const BOSS_DEATH = {
   ashTitan: { roar: true },
   magmaColossus: { line: 'Damn it.', voice: { pitch: 0.1, rate: 0.55 } },
-  boneKing: { roar: true }, // (placeholder: falls apart with a roar; tell Claude what it should do)
+  boneKing: {}, // (no roar: he rattles, shakes and falls apart into a heap of bones; see boss.js)
   leviathan: { roar: true }, // (a long gurgling roar as it sinks)
   devil: { line: 'This isn\'t over... I have SHAREHOLDERS...', voice: { pitch: 0.1, rate: 0.6 } }, // (placeholder: tell Claude his real last words)
   reflection: { line: 'Copy... that.', voice: { pitch: 0.4, rate: 0.7 } }, // (placeholder: shadow-Hank's last words; tell Claude what it should say)

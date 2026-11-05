@@ -27,6 +27,7 @@ const UP = new THREE.Vector3(0, 1, 0);
 export class Boss {
   constructor(scene, physics, ctx) {
     this.isBoss = true;
+    this.scene = scene;
     const cfg = ctx.region.boss;
     this.cfg = cfg;
     this.name = cfg.name;
@@ -59,6 +60,7 @@ export class Boss {
   reset() {
     // Killed but not blown up yet? Finish dying first (souls, gate, saved win).
     if (this.state === 'dying' && !this.exploded) this.#explode();
+    if (!this.defeated) this.#clearBones(); // (he's back: no heap of bones lying around)
     this.pos = this.arenaCenter.clone();
     this.prev = this.pos.clone();
     this.yaw = Math.atan2(-this.arenaCenter.x, -this.arenaCenter.z); // faces the way you'll come in
@@ -334,6 +336,15 @@ export class Boss {
     this.defeated = true;
     this.state = 'dead';
     const L = this.cfg.look || {};
+    // The Bone King doesn't blow up: he falls apart into a heap of bones.
+    if (L.skeleton) {
+      this.#collapse();
+      this.#dustBurst(this.pos.clone().setY(this.pos.y + 1), 30, 1.6);
+      this.ctx.chase.addShake(0.9);
+      this.body.setNextKinematicTranslation({ x: 0, y: -200, z: 0 });
+      this.ctx.onDefeated?.();
+      return;
+    }
     const colors = [L.skin ?? 0x5a5450, L.dark ?? 0x3a3432, L.glow ?? 0xff6a20, 0x9a0a0a, L.horn ?? 0xe0d6bc];
     for (const y of [1, 4, 7]) {
       this.ctx.gore.explode(this.pos.clone().setY(this.pos.y + y), new THREE.Vector3((Math.random() - 0.5) * 10, 6, (Math.random() - 0.5) * 10), colors, 4);
@@ -344,6 +355,70 @@ export class Boss {
     this.root.visible = false;
     this.body.setNextKinematicTranslation({ x: 0, y: -200, z: 0 });
     this.ctx.onDefeated?.();
+  }
+
+  // Every piece of the skeleton comes loose: it keeps its place, tumbles
+  // down under gravity, bounces and rattles, and stays on the ground as a
+  // heap of bones (until the boss resets).
+  #collapse() {
+    this.root.updateMatrixWorld(true);
+    this.bones = [];
+    const meshes = [];
+    this.root.traverse((o) => { if (o.isMesh) meshes.push(o); });
+    const p = new THREE.Vector3(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
+    for (const m of meshes) {
+      m.matrixWorld.decompose(p, q, sc);
+      const piece = new THREE.Mesh(m.geometry, m.material);
+      piece.position.copy(p);
+      piece.quaternion.copy(q);
+      piece.scale.copy(sc);
+      piece.castShadow = true;
+      this.scene.add(piece);
+      // A little outward kick from the middle of the body, and a spin
+      const out = new THREE.Vector3(p.x - this.pos.x, 0, p.z - this.pos.z);
+      const len = out.length() || 1;
+      this.bones.push({
+        m: piece,
+        vel: new THREE.Vector3((out.x / len) * (1 + Math.random() * 4), Math.random() * 3, (out.z / len) * (1 + Math.random() * 4)),
+        spin: new THREE.Vector3((Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8, (Math.random() - 0.5) * 8),
+        rest: false,
+        // (how high its middle sits once it's lying down)
+        lie: Math.max(0.15, Math.min(sc.x, sc.y, sc.z) * 0.2),
+      });
+    }
+    this.root.visible = false;
+    this.rattle = 0;
+    this.ctx.audio.wreck();
+  }
+
+  #updateBones(dt) {
+    if (!this.bones) return;
+    let moving = 0;
+    for (const b of this.bones) {
+      if (b.rest) continue;
+      moving++;
+      b.vel.y -= 22 * dt;
+      b.m.position.addScaledVector(b.vel, dt);
+      b.m.rotation.x += b.spin.x * dt; b.m.rotation.y += b.spin.y * dt; b.m.rotation.z += b.spin.z * dt;
+      const ground = terrain.height(b.m.position.x, b.m.position.z) + b.lie;
+      if (b.m.position.y <= ground) {
+        b.m.position.y = ground;
+        if (Math.abs(b.vel.y) > 2.5) { // bounce
+          b.vel.y *= -0.35; b.vel.x *= 0.6; b.vel.z *= 0.6; b.spin.multiplyScalar(0.5);
+          if ((this.rattle -= 1) < 0) { this.ctx.audio.thump(); this.rattle = 6; } // clatter
+        } else {
+          b.rest = true; // settled
+          b.m.rotation.x = Math.round(b.m.rotation.x / (Math.PI / 2)) * (Math.PI / 2) + (Math.random() - 0.5) * 0.3;
+          b.m.rotation.z = Math.round(b.m.rotation.z / (Math.PI / 2)) * (Math.PI / 2) + (Math.random() - 0.5) * 0.3;
+        }
+      }
+    }
+    if (!moving) this.bonesSettled = true;
+  }
+
+  #clearBones() {
+    for (const b of this.bones || []) this.scene.remove(b.m);
+    this.bones = null;
   }
 
   #dustBurst(at, n, size) {
@@ -360,6 +435,7 @@ export class Boss {
 
   // ------------------------------------------------------------------ drawing
   render(alpha, dt) {
+    this.#updateBones(dt);
     if (!this.root.visible) return;
     const m = this.parts;
     this.root.position.lerpVectors(this.prev, this.pos, alpha);
@@ -373,7 +449,11 @@ export class Boss {
 
     if (this.state === 'dormant') { lower = -1.6; lean = 0.35; armL = armR = -0.4; legL = legR = -1.2; }
     if (this.state === 'waking') { const k = Math.max(0, this.wakeTimer / 2.5); lower = -1.6 * k; lean = 0.35 * k; armL = armR = -2.6 * (1 - k) * (k > 0.3 ? 1 : k / 0.3); legL = legR = -1.2 * k; }
-    if (this.state === 'dying') { this.root.rotation.x = -Math.min(1.45, this.dieTimer * 0.9); }
+    if (this.state === 'dying') {
+      // The Bone King rattles and shakes apart; the others topple over.
+      if (this.cfg.look?.skeleton) { const k = Math.min(1, this.dieTimer / 2.2); this.root.rotation.set(Math.sin(this.dieTimer * 40) * 0.05 * k, this.root.rotation.y, Math.sin(this.dieTimer * 33) * 0.06 * k); m.upper.position.y = -k * 1.2; }
+      else this.root.rotation.x = -Math.min(1.45, this.dieTimer * 0.9);
+    }
     const a = this.action;
     if (a) {
       const wind = Math.min(1, a.t / a.windup), after = a.t > a.windup;
