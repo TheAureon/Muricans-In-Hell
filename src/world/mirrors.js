@@ -216,7 +216,7 @@ export class Mirrors {
       this.portals.push(pa, pb);
     }
     this.clones = [];
-    this.cloneCd = 20;
+    this.cloneCd = SETTINGS.mirror.firstClone;
   }
 
   // Everything you can shoot here (for the bullets)
@@ -332,7 +332,7 @@ export class Mirrors {
   reset() {
     for (const c of this.clones) c.dispose();
     this.clones = [];
-    this.cloneCd = 20;
+    this.cloneCd = SETTINGS.mirror.firstClone;
     for (const m of this.monoliths) {
       m.alive = true;
       m.g.visible = true;

@@ -390,9 +390,10 @@ export const SETTINGS = {
     monolithHp: 120,     // shots to shatter a real mirror
     shatterKmh: 45,      // ram a real mirror this fast and it shatters
     shatterDamage: 15,   // (and it cuts you a bit)
-    cloneChance: 0.35,   // chance a real mirror near you spits out a clone, each try
-    cloneEvery: [18, 30], // seconds between tries
-    maxClones: 2,
+    cloneChance: 0.8,    // chance a real mirror near you spits out a clone, each try
+    cloneEvery: [7, 12], // seconds between tries
+    maxClones: 5,        // most Hank clones hunting you at once
+    firstClone: 8,       // seconds before the first try after arriving (or a wreck)
     cloneHp: 260,
     cloneSpeed: 26,      // m/s
     cloneDamage: 22,     // ram

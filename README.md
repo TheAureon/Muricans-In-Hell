@@ -66,7 +66,7 @@ you to any linked region (Q picks which).
 chrome under a sky that is one enormous **mirror** (on Medium/High graphics
 it really reflects the world, upside down above you). Mirrors stand along
 the road: some are real (ram them hard or shoot them to shatter them), some
-are only reflections (drive straight through). Now and then a real one
+are only reflections (drive straight through). Often, a real one
 spits out a **mirror clone**: a dark chrome copy of your own car, with your
 guns, that hunts you. Framed **teleport mirrors** across the road send you
 somewhere else, and some of the demons are only reflections too (harmless;
