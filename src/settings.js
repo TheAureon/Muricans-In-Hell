@@ -229,9 +229,9 @@ export const SETTINGS = {
     souls: { imp: 2, hound: 2, spiker: 5, spitter: 4, brute: 25, fireImp: 3, magmaBrute: 35, boneRam: 8, boneArcher: 6, drowned: 4, bloater: 10, leech: 1, mireToad: 12, eggSac: 6, frostWraith: 4, frostBrute: 40, ironHusk: 12, harpy: 6, security: 15 },
     // (boss souls are with each boss, under "bosses")
     ramBonus: 1.5,
-    // Getting wrecked restarts the run. true = keep souls, unlocks and
-    // chassis upgrades across wrecks anyway.
-    keepOnWreck: false,
+    // Getting wrecked: true = keep everything (souls, unlocks, chassis and
+    // your build, fully repaired). false = those start over from scratch.
+    keepOnWreck: true,
   },
 
   // What parts cost in the garage. "unlock" = one-time souls to unlock

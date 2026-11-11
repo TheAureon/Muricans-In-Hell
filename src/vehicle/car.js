@@ -706,8 +706,11 @@ export class Car {
   // carrying stay in your stock.
   // Wrecked = start the whole run over: a complete stock car (every body
   // piece back), no bolted-on parts, and just the starting kit in stock.
-  respawn() {
-    this.build.load({ parts: [], missing: [], inventory: { ...SETTINGS.build.startingKit } });
+  // keepBuild: back with your build as you last left the garage, all fixed.
+  // Otherwise: the stock car and the starting kit.
+  respawn(keepBuild = false) {
+    if (keepBuild && this.savedBuild) this.build.load(this.savedBuild);
+    else this.build.load({ parts: [], missing: [], inventory: { ...SETTINGS.build.startingKit } });
     this.savedBuild = this.build.snapshot();
     this.build.save();
     this.wrecked = false;

@@ -525,30 +525,32 @@ async function main() {
       }
       if (wreckTimer > SETTINGS.damage.respawnDelay) {
         wreckTimer = 0;
-        // Full restart of the RUN (stock car + starting kit, no souls, no
-        // unlocks), back at this region's teleporter if it has one, else at
-        // the start. Where you've been (regions, bosses beaten, teleporters)
-        // is remembered.
+        // A fresh car, back at this region's teleporter if it has one, else
+        // at the start. You KEEP everything: souls, unlocks, chassis, your
+        // build (as you last left the garage, fully repaired), regions,
+        // bosses beaten, teleporters and jobs. (settings.progression.keepOnWreck
+        // = false makes a wreck cost the souls, unlocks, chassis and build.)
+        const keep = SETTINGS.progression.keepOnWreck;
         car.spawn.copy(respawnPoint());
         foundry?.reset();
         canyonHazards?.reset();
         mirrors?.reset();
-        car.respawn();
+        car.respawn(keep);
         scrap.clear();
         projectiles.clear();
         demons.clearAround(car.currPos, 99999);
         demons.populate(car.currPos);
-        if (boss) { boss.defeated = false; boss.reset(); }
+        if (boss && !boss.defeated) boss.reset(); // (a boss you killed stays dead)
         souls.clear();
         hazards.clearPools();
-        if (!SETTINGS.progression.keepOnWreck) progress.reset();
+        if (!keep) progress.reset();
         progress.save();
         gate?.setOpen(!!progress.cleared[region.id]);
         setTimeout(() => radio.say('wrecked'), 1500);
         hud.souls(progress.souls);
         car.setTier(progress.tier);
         stats.reset();
-        hud.toast('Starting over with a fresh car!', 'warn');
+        hud.toast(keep ? 'Wrecked! Doc patched you up: your car is fixed.' : 'Starting over with a fresh car!', 'warn');
       }
     }
 

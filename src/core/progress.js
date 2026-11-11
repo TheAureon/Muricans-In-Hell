@@ -1,6 +1,6 @@
 // Your progress. Two kinds:
 //  RUN   souls (the currency), unlocked parts and the chassis tier. A wreck
-//        wipes these (unless settings.progression.keepOnWreck).
+//        keeps these (unless settings.progression.keepOnWreck is false).
 //  WORLD where you are: the region you're in, bosses beaten, teleporters
 //        set up. A wreck never wipes these: Hell remembers where you've been.
 // Kept in the browser.
