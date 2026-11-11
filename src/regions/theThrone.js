@@ -85,7 +85,7 @@ export default {
   belts: [{ from: pt(0.535), to: pt(0.505), width: 12, speed: 9 }], // runs AGAINST you
   // 5. MIRRORS
   mirror: {
-    ceiling: false, glassFloor: false, illusions: 0.12,
+    ceiling: false, glassFloor: false, illusions: 0, // (no fake demons here: they'd be all along the road, not just by the mirrors)
     monoliths: [0.66, 0.675, 0.69, 0.705, 0.72, 0.735, 0.75, 0.765].map((f, i) => { const p = at(f, (i % 2 ? 1 : -1) * 14); return [p.x, p.z, p.yaw + Math.PI / 2, i % 3 !== 1]; }),
     portals: [],
   },

@@ -232,6 +232,7 @@ export class Car {
   // A harpy grabs a bolted-on part and rips it right off (if there are
   // any; otherwise it's just a hit). Returns true if something came off.
   grabPart(worldPoint, fallbackDamage) {
+    if (SETTINGS.dev.noDamage || this.invulnerable) return false; // (nothing comes off an invincible car)
     const parts = this.pieces().filter((pc) => pc.kind === 'part');
     if (!parts.length) { this.takeDamage(fallbackDamage, worldPoint); return false; }
     const pc = parts[Math.floor(Math.random() * parts.length)];

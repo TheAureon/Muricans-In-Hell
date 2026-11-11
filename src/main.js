@@ -163,7 +163,8 @@ async function main() {
     },
   }) : null;
   if (mirrors) {
-    Object.defineProperty(demons, 'targets', { get: () => mirrors.targets }); // (shootable like demons)
+    // (shootable like demons; the Throne has turrets AND mirrors, so both)
+    Object.defineProperty(demons, 'targets', { get: () => [...(foundry?.turrets || []), ...mirrors.targets] });
     mirrors.onTeleport = () => { radio.say('firstPortal'); jobs.emit('teleport'); };
     mirrors.onFake = () => radio.say('firstFake');
     mirrors.onClone = () => radio.say('firstClone');
@@ -765,7 +766,9 @@ async function main() {
     water?.update(dt);
     foundry?.update(dt);
     canyonHazards?.update(dt, car.position);
-    // Down a chasm: that's the end of this car.
+    // Down a chasm: that's the end of this car. (The title-screen movie
+    // just puts its car back on the road.)
+    if (terrain.canyon && !playing && car.currPos.y < SETTINGS.canyon.fallDepth) car.reset(true);
     if (terrain.canyon && playing && !car.wrecked && car.currPos.y < SETTINGS.canyon.fallDepth) {
       car.wrecked = true;
       hud.toast('Fell into the chasm!', 'bad');
