@@ -30,7 +30,8 @@ there).
   anyone in the cast can give jobs, so new characters can hand them out later.)
 - **Wrecked?** You lose nothing: Doc patches you up and you're back at the
   region's teleporter if you've set one up, or at its start, with your souls,
-  unlocks, chassis and build (as you last left the garage, fully repaired).
+  unlocks, chassis and whatever parts were still on the car (repaired; parts
+  you lost stay lost).
   Regions reached, bosses beaten, teleporters and jobs are remembered.
 
 **Current stage: Milestone 7 — regions (part 1: the Lava Rivers).** Beat the
@@ -153,9 +154,9 @@ you're at the base).
 Souls from kills buy parts and chassis upgrades in the garage (**G**):
 Muscle Car → Armored Car → Half-Track → **HELL TANK**.
 
-Get wrecked (lose the cabin) and you keep everything: your souls, unlocks,
-chassis and build come back with you, fully repaired, at the region's
-teleporter or start. A boss you were fighting goes back to sleep at full health;
+Get wrecked (lose the cabin) and you keep your souls, unlocks, chassis and
+every part still on the car, fully repaired, at the region's teleporter or
+start. Parts and body sections you lost stay lost. A boss you were fighting goes back to sleep at full health;
 one you killed stays dead. (Set `progression.keepOnWreck` to `false` in
 `src/settings.js` to make a wreck cost your souls, unlocks, chassis and build.)
 

@@ -526,8 +526,8 @@ async function main() {
       if (wreckTimer > SETTINGS.damage.respawnDelay) {
         wreckTimer = 0;
         // A fresh car, back at this region's teleporter if it has one, else
-        // at the start. You KEEP everything: souls, unlocks, chassis, your
-        // build (as you last left the garage, fully repaired), regions,
+        // at the start. You KEEP everything: souls, unlocks, chassis, the
+        // parts still on the car (repaired; lost ones stay lost), regions,
         // bosses beaten, teleporters and jobs. (settings.progression.keepOnWreck
         // = false makes a wreck cost the souls, unlocks, chassis and build.)
         const keep = SETTINGS.progression.keepOnWreck;

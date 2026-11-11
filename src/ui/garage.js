@@ -128,7 +128,7 @@ export class Garage {
     this.removeMark.visible = false;
     this.missingGhosts.visible = false;
     this.car.build.save();
-    this.car.savedBuild = this.car.build.snapshot(); // you respawn with this
+    this.car.savedBuild = this.car.build.snapshot(); // (the build as you left the garage)
   }
 
   update() {

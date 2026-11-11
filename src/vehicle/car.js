@@ -104,7 +104,7 @@ export class Car {
     // Bolt-on parts (the builder). Restores your last build if there is one.
     this.build = new Build();
     this.build.restore();
-    this.savedBuild = this.build.snapshot(); // what you respawn with
+    this.savedBuild = this.build.snapshot(); // (the build as you last left the garage)
     this.partsGroup = new THREE.Group();
     this.model.body.add(this.partsGroup);
     this.partColliders = [];
@@ -706,10 +706,11 @@ export class Car {
   // carrying stay in your stock.
   // Wrecked = start the whole run over: a complete stock car (every body
   // piece back), no bolted-on parts, and just the starting kit in stock.
-  // keepBuild: back with your build as you last left the garage, all fixed.
-  // Otherwise: the stock car and the starting kit.
+  // keepBuild: back with whatever was still bolted on when you crashed, all
+  // repaired. Parts and body sections you lost STAY lost. Otherwise: the
+  // stock car and the starting kit.
   respawn(keepBuild = false) {
-    if (keepBuild && this.savedBuild) this.build.load(this.savedBuild);
+    if (keepBuild) this.build.load(this.build.snapshot()); // (load repairs everything)
     else this.build.load({ parts: [], missing: [], inventory: { ...SETTINGS.build.startingKit } });
     this.savedBuild = this.build.snapshot();
     this.build.save();
