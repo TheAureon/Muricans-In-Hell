@@ -409,9 +409,6 @@ async function main() {
       cutEl.className = 'fadeout';
       if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
       setTimeout(() => radio.say(region.radio?.arrive), 1200);
-      let wrecked = false;
-      try { wrecked = sessionStorage.getItem('helldrive.wrecked') === '1'; sessionStorage.removeItem('helldrive.wrecked'); } catch { /* ignore */ }
-      if (wrecked) { hud.toast('Wrecked! A brand-new run: everything starts over.', 'warn'); setTimeout(() => radio.say('wrecked'), 3000); }
     }, 320);
   }
 
@@ -527,51 +524,31 @@ async function main() {
         smoke.spawn(tmp.copy(car.position).setY(car.position.y + 1.2), new THREE.Vector3((Math.random() - 0.5) * 1.5, 3 + Math.random() * 2, (Math.random() - 0.5) * 1.5), 0.6 + Math.random() * 0.5, 1.6);
       }
       if (wreckTimer > SETTINGS.damage.respawnDelay) {
-        // A wreck is the END OF THE RUN: everything is wiped (souls, unlocks,
-        // chassis, build, regions reached, bosses beaten, teleporters, jobs)
-        // and a brand-new run starts in the Ash Plains, exactly like NEW RUN.
-        // (Not in creative mode: those visits aren't real. And
-        // settings.progression.keepOnWreck keeps it all.)
-        if (!SETTINGS.dev.creative && !SETTINGS.progression.keepOnWreck) {
-          traveling = true;
-          try {
-            localStorage.removeItem('helldrive.progress');
-            localStorage.removeItem('helldrive.build');
-            localStorage.removeItem('helldrive.missions');
-            // (the story stays seen, so the intro doesn't replay on every death)
-            sessionStorage.setItem('helldrive.wrecked', '1');
-            sessionStorage.setItem('helldrive.toMenu', '1');
-          } catch { /* ignore */ }
-          progress.save = () => {}; // nothing may write the old run back now
-          car.build.save = () => {};
-          jobs.save = () => {};
-          hud.travel('a brand-new run', 'WRECKED! STARTING');
-          setTimeout(() => location.reload(), 1300);
-          wreckTimer = -Infinity; // (never again: the page is reloading)
-        } else {
-          // Creative / keepOnWreck: just a fresh car, right here.
-          wreckTimer = 0;
-          car.spawn.copy(respawnPoint());
-          foundry?.reset();
-          canyonHazards?.reset();
-          mirrors?.reset();
-          car.respawn();
-          scrap.clear();
-          projectiles.clear();
-          demons.clearAround(car.currPos, 99999);
-          demons.populate(car.currPos);
-          if (boss) { boss.defeated = false; boss.reset(); }
-          souls.clear();
-          hazards.clearPools();
-          if (!SETTINGS.progression.keepOnWreck) progress.reset();
-          progress.save();
-          gate?.setOpen(!!progress.cleared[region.id]);
-          setTimeout(() => radio.say('wrecked'), 1500);
-          hud.souls(progress.souls);
-          car.setTier(progress.tier);
-          stats.reset();
-          hud.toast('Starting over with a fresh car!', 'warn');
-        }
+        wreckTimer = 0;
+        // Full restart of the RUN (stock car + starting kit, no souls, no
+        // unlocks), back at this region's teleporter if it has one, else at
+        // the start. Where you've been (regions, bosses beaten, teleporters)
+        // is remembered.
+        car.spawn.copy(respawnPoint());
+        foundry?.reset();
+        canyonHazards?.reset();
+        mirrors?.reset();
+        car.respawn();
+        scrap.clear();
+        projectiles.clear();
+        demons.clearAround(car.currPos, 99999);
+        demons.populate(car.currPos);
+        if (boss) { boss.defeated = false; boss.reset(); }
+        souls.clear();
+        hazards.clearPools();
+        if (!SETTINGS.progression.keepOnWreck) progress.reset();
+        progress.save();
+        gate?.setOpen(!!progress.cleared[region.id]);
+        setTimeout(() => radio.say('wrecked'), 1500);
+        hud.souls(progress.souls);
+        car.setTier(progress.tier);
+        stats.reset();
+        hud.toast('Starting over with a fresh car!', 'warn');
       }
     }
 
