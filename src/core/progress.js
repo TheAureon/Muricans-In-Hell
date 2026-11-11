@@ -1,8 +1,8 @@
-// Your progress. Two kinds:
-//  RUN   souls (the currency), unlocked parts and the chassis tier. A wreck
-//        wipes these (unless settings.progression.keepOnWreck).
-//  WORLD where you are: the region you're in, bosses beaten, teleporters
-//        set up. A wreck never wipes these: Hell remembers where you've been.
+// Your progress:
+//  RUN   souls (the currency), unlocked parts and the chassis tier.
+//  WORLD where you are: the region you're in, bosses beaten, teleporters set up.
+// A wreck wipes ALL of it (plus the build and the jobs) and the page reloads
+// into a brand-new run (see main.js), unless settings.progression.keepOnWreck.
 // Kept in the browser.
 import { SETTINGS } from '../settings.js';
 

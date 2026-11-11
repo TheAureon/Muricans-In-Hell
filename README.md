@@ -26,11 +26,11 @@ there).
   Open the **job board** (**J** or the JOBS button) to accept them. Your jobs
   show on the right; places to go are marked with beams of light and a
   second arrow at the top. Finished jobs pay souls and unlock the next one.
-  Jobs stay done when you wreck. (They live in `src/missions/missions.js`;
+  A wreck wipes your jobs along with everything else. (They live in `src/missions/missions.js`;
   anyone in the cast can give jobs, so new characters can hand them out later.)
-- **Wrecked?** The run starts over (souls, unlocks, chassis, build), but you
-  respawn at the region's teleporter if you've set one up, or at its start.
-  Regions reached, bosses beaten and teleporters are remembered.
+- **Wrecked?** That's the end of the run. EVERYTHING starts over, exactly like
+  NEW RUN: souls, unlocks, chassis, build, regions reached, bosses beaten,
+  teleporters and jobs. You're back at Doc's base in the Ash Plains.
 
 **Current stage: Milestone 7 — regions (part 1: the Lava Rivers).** Beat the
 Ash Titan and a **Hellgate** opens next to its arena: drive through it to
@@ -153,9 +153,10 @@ Souls from kills buy parts and chassis upgrades in the garage (**G**):
 Muscle Car → Armored Car → Half-Track → **HELL TANK**.
 
 Get wrecked (lose the cabin) and the whole run starts over, back in the Ash
-Plains: a complete stock car, the starting parts kit, zero souls, nothing unlocked, fresh demons, and
-the Titan asleep again. (Set `progression.keepOnWreck` to `true` in
-`src/settings.js` to keep souls and unlocks.)
+Plains: a complete stock car, the starting parts kit, zero souls, nothing unlocked,
+every boss alive again, no teleporters and no jobs done. (Set
+`progression.keepOnWreck` to `true` in `src/settings.js` to keep it all and just
+get a fresh car where you are.)
 
 Damage is physical: every body section and bolted-on part takes its own
 damage and breaks off as that actual piece. Press **E** to grab scrap, then
