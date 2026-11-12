@@ -67,6 +67,17 @@ function materials() {
   return (_M = M);
 }
 
+// Paint the car (every copy of it): a paint job from vehicle/paint.js.
+export function applyPaint(p) {
+  const M = materials();
+  M.paint.color.setHex(p.paint);
+  M.stripe.color.setHex(p.stripe);
+  M.accent.color.setHex(p.accent);
+  M.paint.metalness = p.metal ?? 0.1;
+  M.paint.roughness = p.metal ? 0.6 - p.metal * 0.45 : 0.6;
+  if (M.paint.emissive) { M.paint.emissive.setHex(p.glow || 0); M.paint.emissiveIntensity = p.glow ? 1 : 0; }
+}
+
 // The light materials (brake lights brighten when braking).
 export function carLightMaterials() { const M = materials(); return { head: M.headlight, tail: M.taillight }; }
 

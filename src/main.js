@@ -53,6 +53,8 @@ import { JobBoard } from './missions/jobBoard.js';
 import { JobLog } from './ui/jobLog.js';
 import { Record } from './core/record.js';
 import { PART_TYPES } from './vehicle/parts.js';
+import { PaintShop, paintById } from './vehicle/paint.js';
+import { applyPaint } from './vehicle/carModel.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
 
@@ -184,7 +186,10 @@ async function main() {
     progress.tier = creativeStash.tier;
   }
   car.setTier(progress.tier);
-  const garage = new Garage({ camera, renderer, car, audio, progress });
+  // Paint job (the paint shop is in the garage).
+  const paints = new PaintShop();
+  applyPaint(paintById(paints.current));
+  const garage = new Garage({ camera, renderer, car, audio, progress, paints });
   // The garage is a real place now: Doc's base in the Ash Plains. G or the
   // corner button opens it there (or anywhere in creative mode).
   const canGarage = () => SETTINGS.dev.creative || !!base?.contains(car.currPos);

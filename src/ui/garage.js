@@ -25,6 +25,8 @@ import { PART_TYPES } from '../vehicle/parts.js';
 import { BODY_CELLS, cellCenter, CELL, sectionOfCell, SECTION_NAMES, SECTION_PIECES, isSectionPiece, pieceInfo, pieceStats } from '../vehicle/build.js';
 import { makePieceModel } from '../vehicle/pieceModel.js';
 import { REGIONS } from '../regions/index.js';
+import { PAINTS, paintById } from '../vehicle/paint.js';
+import { applyPaint } from '../vehicle/carModel.js';
 
 const KMH = 3.6;
 const PART_LIST = Object.keys(PART_TYPES);
@@ -35,8 +37,9 @@ const bossWithPart = (type) => {
 };
 
 export class Garage {
-  constructor({ camera, renderer, car, audio, progress }) {
+  constructor({ camera, renderer, car, audio, progress, paints }) {
     this.progress = progress;
+    this.paints = paints;
     this.camera = camera;
     this.car = car;
     this.audio = audio;
@@ -340,6 +343,22 @@ export class Garage {
     this.#refreshUI();
   }
 
+  // The paint shop: buy a paint job (or switch to one you own).
+  #paint(id) {
+    const P = this.paints, p = paintById(id);
+    if (!P || p.secret && !P.has(id)) return;
+    if (!P.has(id)) {
+      if (!this.progress.spend(p.price)) { this.audio.claw(); this.#status(`✖ Not enough souls: ${p.name} costs ${p.price} ✦`, true); return; }
+      P.give(id);
+      this.#status(`Grizzle sprayed on ${p.name} (-${p.price} ✦)`);
+    } else this.#status(`Painted: ${p.name}`);
+    P.use(id);
+    applyPaint(p);
+    this.car.repaint();
+    this.audio.chime();
+    this.#refreshUI();
+  }
+
   #upgradeChassis() {
     const next = this.progress.nextTier;
     if (!next) return;
@@ -401,6 +420,8 @@ export class Garage {
     // "Rebuild" buttons for missing body sections
     ui.querySelector('.g-stats').addEventListener('click', (e) => {
       if (e.target.closest('[data-upgrade]')) { this.#upgradeChassis(); return; }
+      const paint = e.target.closest('[data-paint]');
+      if (paint) { this.#paint(paint.dataset.paint); return; }
       const id = e.target.dataset?.restore;
       if (!id) return;
       this.#remember();
@@ -447,7 +468,7 @@ export class Garage {
     }
     this.ui.querySelector('.g-list').innerHTML = rows.join('');
     this.ui.querySelector('.g-mirror').textContent = `🪞 Mirror: ${this.mirror ? 'ON' : 'OFF'} (F)`;
-    this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats()) + bodyHTML(this.car.build) + chassisHTML(this.progress);
+    this.ui.querySelector('.g-stats').innerHTML = statsHTML(this.car.build.stats()) + bodyHTML(this.car.build) + chassisHTML(this.progress) + paintHTML(this.paints, this.progress);
   }
 }
 
@@ -520,6 +541,23 @@ const TIER_BLURB = {
   halftrack: 'rear treads: grips hard, drifts less, much tougher, 50% lava resist',
   tank: 'full treads, spins on the spot, huge armor + a big cannon, 60% lava resist',
 };
+// Paint jobs: swatches. Owned = click to use; others show the price (or
+// a lock for the secret ones).
+function paintHTML(P, progress) {
+  if (!P) return '';
+  const souls = Math.floor(progress.souls);
+  const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+  const tiles = PAINTS.filter((p) => !p.secret || P.has(p.id)).map((p) => {
+    const own = P.has(p.id), on = P.current === p.id;
+    const tag = on ? 'ON' : own ? 'USE' : `${p.price} ✦`;
+    return `<button class="g-paint ${on ? 'on' : ''} ${!own && souls < p.price ? 'cant' : ''}" data-paint="${p.id}" title="${p.name}${p.secret ? ' (secret!)' : ''}">
+      <i style="background:linear-gradient(135deg, ${hex(p.paint)} 55%, ${hex(p.stripe)} 55% 70%, ${hex(p.accent)} 70%)"></i><span>${p.name}</span><b>${tag}</b></button>`;
+  }).join('');
+  const hidden = PAINTS.filter((p) => p.secret && !P.has(p.id)).length;
+  return `<div class="g-sub">PAINT SHOP <small>(Grizzle sprays it on)</small></div><div class="g-paints">${tiles}</div>
+    ${hidden ? `<div class="g-blurb">🔒 ${hidden} secret paint job${hidden > 1 ? 's' : ''} hidden somewhere in Hell.</div>` : ''}`;
+}
+
 function chassisHTML(progress) {
   const now = progress.tierInfo, next = progress.nextTier;
   const souls = Math.floor(progress.souls);

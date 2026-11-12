@@ -258,9 +258,16 @@ body.garage-open #hud > *:not(#fps) { display: none; }
 #garage .g-buy.cant { background: #3a3a3a; color: #aaa; }
 #garage .g-souls { position: absolute; top: 78px; left: 50%; transform: translateX(-50%); font: 20px 'Arial Black', Impact, sans-serif; color: #bfe8ff; text-shadow: 0 0 10px #3aa0ff; }
 #garage .g-upgrade { pointer-events: auto; width: 100%; margin-top: 6px; background: #c8202a; border: 0; border-radius: 5px; padding: 7px; color: #fff; font-weight: 700; }
+#garage .g-stats .g-paints { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px; margin-top: 4px; pointer-events: auto; }
+#garage .g-paint { display: flex; align-items: center; gap: 6px; background: #ffffff10; border: 1px solid #ffffff20; border-radius: 5px; padding: 4px 6px; color: #fff; font-size: 11px; text-align: left; cursor: pointer; }
+#garage .g-paint i { width: 18px; height: 18px; border-radius: 4px; flex: none; border: 1px solid #0008; }
+#garage .g-stats .g-paint span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#garage .g-stats .g-paint b { font-size: 10px; color: #ffd27a; white-space: nowrap; }
+#garage .g-paint.on { border-color: #ff5020; background: #ff502030; }
+#garage .g-stats .g-paint.cant b { color: #fff6; }
 #garage .g-upgrade.cant { background: #3a3a3a; color: #aaa; }
 #garage .g-blurb { display: block !important; font-size: 11px; color: #f0d8c8a0; margin-top: 3px; }
-#garage .g-stats { max-height: calc(100vh - 110px); overflow-y: auto; pointer-events: auto; }
+#garage .g-stats { max-height: calc(100vh - 110px); overflow-y: auto; pointer-events: auto; padding-bottom: 56px; }
 body.garage-open #compass, body.garage-open #souls { display: none !important; }
 
 /* ---- Dev / creative panel ---- */

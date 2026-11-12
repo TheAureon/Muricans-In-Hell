@@ -27,6 +27,9 @@ const _right = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 
+// mesh -> the shared material it had before getting its own (charred) copy
+const SHARED_MAT = new WeakMap();
+
 export class Car {
   constructor(scene, physics, spawn = new THREE.Vector3(0, 1, 0)) {
     const { RAPIER, world } = physics;
@@ -399,10 +402,25 @@ export class Car {
     for (const o of objects || []) {
       o.traverse((m) => {
         if (!m.isMesh || !m.material.color || m.material.transparent) return;
-        if (!m.userData.ownMat) { m.material = m.material.clone(); m.userData.ownMat = true; m.userData.base = m.material.color.clone(); }
+        if (!m.userData.ownMat) { SHARED_MAT.set(m, m.material); m.material = m.material.clone(); m.userData.ownMat = true; m.userData.base = m.material.color.clone(); }
         m.material.color.copy(m.userData.base).lerp(CHAR, dark);
       });
     }
+  }
+
+  // New paint job: the shared materials changed color, so redo the damaged
+  // pieces' own copies from them.
+  repaint() {
+    const fix = (m) => {
+      if (!m.isMesh || !m.userData.ownMat || !SHARED_MAT.has(m)) return;
+      m.material.dispose();
+      m.material = SHARED_MAT.get(m);
+      SHARED_MAT.delete(m);
+      m.userData.ownMat = false;
+    };
+    this.model.root.traverse(fix);
+    this.partsGroup.traverse(fix);
+    this.#refreshAllTints();
   }
 
   #refreshAllTints() {
