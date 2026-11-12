@@ -52,6 +52,7 @@ import { Souls } from './world/souls.js';
 import { JobBoard } from './missions/jobBoard.js';
 import { JobLog } from './ui/jobLog.js';
 import { Record } from './core/record.js';
+import { PART_TYPES } from './vehicle/parts.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
 
@@ -214,7 +215,7 @@ async function main() {
     radio.say('firstKill');
     jobs.emit('kill', { type: d.type, source });
     const P = SETTINGS.progression;
-    souls.burst(d.pos, (P.souls[d.type] || 1) * (source === 'ram' ? P.ramBonus : 1));
+    souls.burst(d.pos, (P.souls[d.type] || 1) * (source === 'ram' ? P.ramBonus : 1) * (1 + (car.stats.soulMult || 0)));
   };
   const scrap = new Scrap(scene);
 
@@ -246,6 +247,7 @@ async function main() {
       if (death.line) setTimeout(() => speakLine(death.line, death.voice, audio), 500);
     },
     onDefeated: () => {
+      setTimeout(() => salvage(), 4000);
       setTimeout(() => radio.say(region.radio?.bossDead), 1500);
       if (region.radio?.afterBoss) setTimeout(() => radio.say(region.radio.afterBoss), 16000);
       if (region.finale) { // THE END
@@ -417,6 +419,19 @@ async function main() {
       if (region.gatingRule?.requires !== 'none') hud.banner(region.name.toUpperCase(), region.gatingRule.description, 9);
       setTimeout(() => radio.say(region.radio?.arrive), 1200);
     }, 320);
+  }
+
+  // BOSS SALVAGE: the first time a boss dies, it leaves its one-of-a-kind
+  // part (settings.bossSalvage). It goes in your stock, and from then on you
+  // can buy more in the garage.
+  function salvage() {
+    const type = SETTINGS.bossSalvage[region.boss?.type];
+    if (!type || SETTINGS.dev.creative || !progress.salvage(type)) return;
+    car.build.give(type);
+    car.build.save();
+    const info = PART_TYPES[type];
+    hud.banner(`SALVAGED: ${info.name.toUpperCase()}`, `${info.icon} ${info.desc.replace(/^BOSS SALVAGE \([^)]*\)\. /, '')} It's in your garage stock.`, 8);
+    audio.chime();
   }
 
   let padPick = 0; // which linked region the base pad sends you to

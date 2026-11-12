@@ -334,10 +334,24 @@ export class Car {
     }
   }
 
+  #regen(hp) {
+    const b = this.build;
+    for (const id of Object.keys(b.sectionHp)) {
+      if (b.missing.has(id)) continue;
+      const max = b.sectionMaxHp(id);
+      if (b.sectionHp[id] < max) { b.sectionHp[id] = Math.min(max, b.sectionHp[id] + hp); this.#tint([this.model.sections[id]], b.sectionHp[id] / max); }
+    }
+    for (const p of b.list()) {
+      const max = pieceStats(p.type).hp;
+      if (p.hp < max) { p.hp = Math.min(max, p.hp + hp); this.#tint(this.partObjects.get(p.key), p.hp / max); }
+    }
+  }
+
   // quiet = no red screen flash (for slow burns).
   damagePiece(pc, amount, quiet = false) {
     if (SETTINGS.dev.noDamage || this.invulnerable) return; // dev mode / title-screen demo: invincible
     if (!quiet) this.hurtTimer = 0.25;
+    amount *= 1 - (this.stats?.armor || 0); // (Mirror Shard and co.)
     if (pc.kind === 'part') {
       const p = this.build.parts.get(pc.key);
       if (!p) return;
@@ -673,6 +687,13 @@ export class Car {
       this.jetsFiring = this.throttle > 0;
     }
     if (this.grounded || !this.stats.jets) this.jetsFiring = false;
+    // Harpy Wings: glide down instead of dropping like a rock.
+    if (!this.grounded && this.stats.glide && !this.wrecked) {
+      const v = this.body.linvel();
+      if (v.y < -this.stats.glide) this.body.setLinvel({ x: v.x, y: -this.stats.glide, z: v.z }, true);
+    }
+    // Self-repair (Bog Heart, Devil's Contract): everything still attached heals.
+    if (this.stats.regen && !this.wrecked && (this.regenT = (this.regenT || 0) + dt) > 0.25) { this.#regen(this.stats.regen * this.regenT); this.regenT = 0; }
 
     this.forwardSpeed = vf;
     this.sidewaysSpeed = vs;

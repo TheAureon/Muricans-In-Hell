@@ -60,9 +60,12 @@ export class Progress {
     return true;
   }
 
+  // A boss dropped its salvage part: unlocked for good (no souls).
+  salvage(type) { if (this.unlocked.has(type)) return false; this.unlocked.add(type); this.save(); return true; }
+
   unlock(type) {
     const cost = SETTINGS.shop[type]?.unlock ?? 0;
-    if (this.isUnlocked(type) || !this.spend(cost)) return false;
+    if (cost === 'boss' || this.isUnlocked(type) || !this.spend(cost)) return false;
     this.unlocked.add(type);
     this.save();
     return true;

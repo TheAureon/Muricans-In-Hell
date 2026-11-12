@@ -24,9 +24,15 @@ import { SETTINGS } from '../settings.js';
 import { PART_TYPES } from '../vehicle/parts.js';
 import { BODY_CELLS, cellCenter, CELL, sectionOfCell, SECTION_NAMES, SECTION_PIECES, isSectionPiece, pieceInfo, pieceStats } from '../vehicle/build.js';
 import { makePieceModel } from '../vehicle/pieceModel.js';
+import { REGIONS } from '../regions/index.js';
 
 const KMH = 3.6;
 const PART_LIST = Object.keys(PART_TYPES);
+// The boss that drops this salvage part (by name).
+const bossWithPart = (type) => {
+  const bossType = Object.keys(SETTINGS.bossSalvage).find((b) => SETTINGS.bossSalvage[b] === type);
+  return REGIONS.find((r) => r.boss?.type === bossType)?.boss.name || 'its boss';
+};
 
 export class Garage {
   constructor({ camera, renderer, car, audio, progress }) {
@@ -432,9 +438,12 @@ export class Garage {
     // Locked parts at the bottom, with their unlock price
     for (const t of this.#lockedParts()) {
       const info = pieceInfo(t), cost = SETTINGS.shop[t].unlock;
-      rows.push(`<div class="g-item locked"><span class="ico">🔒</span>
+      // Boss salvage can't be bought: only the boss drops it.
+      const btn = cost === 'boss' ? `<span class="g-boss">☠ Kill ${bossWithPart(t)}</span>`
+        : `<button class="g-buy unlock ${souls < cost ? 'cant' : ''}" data-unlock="${t}">Unlock ${cost} ✦</button>`;
+      rows.push(`<div class="g-item locked ${info.boss ? 'boss' : ''}"><span class="ico">🔒</span>
         <span class="nm">${info.name}<small>${info.desc}</small></span>
-        <span class="kg"><button class="g-buy unlock ${souls < cost ? 'cant' : ''}" data-unlock="${t}">Unlock ${cost} ✦</button></span></div>`);
+        <span class="kg">${btn}</span></div>`);
     }
     this.ui.querySelector('.g-list').innerHTML = rows.join('');
     this.ui.querySelector('.g-mirror').textContent = `🪞 Mirror: ${this.mirror ? 'ON' : 'OFF'} (F)`;
@@ -482,6 +491,10 @@ function statsHTML(st) {
     ${row('0–100 km/h', p.zeroHundred ? `${p.zeroHundred.toFixed(1)} s` : 'never!', p.zeroHundred ? diff(p.zeroHundred, stock.zeroHundred, 'down', ' s', 1) : '')}
     ${row('Turning', `${Math.round(p.turn)}%`, diff(p.turn, stock.turn, 'up', '%'))}
     ${row('Guns', st.guns)}
+    ${st.soulMult ? row('Souls from kills', `+${Math.round(st.soulMult * 100)}%`) : ''}
+    ${st.armor ? row('Damage taken', `-${Math.round(st.armor * 100)}%`) : ''}
+    ${st.regen ? row('Self-repair', `${st.regen} hp/s`) : ''}
+    ${st.glide ? row('Glide', 'yes') : ''}
     <div class="g-sub">SPLATS IMPS FROM</div>
     ${row('Front', `${Math.round(p.splatFront)} km/h`, diff(p.splatFront, stock.splatFront, 'down'))}
     ${row('Sides', `${Math.round(p.splatSide)} km/h`, diff(p.splatSide, stock.splatSide, 'down'))}

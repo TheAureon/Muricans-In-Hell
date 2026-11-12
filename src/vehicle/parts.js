@@ -19,6 +19,18 @@ const M = {
   float: mat(0xff7a20, { roughness: 0.5, metalness: 0 }),
   glowHot: new THREE.MeshBasicMaterial({ color: 0xff7020 }),
   copper: mat(0xb06a30, { metalness: 0.6, roughness: 0.35 }),
+  // (boss salvage)
+  ash: mat(0x3a3430, { roughness: 0.9 }),
+  ember: new THREE.MeshBasicMaterial({ color: 0xff5010 }),
+  gold: mat(0xf0c040, { metalness: 0.8, roughness: 0.3 }),
+  tooth: mat(0xe8e4d0, { roughness: 0.4 }),
+  bogGreen: new THREE.MeshBasicMaterial({ color: 0x80ff40 }),
+  ice: mat(0x9ad8ff, { metalness: 0.1, roughness: 0.15, transparent: true, opacity: 0.85 }),
+  reactor: new THREE.MeshBasicMaterial({ color: 0x40ffd0 }),
+  feather: mat(0x4a2a3a, { roughness: 0.8 }),
+  mirror: mat(0xd8e0ea, { metalness: 1, roughness: 0.05 }),
+  devil: new THREE.MeshBasicMaterial({ color: 0xff2020 }),
+  paper: mat(0xe8d8a8, { roughness: 0.9 }),
 };
 
 function add(group, geometry, material, x = 0, y = 0, z = 0) {
@@ -256,6 +268,105 @@ export const PART_TYPES = {
     build(g) {
       add(g, new THREE.BoxGeometry(0.46, 0.46, 0.46), M.lead);
       add(g, new THREE.BoxGeometry(0.47, 0.1, 0.47), M.yellow, 0, 0.1, 0);
+    },
+  },
+
+  // ---------------- BOSS SALVAGE (one per boss; see settings.bossSalvage) ----------------
+  titanFist: {
+    name: "Titan's Fist", icon: '👊', boss: true,
+    desc: 'BOSS SALVAGE (Ash Titan). A stone fist: +200% ram damage on the side it faces.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.46, 0.14, 0.46), M.dark, 0, -0.18, 0);
+      add(g, new THREE.DodecahedronGeometry(0.3, 0), M.ash, 0, 0.12, 0).scale.set(1, 0.85, 1.1);
+      for (const x of [-0.15, -0.05, 0.05, 0.15]) add(g, new THREE.BoxGeometry(0.08, 0.12, 0.1), M.ash, x, 0.36, 0.08);
+      add(g, new THREE.BoxGeometry(0.4, 0.03, 0.03), M.ember, 0, 0.2, 0.26);
+    },
+  },
+  magmaHeart: {
+    name: 'Magma Heart', icon: '🔥', boss: true,
+    desc: 'BOSS SALVAGE (Magma Colossus). Lava can\'t touch you (like 4 Hover Fans) and +engine power.',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.2, 0.24, 0.16, 8), M.dark, 0, -0.17, 0);
+      add(g, new THREE.IcosahedronGeometry(0.22, 0), M.ember, 0, 0.12, 0);
+      for (const [x, y, z] of [[0.14, 0.2, 0.08], [-0.15, 0.08, 0.1], [0.02, 0.05, -0.18], [-0.05, 0.3, -0.05]]) add(g, new THREE.DodecahedronGeometry(0.1, 0), M.ash, x, y, z); // crust
+      for (const a of [0, 2.1, 4.2]) add(g, new THREE.BoxGeometry(0.05, 0.3, 0.05), M.ember, Math.cos(a) * 0.2, 0.1, Math.sin(a) * 0.2);
+    },
+  },
+  boneCrown: {
+    name: 'Bone Crown', icon: '👑', boss: true,
+    desc: 'BOSS SALVAGE (Bone King). Demons you kill drop +50% souls.',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.22, 0.22, 0.14, 8, 1, true), M.bone, 0, -0.12, 0);
+      for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; add(g, new THREE.ConeGeometry(0.06, 0.26, 4), M.bone, Math.cos(a) * 0.2, 0.08, Math.sin(a) * 0.2); }
+      add(g, new THREE.OctahedronGeometry(0.07, 0), M.gold, 0, -0.04, 0.22);
+    },
+  },
+  leviathanTooth: {
+    name: 'Leviathan Tooth', icon: '🦷', boss: true,
+    desc: 'BOSS SALVAGE (Drowned Leviathan). +150% ram damage on its side, and it floats (like 3 Pontoons).',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.44, 0.12, 0.44), M.dark, 0, -0.19, 0);
+      add(g, new THREE.ConeGeometry(0.2, 0.95, 6), M.tooth, 0, 0.32, 0).rotation.z = 0.15;
+    },
+  },
+  bogHeart: {
+    name: 'Bog Heart', icon: '💚', boss: true,
+    desc: 'BOSS SALVAGE (Bog Mother). It slowly repairs your whole car, and you never get stuck in mud.',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.22, 0.2, 0.14, 8), M.dark, 0, -0.17, 0);
+      add(g, new THREE.SphereGeometry(0.2, 8, 6), M.bogGreen, 0, 0.08, 0);
+      for (const a of [0.5, 2.4, 4.4]) add(g, new THREE.TorusGeometry(0.2, 0.025, 4, 10), M.feather, 0, 0.08, 0).rotation.set(a, a * 0.7, 0);
+    },
+  },
+  frostCore: {
+    name: 'Frost Core', icon: '❄️', boss: true,
+    desc: 'BOSS SALVAGE (Frozen Warden). No cold (like 3 Heaters) and grip on ice (like 3 Spiked Tires).',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.4, 0.12, 0.4), M.steel, 0, -0.18, 0);
+      add(g, new THREE.OctahedronGeometry(0.26, 0), M.ice, 0, 0.16, 0).scale.set(0.8, 1.3, 0.8);
+      add(g, new THREE.OctahedronGeometry(0.08, 0), M.cool, 0, 0.16, 0);
+    },
+  },
+  colossusReactor: {
+    name: 'Colossus Reactor', icon: '⚛️', boss: true,
+    desc: 'BOSS SALVAGE (Iron Colossus). Huge engine power and top speed, and magnets can\'t grab you.',
+    build(g) {
+      add(g, new THREE.CylinderGeometry(0.22, 0.24, 0.5, 8), M.steel, 0, 0, 0);
+      add(g, new THREE.CylinderGeometry(0.16, 0.16, 0.52, 8), M.reactor, 0, 0, 0).scale.set(1, 1, 0.3);
+      for (const y of [-0.15, 0.15]) add(g, new THREE.TorusGeometry(0.23, 0.03, 4, 12), M.yellow, 0, y, 0).rotation.x = Math.PI / 2;
+    },
+  },
+  harpyWings: {
+    name: 'Harpy Wings', icon: '🪽', boss: true,
+    desc: 'BOSS SALVAGE (Harpy Queen). You glide when you\'re in the air, with jet thrust (like 2 Jump Jets).',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.3, 0.14, 0.3), M.dark, 0, -0.17, 0);
+      for (const s of [-1, 1]) {
+        const w = add(g, new THREE.BoxGeometry(0.7, 0.04, 0.32), M.feather, s * 0.35, 0.05, 0);
+        w.rotation.z = s * 0.35;
+      }
+      const flame = add(g, new THREE.ConeGeometry(0.1, 0.4, 6), M.flame, 0, 0.3, 0);
+      flame.visible = false;
+      g.userData.jetFlame = flame;
+    },
+  },
+  mirrorShard: {
+    name: 'Mirror Shard', icon: '🪞', boss: true,
+    desc: 'BOSS SALVAGE (The Reflection). Your whole car takes 25% less damage.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.36, 0.1, 0.36), M.dark, 0, -0.2, 0);
+      add(g, new THREE.TetrahedronGeometry(0.34, 0), M.mirror, 0, 0.14, 0).scale.set(0.7, 1.3, 0.35);
+    },
+  },
+  devilsContract: {
+    name: "Devil's Contract", icon: '📜', boss: true,
+    desc: 'BOSS SALVAGE (The Devil). DOUBLE souls from kills, 10% less damage, and slow self-repair. Signed in blood.',
+    build(g) {
+      add(g, new THREE.BoxGeometry(0.36, 0.1, 0.36), M.dark, 0, -0.2, 0);
+      add(g, new THREE.CylinderGeometry(0.08, 0.08, 0.42, 8), M.paper, 0, 0.0, 0).rotation.z = Math.PI / 2;
+      add(g, new THREE.BoxGeometry(0.36, 0.3, 0.02), M.paper, 0, 0.12, 0.04);
+      add(g, new THREE.CylinderGeometry(0.06, 0.06, 0.03, 8), M.devil, 0.1, 0.06, 0.06).rotation.x = Math.PI / 2;
+      for (const s of [-1, 1]) add(g, new THREE.ConeGeometry(0.04, 0.18, 5), M.devil, s * 0.16, 0.34, 0).rotation.z = -s * 0.4;
     },
   },
 };

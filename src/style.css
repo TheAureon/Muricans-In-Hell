@@ -253,6 +253,8 @@ body.garage-open #hud > *:not(#fps) { display: none; }
 #garage .g-item.locked { opacity: 0.75; cursor: default; border-style: dashed; }
 #garage .g-buy { pointer-events: auto; margin-top: 4px; background: #1f5a8a; border: 0; border-radius: 4px; padding: 2px 7px; font-size: 11px; color: #dff3ff; white-space: nowrap; }
 #garage .g-buy.unlock { background: #6a3a9a; }
+#garage .g-boss { font-size: 11px; color: #ff9a60; white-space: nowrap; }
+#garage .g-item.boss .nm { color: #ffd27a; }
 #garage .g-buy.cant { background: #3a3a3a; color: #aaa; }
 #garage .g-souls { position: absolute; top: 78px; left: 50%; transform: translateX(-50%); font: 20px 'Arial Black', Impact, sans-serif; color: #bfe8ff; text-shadow: 0 0 10px #3aa0ff; }
 #garage .g-upgrade { pointer-events: auto; width: 100%; margin-top: 6px; background: #c8202a; border: 0; border-radius: 5px; padding: 7px; color: #fff; font-weight: 700; }

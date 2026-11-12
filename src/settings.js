@@ -219,6 +219,32 @@ export const SETTINGS = {
     jammer:   { mass: 35, hp: 50 },                 // radar jammer: turrets miss more (see "foundry")
     degausser: { mass: 60, hp: 70 },                // shields you from the magnets (see "foundry")
     jumpJet:  { mass: 45, hp: 60 },                 // thrust, lift and steering in the AIR (see "canyon")
+
+    // BOSS SALVAGE: one-of-a-kind parts. Each boss drops its own the first
+    // time you kill it (and you can buy more in the garage after that).
+    //   counts: works like that many of these normal parts (fans = Hover
+    //           Fans, pontoons, mudTires, spikeTires, heaters, degaussers, jets)
+    //   soulMult: +x souls from kills (0.5 = +50%)
+    //   armor:    takes x less damage, everywhere on the car (0.25 = 25% less)
+    //   regen:    repairs the whole car, hp per second
+    //   glide:    falls no faster than this (m/s) when in the air
+    titanFist:    { mass: 220, hp: 450, ramBonus: 2.0 },
+    magmaHeart:   { mass: 90,  hp: 200, power: 3000, counts: { fans: 4 } },
+    boneCrown:    { mass: 30,  hp: 120, soulMult: 0.5 },
+    leviathanTooth: { mass: 80, hp: 260, ramBonus: 1.5, counts: { pontoons: 3 } },
+    bogHeart:     { mass: 60,  hp: 180, regen: 6, counts: { mudTires: 4 } },
+    frostCore:    { mass: 70,  hp: 180, counts: { heaters: 3, spikeTires: 3 } },
+    colossusReactor: { mass: 150, hp: 260, power: 6000, topSpeed: 5, counts: { degaussers: 2 } },
+    harpyWings:   { mass: 40,  hp: 120, glide: 5, counts: { jets: 2 } },
+    mirrorShard:  { mass: 30,  hp: 160, armor: 0.25 },
+    devilsContract: { mass: 10, hp: 100, soulMult: 1.0, armor: 0.1, regen: 3 },
+  },
+
+  // Which boss drops which salvage part.
+  bossSalvage: {
+    ashTitan: 'titanFist', magmaColossus: 'magmaHeart', boneKing: 'boneCrown', leviathan: 'leviathanTooth',
+    bogMother: 'bogHeart', frozenWarden: 'frostCore', ironColossus: 'colossusReactor', harpyQueen: 'harpyWings',
+    reflection: 'mirrorShard', devil: 'devilsContract',
   },
 
   // ---------------------------------------------------------------
@@ -254,6 +280,17 @@ export const SETTINGS = {
     degausser:  { unlock: 700, price: 90 },
     jumpJet:    { unlock: 800, price: 90 },
     cannon:     { unlock: 500, price: 150 },
+    // Boss salvage: unlocked by killing the boss (not with souls).
+    titanFist:       { unlock: 'boss', price: 600 },
+    magmaHeart:      { unlock: 'boss', price: 700 },
+    boneCrown:       { unlock: 'boss', price: 800 },
+    leviathanTooth:  { unlock: 'boss', price: 800 },
+    bogHeart:        { unlock: 'boss', price: 900 },
+    frostCore:       { unlock: 'boss', price: 900 },
+    colossusReactor: { unlock: 'boss', price: 1000 },
+    harpyWings:      { unlock: 'boss', price: 1000 },
+    mirrorShard:     { unlock: 'boss', price: 1200 },
+    devilsContract:  { unlock: 'boss', price: 1500 },
   },
 
   // The car-to-tank upgrade path, in order. Each tier multiplies the base

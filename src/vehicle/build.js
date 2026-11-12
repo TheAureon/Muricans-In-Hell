@@ -222,7 +222,11 @@ export class Build {
 
   // ---- What the build adds up to ----
   stats() {
-    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0, fans = 0, pontoons = 0, mudTires = 0, spikeTires = 0, heaters = 0, jammers = 0, degaussers = 0, jets = 0;
+    let mass = SETTINGS.car.mass + this.tier.massAdd, momentZ = 0, momentX = 0, power = 0, topSpeed = 0, guns = 0;
+    // (counts of the special parts; boss salvage can count as several)
+    const n = { fans: 0, pontoons: 0, mudTires: 0, spikeTires: 0, heaters: 0, jammers: 0, degaussers: 0, jets: 0 };
+    let soulMult = 0, armorKeep = 1, regen = 0, glide = 0;
+    const COUNTS = { hoverFan: 'fans', pontoon: 'pontoons', mudTire: 'mudTires', spikeTire: 'spikeTires', heater: 'heaters', jammer: 'jammers', degausser: 'degaussers', jumpJet: 'jets' };
     // Missing body sections make the car lighter (and shift its balance).
     for (const id of this.missing) {
       const m = SETTINGS.chassis[id].mass, c = sectionCenter(id);
@@ -239,14 +243,12 @@ export class Build {
       if (s.power) power += s.power;
       if (s.topSpeed) topSpeed += s.topSpeed;
       if (PART_TYPES[rec.type]?.isGun) guns++;
-      if (rec.type === 'hoverFan') fans++;
-      if (rec.type === 'pontoon') pontoons++;
-      if (rec.type === 'mudTire') mudTires++;
-      if (rec.type === 'spikeTire') spikeTires++;
-      if (rec.type === 'heater') heaters++;
-      if (rec.type === 'jammer') jammers++;
-      if (rec.type === 'degausser') degaussers++;
-      if (rec.type === 'jumpJet') jets++;
+      if (COUNTS[rec.type]) n[COUNTS[rec.type]]++;
+      for (const [k, v] of Object.entries(s.counts || {})) n[k] += v;
+      if (s.soulMult) soulMult += s.soulMult;
+      if (s.armor) armorKeep *= 1 - s.armor;
+      if (s.regen) regen += s.regen;
+      if (s.glide) glide = glide ? Math.min(glide, s.glide) : s.glide;
       if (s.ramBonus) {
         const side = `${rec.normal[0]},${rec.normal[2]}`;
         if (side in ramBonus) ramBonus[side] += s.ramBonus;
@@ -263,14 +265,11 @@ export class Build {
       topSpeed: SETTINGS.car.topSpeed * this.tier.topSpeed + topSpeed,
       guns: guns + (this.missing.has('cabin') ? 0 : 1), // + the built-in roof gun
       ramBonus,
-      fans,
-      pontoons,
-      mudTires,
-      spikeTires,
-      heaters,
-      jammers,
-      degaussers,
-      jets,
+      ...n,
+      soulMult,             // +souls from kills (0.5 = +50%)
+      armor: 1 - armorKeep, // less damage taken (0.25 = 25% less)
+      regen,                // self-repair, hp per second
+      glide,                // max fall speed in the air (0 = none)
     };
   }
 
