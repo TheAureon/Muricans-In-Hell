@@ -51,6 +51,7 @@ import { Progress } from './core/progress.js';
 import { Souls } from './world/souls.js';
 import { JobBoard } from './missions/jobBoard.js';
 import { JobLog } from './ui/jobLog.js';
+import { Record } from './core/record.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
 
@@ -131,7 +132,12 @@ async function main() {
   const radio = new Radio(audio);
   // Jobs (missions) from Doc and whoever else needs something done.
   const jobs = new JobBoard({ region, progress, radio, hud, audio });
-  const jobLog = new JobLog(jobs);
+  // Your lifetime record hears every game event the jobs do.
+  const record = new Record();
+  const jobsEmit = jobs.emit.bind(jobs);
+  jobs.emit = (type, e) => { if (mode === 'play') record.on(type, e); jobsEmit(type, e); };
+  jobs.onDone = () => record.on('jobDone');
+  const jobLog = new JobLog(jobs, record);
   const beacons = new Beacons(scene);
   jobs.onChange = () => { hud.jobs(jobs); jobLog.render(); beacons.set(jobs.beacons()); };
   jobs.onChange();
@@ -195,6 +201,7 @@ async function main() {
   let lastChime = 0;
   const souls = new Souls(scene, (value) => {
     progress.addSouls(value);
+    if (mode === 'play') record.on('souls', { n: value });
     if (performance.now() - lastChime > 70) { audio.chime(); lastChime = performance.now(); }
     if (mode === 'play') radio.say('firstSouls');
   });
@@ -246,7 +253,7 @@ async function main() {
         souls.burst(boss.pos.clone().setY(4), boss.B.souls);
         progress.cleared[region.id] = true;
         progress.save();
-        jobs.emit('boss');
+        jobs.emit('boss', { name: boss.name });
         setTimeout(playEnding, 9000);
         return;
       }
@@ -257,7 +264,7 @@ async function main() {
       souls.burst(boss.pos.clone().setY(4), boss.B.souls);
       progress.cleared[region.id] = true;
       progress.save();
-      jobs.emit('boss');
+      jobs.emit('boss', { name: boss.name });
       gate?.setOpen(true);
     },
   }) : null;
@@ -431,6 +438,18 @@ async function main() {
   let dustTimer = 0;
   let elapsed = 0;
   let wreckTimer = 0;
+  let fellIn = false; // (the wreck was a fall into a chasm)
+  // What got you, for the record (a best guess from what was going on).
+  const wreckCause = () => {
+    if (fellIn) return 'Fell into a chasm';
+    if (car.water === 'sink') return 'Drowned';
+    if (car.stuck > 0.5 && terrain.mud(car.currPos.x, car.currPos.z) > 0) return 'Swallowed by the bog';
+    if (car.onLava > 0) return 'Melted in lava';
+    if (car.cold > 0.8) return 'Froze solid';
+    if (boss?.awake && boss.state !== 'dead' && boss.distanceTo(car.currPos) < (boss.arenaRadius || 80) + 30) return `Killed by ${boss.name}`;
+    if (foundry?.turrets?.some((t) => t.alive && t.pos.distanceTo(car.currPos) < 60)) return 'Shot by turrets';
+    return 'Torn apart by demons';
+  };
   let damageFxTimer = 0;
   let smokeTimer = 0;
   let regionTime = 0;
@@ -475,6 +494,7 @@ async function main() {
       jobsClicked = false;
       if (jobLog.open || garage.open) audio.update(0, 0, 0); // paused: no engine roar or tire screech
       if (jobLog.open) {
+        if (input.wasPressed('Tab')) jobLog.nextTab();
         aim.mesh.visible = false;
         lighting.render();
         input.endFrame();
@@ -514,6 +534,8 @@ async function main() {
     // --- Wrecked? Boom, smoke, then respawn ---
     if (car.wrecked) {
       if (wreckTimer === 0) {
+        if (playing) record.on('wreck', { cause: wreckCause() });
+        fellIn = false;
         audio.wreck();
         chase.addShake(1);
         gore.explode(car.currPos, new THREE.Vector3(), [0x3a66d0, 0x1a1a1c, 0x5a5d63, 0xc8202a], 1.5);
@@ -687,6 +709,7 @@ async function main() {
       }
       if (tele && !tele.established && (regionTime += dt) > 75) radio.say('teleporterHint');
       jobs.update(dt, car);
+      if (!car.wrecked) record.on('drive', { dt, speed: car.speed, airborne: !car.grounded });
       if (!car.wrecked && car.onLava > 0 && car.grounded) jobs.emit('lava', { dt });
       if (!car.wrecked && car.drifting) jobs.emit('drift', { dt });
     }
@@ -773,6 +796,7 @@ async function main() {
     if (terrain.canyon && !playing && car.currPos.y < SETTINGS.canyon.fallDepth) car.reset(true);
     if (terrain.canyon && playing && !car.wrecked && car.currPos.y < SETTINGS.canyon.fallDepth) {
       car.wrecked = true;
+      fellIn = true;
       hud.toast('Fell into the chasm!', 'bad');
       radio.say('firstFall');
     }
@@ -825,7 +849,7 @@ async function main() {
   await lighting.precompile();
   if (boss) boss.root.visible = bossShown;
   requestAnimationFrame(frame);
-  showTitleScreen({ region, progress, onMenu: () => audio.start(), onStory: () => { radio.markSeen('intro'); return playIntro(); } }).then(async () => {
+  showTitleScreen({ region, progress, record, onMenu: () => audio.start(), onStory: () => { radio.markSeen('intro'); return playIntro(); } }).then(async () => {
     // A brand new game starts with the story.
     if (progress.fresh && !radio.hasSeen('intro')) { radio.markSeen('intro'); await playIntro(); }
     startPlaying();

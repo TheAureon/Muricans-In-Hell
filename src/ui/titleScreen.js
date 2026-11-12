@@ -35,7 +35,7 @@ const HOW_TO = `
   </table>
   <p class="dim">Pieces of your car break off as they take damage. Lose the cabin and the whole run starts over.</p>`;
 
-export function showTitleScreen({ region, progress, onMenu, onStory }) {
+export function showTitleScreen({ region, progress, record, onMenu, onStory }) {
   const el = document.getElementById('start');
   document.body.classList.add('title-open');
   const regionNo = REGIONS.indexOf(region) + 1;
@@ -56,6 +56,7 @@ export function showTitleScreen({ region, progress, onMenu, onStory }) {
     { id: 'drive', label: fresh ? 'DRIVE INTO HELL' : 'CONTINUE', sub: fresh ? 'Start your engine' : `Back to ${region.name}`, primary: true },
     { id: 'story', label: 'STORY', sub: 'How it all started' },
     { id: 'how', label: 'HOW TO PLAY', sub: 'Controls & the basics' },
+    { id: 'stats', label: 'STATS', sub: 'Your driving career in Hell' },
     { id: 'gfx', label: `GRAPHICS: ${GFX.label}`, sub: GFX_SUB[GFX.name] },
   ];
   if (!fresh && !SETTINGS.dev.creative) items.push({ id: 'new', label: 'NEW RUN', sub: 'Wipe everything, start over' });
@@ -99,9 +100,13 @@ export function showTitleScreen({ region, progress, onMenu, onStory }) {
       } else if (it.id === 'story') {
         panel.classList.remove('on'); el.classList.remove('panel-open');
         onStory?.();
-      } else if (it.id === 'how') {
-        panel.innerHTML = HOW_TO;
-        el.classList.toggle('panel-open', panel.classList.toggle('on'));
+      } else if (it.id === 'how' || it.id === 'stats') {
+        const was = panel.dataset.show;
+        panel.dataset.show = it.id;
+        panel.innerHTML = it.id === 'how' ? HOW_TO : `<h3>YOUR RECORD</h3>${record?.html() || ''}`;
+        const on = was !== it.id || !panel.classList.contains('on');
+        panel.classList.toggle('on', on);
+        el.classList.toggle('panel-open', on);
       } else if (it.id === 'gfx') {
         // Next quality level. It needs a restart; come straight back to the menu.
         const next = QUALITY_ORDER[(QUALITY_ORDER.indexOf(GFX.name) + 1) % QUALITY_ORDER.length];

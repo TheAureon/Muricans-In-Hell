@@ -150,6 +150,7 @@ export class JobBoard {
     this.save();
     const souls = m.reward?.souls || 0;
     if (souls) this.world.progress.addSouls(souls);
+    this.onDone?.(m);
     this.hud.banner('JOB DONE', `${m.title}${souls ? `  ·  +${souls} souls` : ''}`, 5);
     this.audio.chime();
     if (m.done) this.talkQueue.unshift(m.done);

@@ -102,6 +102,7 @@ body.title-open canvas { cursor: default; }
 #start .t-panel { position: absolute; right: clamp(16px, 5vw, 80px); top: 50%; transform: translate(30px, -50%); width: min(430px, 88vw);
   background: #0e0404ee; border: 1px solid #ff502050; border-top: 3px solid #ff5020; padding: 18px 22px; opacity: 0; pointer-events: none;
   transition: opacity 0.25s, transform 0.25s; font: 14px/1.5 system-ui, sans-serif; color: #f0d8c8; box-shadow: 0 20px 60px #000c; }
+#start .t-panel { max-height: 80vh; overflow-y: auto; }
 #start .t-panel.on { opacity: 1; transform: translate(0, -50%); pointer-events: auto; }
 #start .t-panel h3 { margin: 0 0 8px; font: 20px 'Arial Black', Impact, sans-serif; letter-spacing: 2px; color: #ffb070; }
 #start .t-panel p { margin: 0 0 10px; }
@@ -383,6 +384,13 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #joblog .jl-head small { color: #fff8; }
 #joblog .jl-close { position: absolute; top: 12px; right: 12px; background: none; border: 0; color: #fff8; font-size: 20px; cursor: pointer; }
 #joblog .jl-scroll { overflow-y: auto; padding: 4px 18px 12px; }
+#joblog .jl-tabs { display: flex; gap: 4px; padding: 8px 18px 0; border-bottom: 1px solid #ffffff18; flex-wrap: wrap; }
+#joblog .jl-tab { background: none; border: 0; border-bottom: 3px solid transparent; color: #fff8; font: 13px 'Arial Black', Impact, sans-serif; letter-spacing: 2px; padding: 6px 10px; cursor: pointer; }
+#joblog .jl-tab.on { color: #fff; border-bottom-color: #ff5020; }
+#joblog .jl-tab i { font-style: normal; background: #ff5020; color: #fff; border-radius: 8px; padding: 0 6px; font-size: 11px; }
+.rec { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 0 22px; }
+.rec-row { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-bottom: 1px solid #ffffff10; color: #fffc; font-size: 14px; }
+.rec-row b { color: #ffd27a; white-space: nowrap; }
 #joblog h3 { margin: 14px 0 6px; font: 12px 'Arial Black', Impact, sans-serif; letter-spacing: 3px; color: #ff9a60; }
 #joblog .jl-empty { color: #fff6; font-style: italic; }
 #joblog .jl-card { display: flex; gap: 12px; align-items: flex-start; background: #ffffff08; border-left: 3px solid var(--c); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
@@ -434,3 +442,4 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #credits .c-row.c-head b { font-size: 34px; margin-top: 18px; }
 #credits .c-gap { height: 60px; }
 #credits .c-skip { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: 2px; color: #fff6; }
+#start .t-panel .rec h3 { font-size: 12px; letter-spacing: 3px; margin: 12px 0 4px; color: #ff9a60; }

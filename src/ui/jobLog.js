@@ -1,13 +1,22 @@
-// The job board screen (J): new jobs to accept, jobs in progress, jobs done.
+// THE LOGBOOK (J). Tabs:
+//   JOBS   new jobs to accept, jobs in progress, jobs done
+//   STATS  your lifetime record (core/record.js)
+// More tabs can be added: tabs.push({ id, label, html: () => '...' }).
 // The game pauses while it's open.
 import { REGIONS } from '../regions/index.js';
 
 const regionName = (id) => REGIONS.find((r) => r.id === id)?.name || '';
 
 export class JobLog {
-  constructor(board) {
+  constructor(board, record) {
     this.board = board;
+    this.record = record;
     this.open = false;
+    this.tab = 'jobs';
+    this.tabs = [
+      { id: 'jobs', label: 'JOBS', sub: 'Things people need done in Hell. Finish them for souls.', html: () => this.#jobsHtml() },
+      { id: 'stats', label: 'STATS', sub: 'Your whole driving career in Hell.', html: () => this.record?.html() || '' },
+    ];
     const el = document.createElement('div');
     el.id = 'joblog';
     document.body.appendChild(el);
@@ -15,7 +24,8 @@ export class JobLog {
     el.addEventListener('click', (e) => {
       const b = e.target.closest('button');
       if (!b) return;
-      if (b.dataset.accept) board.accept(b.dataset.accept);
+      if (b.dataset.tab) this.tab = b.dataset.tab;
+      else if (b.dataset.accept) board.accept(b.dataset.accept);
       else if (b.dataset.track) board.track(b.dataset.track);
       else if (b.dataset.close) this.toggle(false);
       this.render();
@@ -31,6 +41,26 @@ export class JobLog {
 
   render() {
     if (!this.open) return;
+    const tab = this.tabs.find((t) => t.id === this.tab) || this.tabs[0];
+    const tabs = this.tabs.map((t) => `<button class="jl-tab ${t === tab ? 'on' : ''}" data-tab="${t.id}">${t.label}${t.badge?.() ? ` <i>${t.badge()}</i>` : ''}</button>`).join('');
+    const keep = this.el.querySelector('.jl-scroll')?.scrollTop || 0;
+    this.el.innerHTML = `<div class="jl-panel">
+      <div class="jl-head"><b>LOGBOOK</b><small>${tab.sub}</small><button class="jl-close" data-close="1">✕</button></div>
+      <div class="jl-tabs">${tabs}</div>
+      <div class="jl-scroll">${tab.html()}</div>
+      <div class="jl-foot"><b>J</b> or <b>ESC</b> to close${this.tabs.length > 1 ? ' · <b>TAB</b> next page' : ''}</div>
+    </div>`;
+    if (this.lastTab === tab.id) this.el.querySelector('.jl-scroll').scrollTop = keep;
+    this.lastTab = tab.id;
+  }
+
+  nextTab() {
+    const i = this.tabs.findIndex((t) => t.id === this.tab);
+    this.tab = this.tabs[(i + 1) % this.tabs.length].id;
+    this.render();
+  }
+
+  #jobsHtml() {
     const B = this.board;
     const card = (m) => {
       const status = B.status(m), who = B.giver(m);
@@ -54,14 +84,8 @@ export class JobLog {
       </div>`;
     };
     const section = (title, list, empty) => `<h3>${title}</h3>${list.length ? list.map(card).join('') : `<div class="jl-empty">${empty}</div>`}`;
-    this.el.innerHTML = `<div class="jl-panel">
-      <div class="jl-head"><b>JOB BOARD</b><small>Things people need done in Hell. Finish them for souls.</small><button class="jl-close" data-close="1">✕</button></div>
-      <div class="jl-scroll">
-        ${section('NEW', B.byStatus('offered'), 'Nothing new. Keep your radio on.')}
+    return `${section('NEW', B.byStatus('offered'), 'Nothing new. Keep your radio on.')}
         ${section('IN PROGRESS', B.byStatus('active'), 'No jobs taken.')}
-        ${B.byStatus('done').length ? section('DONE', B.byStatus('done'), '') : ''}
-      </div>
-      <div class="jl-foot"><b>J</b> or <b>ESC</b> to close</div>
-    </div>`;
+        ${B.byStatus('done').length ? section('DONE', B.byStatus('done'), '') : ''}`;
   }
 }
