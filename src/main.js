@@ -207,7 +207,7 @@ async function main() {
   let lastChime = 0;
   const souls = new Souls(scene, (value) => {
     progress.addSouls(value);
-    if (mode === 'play') record.on('souls', { n: value });
+    if (mode === 'play') jobs.emit('souls', { n: value });
     if (performance.now() - lastChime > 70) { audio.chime(); lastChime = performance.now(); }
     if (mode === 'play') radio.say('firstSouls');
   });
@@ -720,7 +720,7 @@ async function main() {
       if (foundry?.pulled) radio.say('firstMagnet');
       if (canyonHazards?.windBlowing) radio.say('firstWind');
       if (terrain.canyon && !car.grounded && car.speed > 15) radio.say('firstJump');
-      if (terrain.canyon && !car.grounded && !car.wrecked) jobs.emit('air', { dt });
+      if (!car.grounded && !car.wrecked) jobs.emit('air', { dt });
       if (car.water === 'float') { radio.say('firstFloat'); if (!car.wrecked) jobs.emit('float', { dt }); }
       hud.garageButton(canGarage() && !car.wrecked, canGarage() ? 'Open the garage (G)' : base ? 'The garage is at base (drive home)' : 'The garage is at base (teleport home from a teleporter pad)');
       if (boss && !SETTINGS.dev.noEnemies) {
@@ -743,6 +743,7 @@ async function main() {
         for (const item of scrap.collect(reach, car.position)) {
           car.build.give(item.type, item.count);
           hud.toast(`+${item.count} ${item.label}`);
+          jobs.emit('scrap', { n: item.count });
         }
         car.build.save();
         audio.hit();

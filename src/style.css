@@ -405,9 +405,9 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #joblog .jl-card { display: flex; gap: 12px; align-items: flex-start; background: #ffffff08; border-left: 3px solid var(--c); border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
 #joblog .jl-card.done { opacity: 0.55; padding: 6px 12px; }
 #joblog .jl-card.done p { display: none; }
-#joblog .jl-who { flex: 0 0 52px; height: 52px; border-radius: 6px; background: #000; border: 2px solid var(--c); color: var(--c); display: flex; align-items: center;
+#joblog .jl-who { flex: 0 0 auto; min-width: 52px; padding: 0 4px; box-sizing: border-box; height: 52px; border-radius: 6px; background: #000; border: 2px solid var(--c); color: var(--c); display: flex; align-items: center;
   justify-content: center; font: 13px 'Arial Black', Impact, sans-serif; letter-spacing: 1px; }
-#joblog .jl-card.done .jl-who { flex-basis: 40px; height: 28px; font-size: 10px; }
+#joblog .jl-card.done .jl-who { min-width: 40px; height: 28px; font-size: 10px; }
 #joblog .jl-body { flex: 1; min-width: 0; }
 #joblog .jl-title { font: 17px 'Arial Black', Impact, sans-serif; color: #fff; letter-spacing: 1px; }
 #joblog .jl-away { font: 11px system-ui; color: #ffcf9a; letter-spacing: 1px; margin-left: 6px; }

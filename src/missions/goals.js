@@ -4,8 +4,9 @@
 //   already(goal, world)     true if it's done before you even start (optional)
 //   points(goal, s)          places to mark with a beam of light (optional)
 //   show(n, total)           how the progress reads (optional)
-// The game sends events: kill { type, source }, tick { pos }, lava { dt },
-// drift { dt }, float { dt }, teleporter {}, boss {}.
+// The game sends events: kill { type, source }, tick { pos, speed }, lava { dt },
+// drift { dt }, float { dt }, air { dt }, teleporter {}, boss {}, teleport {},
+// scrap { n }, souls { n }.
 // A new kind of goal is just a new entry here.
 import { DEMON_TYPES } from '../demons/demonTypes.js';
 
@@ -70,6 +71,23 @@ export const GOALS = {
     total: (g) => g.count,
     label: () => 'Go through teleport mirrors',
     on: { teleport: () => 1 },
+  },
+  speed: {
+    total: () => 1,
+    label: (g) => `Hit ${g.kmh} km/h`,
+    on: { tick: (g, e) => (e.speed * 3.6 >= g.kmh ? 1 : 0) },
+    show: () => '',
+  },
+  scrap: {
+    total: (g) => g.count,
+    label: () => 'Grab scrap (E)',
+    on: { scrap: (g, e) => e.n },
+  },
+  souls: {
+    total: (g) => g.count,
+    label: () => 'Collect souls',
+    on: { souls: (g, e) => e.n },
+    show: (n, t) => `${Math.floor(n)}/${t}`,
   },
   drift: {
     total: (g) => g.seconds,

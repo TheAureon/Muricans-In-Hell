@@ -9,7 +9,7 @@
 //
 //  A job:
 //    id        unique name (used in the save)
-//    giver     who offers it ('doc', ...)
+//    giver     who offers it ('doc', 'buck', 'grizzle', 'carol', ...)
 //    region    the region it's offered and done in (leave out = anywhere)
 //    after     jobs that must be finished first
 //    afterBoss a region whose boss must be beaten first
@@ -23,6 +23,11 @@
 //                lavaTime   { seconds }  (drive on lava, total time)
 //                drift      { seconds }  (drift, total time)
 //                floatTime  { seconds }  (float on deep water with Pontoons, total time)
+//                airTime    { seconds }  (time in the air, total)
+//                speed      { kmh }      (hit this speed once)
+//                scrap      { count }    (grab parts that fell off, E)
+//                souls      { count }    (collect souls)
+//                teleports  { count }    (go through teleport mirrors)
 //    reward    { souls }
 //    done      radio lines when it's finished
 // =====================================================================
@@ -408,5 +413,168 @@ export const MISSIONS = [
     goals: [{ kind: 'reach', label: 'Plant trackers', points: [{ x: 126, z: 1097 }, { x: -721, z: 1139 }, { x: 232, z: -834 }] }],
     reward: { souls: 2000 },
     done: [['doc', 'All three pinging. Everything on this road feeds the palace. Cut off the head, and the whole thing stops.']],
+  },
+  // =================================================================
+  //  BUCK "BOOTLEGGER" DAWSON: a washed-up stock-car racer who came to
+  //  Hell for the oil too. Stunts and speed (and races, see races.js).
+  // =================================================================
+  {
+    id: 'buckHello', giver: 'buck', region: 'lava_rivers',
+    title: 'New Kid In Town',
+    brief: 'A loudmouth stock-car racer wants to see if the "F1 champ" can actually drive. Drift, and go fast.',
+    offer: [
+      ['buck', 'Well, well. Hank Redline Mercer. Buck Dawson, three-time dirt track champion. I came down here for the oil, same as you.'],
+      ['you', 'Never heard of you.'],
+      ['buck', 'You will. F1 boys can\'t drive on dirt. Prove me wrong: hit 150 and slide it around for a while.'],
+    ],
+    goals: [{ kind: 'speed', kmh: 150 }, { kind: 'drift', seconds: 20 }],
+    reward: { souls: 300 },
+    done: [['buck', 'Huh. Not bad for a guy who needs a pit crew to change a tire.'], ['you', 'I had four pit crews.']],
+  },
+  {
+    id: 'buckAir', giver: 'buck', region: 'bone_mountains', after: ['buckHello'],
+    title: 'Hang Time',
+    brief: 'Buck says real drivers fly. Spend time in the air off the mountain ridges.',
+    offer: [['buck', 'These mountains are a ramp park, Mercer. Get some air. Six seconds total, and I\'ll stop calling you Formula Wimp.']],
+    goals: [{ kind: 'airTime', seconds: 6 }],
+    reward: { souls: 400 },
+    done: [['buck', 'Okay. That was pretty. Don\'t tell anyone I said that.']],
+  },
+  {
+    id: 'buckRam', giver: 'buck', region: 'flooded_city', after: ['buckAir'],
+    title: 'Trading Paint',
+    brief: 'Buck\'s challenge: run over 25 demons. No guns. Just bumper.',
+    offer: [['buck', 'Where I come from, you don\'t shoot the competition. You put \'em in the wall. Run over twenty-five of these wet freaks.']],
+    goals: [{ kind: 'kill', count: 25, by: 'ram', label: 'Run demons over' }],
+    reward: { souls: 600 },
+    done: [['buck', 'Now THAT is racing.']],
+  },
+  {
+    id: 'buckCanyon', giver: 'buck', region: 'screaming_canyon',
+    title: 'Canyon Jumper',
+    brief: 'The chasms here are the biggest jumps in Hell. Buck wants 25 seconds of air.',
+    offer: [['buck', 'Biggest gaps I ever saw, Mercer. Twenty-five seconds of hang time, total. If you fall in, I\'m keeping your car.']],
+    goals: [{ kind: 'airTime', seconds: 25 }],
+    reward: { souls: 900 },
+    done: [['buck', 'You\'re crazy. I respect crazy.']],
+  },
+
+  // =================================================================
+  //  GRIZZLE: a demon mechanic who switched sides (Infernal Petroleum
+  //  never paid overtime). Works the garage at base, runs the paint shop.
+  //  Hunting and salvage jobs.
+  // =================================================================
+  {
+    id: 'grizzleHello', giver: 'grizzle', region: 'ash_plains', after: ['ashSurvey'],
+    title: 'The New Guy',
+    brief: 'A demon showed up at the base asking for a job. He wants Spiker spines to make you better parts.',
+    offer: [
+      ['doc', 'Hank, don\'t panic, but there\'s a demon in the garage. He says he\'s a mechanic.'],
+      ['grizzle', 'Grizzle. Fixed engines for Infernal Petroleum for nine hundred years. Never got a day off. So I quit.'],
+      ['grizzle', 'Bring me four Spikers. Their spines make good steel. I also paint cars now. Ask me in the garage.'],
+    ],
+    goals: [{ kind: 'kill', demon: 'spiker', count: 4, label: 'Hunt Spikers' }],
+    reward: { souls: 250 },
+    done: [['grizzle', 'Good spines. You and me, we\'ll get along.'], ['doc', 'He reorganized my whole toolbox. I hate that it\'s better.']],
+  },
+  {
+    id: 'grizzleScrap', giver: 'grizzle', region: 'ash_plains', after: ['grizzleHello'],
+    title: 'Waste Not',
+    brief: 'Grizzle hates waste. When parts get knocked off your car, grab them back (E). Five pieces.',
+    offer: [['grizzle', 'You keep leaving parts all over Hell. Every piece that falls off, you pick it back up. E. Five of them, so I know you can learn.']],
+    goals: [{ kind: 'scrap', count: 5 }],
+    reward: { souls: 250 },
+    done: [['grizzle', 'See? Free parts.']],
+  },
+  {
+    id: 'grizzleRams', giver: 'grizzle', region: 'bone_mountains',
+    title: 'Horn Collection',
+    brief: 'Bone Ram horns make the best ram spikes in Hell. Grizzle wants six.',
+    offer: [['grizzle', 'Bone Rams. Their horns are harder than steel. Bring down six and I\'ll stop buying spikes from the black market.']],
+    goals: [{ kind: 'kill', demon: 'boneRam', count: 6, label: 'Hunt Bone Rams' }],
+    reward: { souls: 450 },
+    done: [['grizzle', 'Beautiful horns. Don\'t ask what I do with the rest.']],
+  },
+  {
+    id: 'grizzleBog', giver: 'grizzle', region: 'blood_swamp',
+    title: 'Swamp Grease',
+    brief: 'Mire Toad fat is the best axle grease there is. Grizzle wants four toads and three bloaters.',
+    offer: [['grizzle', 'Mire Toads are full of grease. The good kind. Four toads. And three Bloaters, for... reasons.']],
+    goals: [{ kind: 'kill', demon: 'mireToad', count: 4, label: 'Hunt Mire Toads' }, { kind: 'kill', demon: 'bloater', count: 3, label: 'Pop Bloaters' }],
+    reward: { souls: 600 },
+    done: [['grizzle', 'Ahh. Smells like home. Terrible.']],
+  },
+  {
+    id: 'grizzleTurrets', giver: 'grizzle', region: 'iron_foundry',
+    title: 'Spare Parts',
+    brief: 'The foundry turrets are full of good parts. Grizzle wants eight of them torn down.',
+    offer: [['grizzle', 'I built half of these turrets. Lousy pay. Tear down eight and I\'ll strip them for parts.']],
+    goals: [{ kind: 'kill', demon: 'turret', count: 8, label: 'Wreck turrets' }],
+    reward: { souls: 900 },
+    done: [['grizzle', 'Nine hundred years I waited to see that.']],
+  },
+  {
+    id: 'grizzleBrutes', giver: 'grizzle', region: 'ice_hell',
+    title: 'Coolant',
+    brief: 'Frost Brutes have frozen blood: perfect engine coolant. Grizzle wants two.',
+    offer: [['grizzle', 'Frost Brute blood never thaws. Best coolant there is. Get me two. Big ones. They\'re all big ones.']],
+    goals: [{ kind: 'kill', demon: 'frostBrute', count: 2, label: 'Hunt Frost Brutes' }],
+    reward: { souls: 800 },
+    done: [['grizzle', 'Your engine will run cold forever now. Well. Cooler.']],
+  },
+
+  // =================================================================
+  //  CAROL FINCH: the Devil's Executive Assistant for four thousand
+  //  years, fired by email. Leaks company secrets; sabotage jobs (and
+  //  she knows where things are hidden, see secrets.js).
+  // =================================================================
+  {
+    id: 'carolHello', giver: 'carol', region: 'bone_mountains',
+    title: 'Dead Drops',
+    brief: 'Someone is hacking Doc\'s radio. She says she has Infernal Petroleum secrets, left at two spots in the mountains.',
+    offer: [
+      ['carol', 'Is this thing on? Hello? Hank Mercer? Carol Finch. Executive Assistant to the CEO of Infernal Petroleum. Former.'],
+      ['carol', 'Four thousand years of service, and he fired me. By email. With a typo.'],
+      ['carol', 'I left a few files for you in the mountains. Go pick them up. And then let\'s ruin him.'],
+    ],
+    goals: [{ kind: 'reach', label: 'Pick up the files', points: [{ x: 240, z: 140 }, { x: 60, z: 280 }] }],
+    reward: { souls: 350 },
+    done: [['carol', 'Those are the quarterly reports. Read page forty. He is NOT a nice man.'], ['doc', 'She knows things, Hank. I don\'t trust her. But she knows things.']],
+  },
+  {
+    id: 'carolPipes', giver: 'carol', region: 'flooded_city', after: ['carolHello'],
+    title: 'Pipe Dreams',
+    brief: 'The flooded city hides Infernal Petroleum\'s pipelines. Carol knows where the valves are.',
+    offer: [['carol', 'His pipelines run under this whole city. Three valves. Drive over them and Doc\'s little gadget will jam them open. Oil everywhere. Good.']],
+    goals: [{ kind: 'reach', label: 'Jam the valves', points: [{ x: -680, z: 160 }, { x: 420, z: 680 }, { x: 680, z: -340 }] }],
+    reward: { souls: 600 },
+    done: [['carol', 'I can hear him screaming from here. Delightful.']],
+  },
+  {
+    id: 'carolHusks', giver: 'carol', region: 'iron_foundry',
+    title: 'Restructuring',
+    brief: 'The Iron Husks are company security. Carol wants ten of them "let go".',
+    offer: [['carol', 'Those Iron Husks guard the foundry. I wrote their contracts. No severance. Let ten of them go, please.']],
+    goals: [{ kind: 'kill', demon: 'ironHusk', count: 10, label: 'Let Iron Husks go' }],
+    reward: { souls: 900 },
+    done: [['carol', 'I\'ll send them a card. No, I won\'t.']],
+  },
+  {
+    id: 'carolMirrors', giver: 'carol', region: 'mirror_wastes',
+    title: 'Vanity',
+    brief: 'The Devil LOVES his mirrors. Carol wants eight of them smashed.',
+    offer: [['carol', 'He had me polish these mirrors. Every day. For centuries. Smash eight of them. I\'ll be listening.']],
+    goals: [{ kind: 'kill', demon: 'mirror', count: 8, label: 'Smash mirrors' }],
+    reward: { souls: 1100 },
+    done: [['carol', 'Seven years of bad luck each. For HIM. Wonderful.']],
+  },
+  {
+    id: 'carolFinal', giver: 'carol', region: 'the_throne',
+    title: 'Exit Interview',
+    brief: 'Carol\'s last request: take out his personal security detail. Ten of them.',
+    offer: [['carol', 'His personal security. The ones who walked me out of the building with a cardboard box. Ten of them. Then go get him.']],
+    goals: [{ kind: 'kill', demon: 'security', count: 10, label: 'Fire his security' }],
+    reward: { souls: 1500 },
+    done: [['carol', 'Thank you, Hank. Truly. Now go give him my notice.']],
   },
 ];

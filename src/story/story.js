@@ -18,6 +18,12 @@
 export const CAST = {
   you: { name: 'HANK', full: 'Hank "Redline" Mercer', color: '#ffb070', voice: { pitch: 0.7, rate: 1.0 } },
   doc: { name: 'DOC', full: 'Dr. Wendell "Doc" Pike', color: '#7fd8ff', voice: { pitch: 1.25, rate: 1.08 } },
+  // People who turn up later and hand out jobs too (see missions.js):
+  // a rival driver who came for the oil, a demon mechanic who switched
+  // sides, and the Devil's fired executive assistant.
+  buck: { name: 'BUCK', full: 'Buck "Bootlegger" Dawson', color: '#ffd040', voice: { pitch: 0.85, rate: 0.95 } },
+  grizzle: { name: 'GRIZZLE', full: 'Grizzle, demon mechanic', color: '#ff6a40', voice: { pitch: 0.5, rate: 0.9 } },
+  carol: { name: 'CAROL', full: 'Carol Finch, ex-Executive Assistant to the CEO', color: '#c890ff', voice: { pitch: 1.35, rate: 1.15 } },
 };
 
 // The intro, shown once when you start a new game (and from the menu: STORY).

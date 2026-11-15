@@ -67,7 +67,7 @@ export class JobBoard {
         else this.offer(m);
       }
     }
-    if (!car.wrecked) this.emit('tick', { pos: car.currPos });
+    if (!car.wrecked) this.emit('tick', { pos: car.currPos, speed: car.speed });
   }
 
   offer(m) {
