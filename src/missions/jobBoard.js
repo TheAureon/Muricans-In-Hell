@@ -3,6 +3,7 @@
 // Jobs are part of the WORLD (like bosses beaten): a wreck doesn't undo them.
 // Kept in the browser.
 import { MISSIONS } from './missions.js';
+import { dailyJob, isDaily } from './daily.js';
 import { GOALS } from './goals.js';
 import { CAST } from '../story/story.js';
 import { SETTINGS } from '../settings.js';
@@ -19,6 +20,9 @@ export class JobBoard {
     this.talkQueue = [];  // radio lines waiting for a quiet moment
     this.offerTimer = 5;  // a few seconds into the drive before the first offer
     this.onChange = null;
+    // Every job: the story jobs, plus today's daily job for this region.
+    this.daily = dailyJob(region);
+    this.list = [...MISSIONS, this.daily];
     this.#load();
   }
 
@@ -29,6 +33,9 @@ export class JobBoard {
       const d = JSON.parse(localStorage.getItem(KEY) || '{}');
       this.jobs = d.jobs || {};
       this.tracked = d.tracked || null;
+      // Daily jobs from other days (or other regions) are gone.
+      for (const id of Object.keys(this.jobs)) if (isDaily(id) && id !== this.daily.id) delete this.jobs[id];
+      if (this.tracked && !this.jobs[this.tracked]) this.tracked = null;
     } catch { /* fresh start */ }
   }
 
@@ -45,7 +52,7 @@ export class JobBoard {
   status(m) { return this.jobs[m.id]?.status || 'none'; }
   here(m) { return !m.region || m.region === this.world.region.id; }
   giver(m) { return CAST[m.giver] || { name: m.giver.toUpperCase(), color: '#ccc' }; }
-  byStatus(status) { return MISSIONS.filter((m) => this.status(m) === status); }
+  byStatus(status) { return this.list.filter((m) => this.status(m) === status); }
   get newCount() { return this.byStatus('offered').length; }
 
   // Can this job be offered right now?
@@ -60,7 +67,7 @@ export class JobBoard {
     if (this.talkQueue.length && this.radio.quiet) this.radio.talk(this.talkQueue.shift());
     if ((this.offerTimer -= dt) <= 0 && this.radio.quiet && !this.talkQueue.length) {
       this.offerTimer = OFFER_GAP;
-      const m = MISSIONS.find((j) => this.#ready(j));
+      const m = this.list.find((j) => this.#ready(j));
       if (m) {
         // Already done before it was ever asked for (an old save)? Then it's just done.
         if (m.goals.every((g) => GOALS[g.kind]?.already?.(g, this.world))) { this.jobs[m.id] = { status: 'done' }; this.save(); this.offerTimer = 0; }
@@ -80,7 +87,7 @@ export class JobBoard {
   }
 
   accept(id) {
-    const m = MISSIONS.find((j) => j.id === id);
+    const m = this.list.find((j) => j.id === id);
     if (!m || this.status(m) !== 'offered') return;
     this.jobs[id] = { status: 'active', goals: m.goals.map(() => ({ n: 0 })) };
     m.goals.forEach((g, i) => { if (this.here(m) && GOALS[g.kind]?.already?.(g, this.world)) this.jobs[id].goals[i].n = this.total(g); });
@@ -92,11 +99,11 @@ export class JobBoard {
   }
 
   track(id) { this.tracked = id; this.save(); this.#changed(); }
-  get trackedJob() { return MISSIONS.find((m) => m.id === this.tracked && this.status(m) === 'active') || null; }
+  get trackedJob() { return this.list.find((m) => m.id === this.tracked && this.status(m) === 'active') || null; }
 
   // Something happened in the game (see goals.js for the list).
   emit(type, e = {}) {
-    for (const m of MISSIONS) {
+    for (const m of this.list) {
       const st = this.jobs[m.id];
       if (st?.status !== 'active' || !this.here(m)) continue;
       let moved = false;
