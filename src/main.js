@@ -55,6 +55,7 @@ import { Record } from './core/record.js';
 import { PART_TYPES } from './vehicle/parts.js';
 import { PaintShop, paintById } from './vehicle/paint.js';
 import { Bounty } from './demons/bounties.js';
+import { Race } from './world/race.js';
 import { applyPaint } from './vehicle/carModel.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
@@ -217,6 +218,8 @@ async function main() {
   });
   hud.souls(progress.souls);
   progress.onChange((p) => hud.souls(p.souls));
+  // Buck's race course for this region (vs the mirror clone).
+  const race = new Race(scene, region, regionSpawn(), { hud, audio, radio, jobs, progress, souls });
   // Every kill drops souls (ram kills pay extra).
   demons.onKill = (d, source) => {
     lighting.flash(d.pos, d.def.heavy ? 1.5 : 0.6);
@@ -740,6 +743,7 @@ async function main() {
       if (tele && !tele.established && (regionTime += dt) > 75) radio.say('teleporterHint');
       jobs.update(dt, car);
       bounty.update(dt, car, !SETTINGS.dev.noEnemies);
+      race.update(dt, car, true);
       if (!car.wrecked) record.on('drive', { dt, speed: car.speed, airborne: !car.grounded });
       if (!car.wrecked && car.onLava > 0 && car.grounded) jobs.emit('lava', { dt });
       if (!car.wrecked && car.drifting) jobs.emit('drift', { dt });
@@ -851,7 +855,14 @@ async function main() {
     // Second arrow: the nearest spot the tracked job wants you to go.
     beacons.update(dt);
     const spots = playing ? jobs.beacons().filter((b) => b.tracked) : [];
-    if (spots.length) {
+    if (race.racing && race.target) {
+      // Racing: the arrow points at the next ring.
+      const to = new THREE.Vector3(race.target.x - car.position.x, 0, race.target.z - car.position.z);
+      const camFwd = new THREE.Vector3();
+      camera.getWorldDirection(camFwd);
+      const angle = Math.atan2(camFwd.x * to.z - camFwd.z * to.x, camFwd.x * to.x + camFwd.z * to.z);
+      hud.jobPointer(`🏁 NEXT RING · ${Math.round(to.length())} m`, angle, '#ffd040');
+    } else if (spots.length) {
       const near = spots.reduce((a, b) => (Math.hypot(a.x - car.position.x, a.z - car.position.z) < Math.hypot(b.x - car.position.x, b.z - car.position.z) ? a : b));
       const to = new THREE.Vector3(near.x - car.position.x, 0, near.z - car.position.z);
       const camFwd = new THREE.Vector3();
@@ -888,7 +899,7 @@ async function main() {
   });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors, race, bounty, record };
 }
 
 // A full-screen message with buttons (graphics trouble).

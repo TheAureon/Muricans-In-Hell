@@ -452,3 +452,8 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #credits .c-gap { height: 60px; }
 #credits .c-skip { position: absolute; bottom: 16px; left: 0; right: 0; text-align: center; font-size: 12px; letter-spacing: 2px; color: #fff6; }
 #start .t-panel .rec h3 { font-size: 12px; letter-spacing: 3px; margin: 12px 0 4px; color: #ff9a60; }
+#race-hud { position: fixed; top: 92px; left: 50%; transform: translateX(-50%); z-index: 6; text-align: center; pointer-events: none;
+  font: 15px system-ui, sans-serif; color: #fff; text-shadow: 0 2px 6px #000; }
+#race-hud .rc-t { font: 40px 'Arial Black', Impact, sans-serif; color: #ffd040; letter-spacing: 2px; }
+#race-hud .rc-sub { color: #fffc; font-size: 13px; }
+#race-hud .rc-count { font: 96px 'Arial Black', Impact, sans-serif; color: #ffd040; }

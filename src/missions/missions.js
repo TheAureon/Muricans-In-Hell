@@ -429,7 +429,8 @@ export const MISSIONS = [
     ],
     goals: [{ kind: 'speed', kmh: 150 }, { kind: 'drift', seconds: 20 }],
     reward: { souls: 300 },
-    done: [['buck', 'Huh. Not bad for a guy who needs a pit crew to change a tire.'], ['you', 'I had four pit crews.']],
+    done: [['buck', 'Huh. Not bad for a guy who needs a pit crew to change a tire.'], ['you', 'I had four pit crews.'],
+      ['buck', 'Tell you what. I set up a race course in every region. Doc\'s mirror gizmo makes a copy of you to race. Find the start gate. Beat yourself, I pay.']],
   },
   {
     id: 'buckAir', giver: 'buck', region: 'bone_mountains', after: ['buckHello'],
