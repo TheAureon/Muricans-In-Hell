@@ -56,6 +56,7 @@ import { PART_TYPES } from './vehicle/parts.js';
 import { PaintShop, paintById } from './vehicle/paint.js';
 import { Bounty } from './demons/bounties.js';
 import { Race } from './world/race.js';
+import { Secrets } from './world/secrets.js';
 import { applyPaint } from './vehicle/carModel.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
@@ -220,6 +221,9 @@ async function main() {
   progress.onChange((p) => hud.souls(p.souls));
   // Buck's race course for this region (vs the mirror clone).
   const race = new Race(scene, region, regionSpawn(), { hud, audio, radio, jobs, progress, souls });
+  // Hidden stashes (lore notes, souls, secret paint jobs).
+  const secrets = new Secrets(scene, region, { hud, audio, radio, jobs, souls, paints });
+  jobLog.tabs.push({ id: 'notes', label: 'NOTES', sub: 'Secrets you found: Infernal Petroleum\'s dirty laundry.', html: () => secrets.html(REGIONS) });
   // Every kill drops souls (ram kills pay extra).
   demons.onKill = (d, source) => {
     lighting.flash(d.pos, d.def.heavy ? 1.5 : 0.6);
@@ -744,6 +748,7 @@ async function main() {
       jobs.update(dt, car);
       bounty.update(dt, car, !SETTINGS.dev.noEnemies);
       race.update(dt, car, true);
+      secrets.update(dt, car, true);
       if (!car.wrecked) record.on('drive', { dt, speed: car.speed, airborne: !car.grounded });
       if (!car.wrecked && car.onLava > 0 && car.grounded) jobs.emit('lava', { dt });
       if (!car.wrecked && car.drifting) jobs.emit('drift', { dt });
@@ -899,7 +904,7 @@ async function main() {
   });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors, race, bounty, record };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors, race, bounty, record, secrets };
 }
 
 // A full-screen message with buttons (graphics trouble).

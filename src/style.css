@@ -457,3 +457,7 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #race-hud .rc-t { font: 40px 'Arial Black', Impact, sans-serif; color: #ffd040; letter-spacing: 2px; }
 #race-hud .rc-sub { color: #fffc; font-size: 13px; }
 #race-hud .rc-count { font: 96px 'Arial Black', Impact, sans-serif; color: #ffd040; }
+#joblog .nt-note { background: #ffffff08; border-left: 3px solid #c890ff; border-radius: 4px; padding: 8px 12px; margin: 6px 0; }
+#joblog .nt-note b { color: #e0c8ff; }
+#joblog .nt-note p { margin: 4px 0 0; color: #fffc; font-size: 14px; line-height: 1.45; }
+#joblog .nt-note.locked { color: #fff6; font-style: italic; border-left-color: #fff3; }
