@@ -461,3 +461,7 @@ body.garage-open #jobs-btn, body.garage-open #jobs, body.garage-open #jcompass {
 #joblog .nt-note b { color: #e0c8ff; }
 #joblog .nt-note p { margin: 4px 0 0; color: #fffc; font-size: 14px; line-height: 1.45; }
 #joblog .nt-note.locked { color: #fff6; font-style: italic; border-left-color: #fff3; }
+#event-hud { position: fixed; top: 150px; left: 50%; transform: translateX(-50%); z-index: 6; text-align: center; pointer-events: none;
+  background: #200404d0; border: 1px solid #ff502080; border-radius: 6px; padding: 6px 16px; color: #fff; font: 13px system-ui, sans-serif; }
+#event-hud b { display: block; font: 18px 'Arial Black', Impact, sans-serif; color: #ff7040; letter-spacing: 2px; }
+#event-hud span { color: #fffc; }

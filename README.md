@@ -33,6 +33,29 @@ there).
   unlocks, chassis and whatever parts were still on the car (repaired; parts
   you lost stay lost).
   Regions reached, bosses beaten, teleporters and jobs are remembered.
+- **More people give jobs:** Buck "Bootlegger" Dawson (a rival racer: speed,
+  drift and jump challenges), Grizzle (a demon mechanic who quit Infernal
+  Petroleum: hunting jobs) and Carol Finch (the Devil's fired assistant:
+  sabotage).
+- **Doc's daily job:** a new hard job every real-world day (the same for
+  everyone that day), for big souls.
+- **Bounties:** every region has a WANTED demon (Big Earl, Old Smokey...),
+  posted by Grizzle. Giant, tough, with a name tag. Hurt it and it runs.
+- **Boss salvage:** each boss drops its own one-of-a-kind part the first time
+  you kill it (Titan's Fist, Magma Heart, Harpy Wings, the Devil's
+  Contract...). After that you can buy more in the garage.
+- **Paint shop:** paint jobs in the garage, bought with souls, plus 5 secret
+  ones. Paint jobs are kept forever.
+- **Races vs Mirror Hank:** after Buck's first job, every region has a race
+  course (drive into the 🏁 start gate). You race a silver ghost of your own
+  best run; the first win in each region pays souls.
+- **Hidden areas:** two secret stashes per region (rings of standing stones,
+  far from the roads) with lore notes, souls and secret paint jobs. Carol
+  radios when you're close. Read the notes in the logbook (**J** → NOTES).
+- **Random events:** every couple of minutes something happens: a demon
+  stampede, fire rain, an oil convoy to blow up, or a soul storm.
+- **Logbook (J):** JOBS, STATS (your lifetime record) and NOTES. **TAB**
+  flips pages. STATS is also on the title menu.
 
 **Current stage: Milestone 7 — regions (part 1: the Lava Rivers).** Beat the
 Ash Titan and a **Hellgate** opens next to its arena: drive through it to

@@ -57,6 +57,7 @@ import { PaintShop, paintById } from './vehicle/paint.js';
 import { Bounty } from './demons/bounties.js';
 import { Race } from './world/race.js';
 import { Secrets } from './world/secrets.js';
+import { Events } from './world/events.js';
 import { applyPaint } from './vehicle/carModel.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
@@ -163,7 +164,6 @@ async function main() {
       jobs.emit('kill', { type: 'turret', source });
     },
   }) : null;
-  if (foundry) demons.targets = foundry.turrets; // (shootable like demons)
   // Screaming Canyon: wind gusts and rockslides (the chasms are in the terrain).
   const canyonHazards = region.canyon && region.canyon.hazards !== false ? new CanyonHazards(scene, region, { dust, gore, audio, chase, demons }) : null;
   if (canyonHazards) canyonHazards.onSlide = () => { if (mode === 'play') radio.say('firstRockslide'); };
@@ -179,7 +179,6 @@ async function main() {
   }) : null;
   if (mirrors) {
     // (shootable like demons; the Throne has turrets AND mirrors, so both)
-    Object.defineProperty(demons, 'targets', { get: () => [...(foundry?.turrets || []), ...mirrors.targets] });
     mirrors.onTeleport = () => { radio.say('firstPortal'); jobs.emit('teleport'); };
     mirrors.onFake = () => radio.say('firstFake');
     mirrors.onClone = () => radio.say('firstClone');
@@ -223,6 +222,10 @@ async function main() {
   const race = new Race(scene, region, regionSpawn(), { hud, audio, radio, jobs, progress, souls });
   // Hidden stashes (lore notes, souls, secret paint jobs).
   const secrets = new Secrets(scene, region, { hud, audio, radio, jobs, souls, paints });
+  // Random events (stampedes, fire rain, oil convoys, soul storms).
+  const events = new Events(scene, region, { demons, projectiles, souls, hud, audio, radio, jobs, gore, sparks, chase });
+  // Everything you can shoot that isn't a demon: turrets, mirrors, the oil tanker.
+  Object.defineProperty(demons, 'targets', { get: () => [...(foundry?.turrets || []), ...(mirrors?.targets || []), ...events.targets] });
   jobLog.tabs.push({ id: 'notes', label: 'NOTES', sub: 'Secrets you found: Infernal Petroleum\'s dirty laundry.', html: () => secrets.html(REGIONS) });
   // Every kill drops souls (ram kills pay extra).
   demons.onKill = (d, source) => {
@@ -608,6 +611,7 @@ async function main() {
         hud.souls(progress.souls);
         car.setTier(progress.tier);
         stats.reset();
+        events.reset();
         hud.toast(keep ? 'Wrecked! Doc patched you up: your car is fixed.' : 'Starting over with a fresh car!', 'warn');
       }
     }
@@ -749,6 +753,7 @@ async function main() {
       bounty.update(dt, car, !SETTINGS.dev.noEnemies);
       race.update(dt, car, true);
       secrets.update(dt, car, true);
+      events.update(dt, car, { allowed: !race.racing && !(boss?.awake && boss.state !== 'dead') && !base?.contains(car.currPos) && !SETTINGS.dev.noEnemies });
       if (!car.wrecked) record.on('drive', { dt, speed: car.speed, airborne: !car.grounded });
       if (!car.wrecked && car.onLava > 0 && car.grounded) jobs.emit('lava', { dt });
       if (!car.wrecked && car.drifting) jobs.emit('drift', { dt });
@@ -860,13 +865,15 @@ async function main() {
     // Second arrow: the nearest spot the tracked job wants you to go.
     beacons.update(dt);
     const spots = playing ? jobs.beacons().filter((b) => b.tracked) : [];
-    if (race.racing && race.target) {
-      // Racing: the arrow points at the next ring.
-      const to = new THREE.Vector3(race.target.x - car.position.x, 0, race.target.z - car.position.z);
+    // Racing: the arrow points at the next ring. Oil convoy: at the tanker.
+    const special = race.racing && race.target ? { p: race.target, label: '🏁 NEXT RING', color: '#ffd040' }
+      : events.tanker?.alive ? { p: events.tanker.pos, label: '🛢️ OIL TANKER', color: '#ff7040' } : null;
+    if (special) {
+      const to = new THREE.Vector3(special.p.x - car.position.x, 0, special.p.z - car.position.z);
       const camFwd = new THREE.Vector3();
       camera.getWorldDirection(camFwd);
       const angle = Math.atan2(camFwd.x * to.z - camFwd.z * to.x, camFwd.x * to.x + camFwd.z * to.z);
-      hud.jobPointer(`🏁 NEXT RING · ${Math.round(to.length())} m`, angle, '#ffd040');
+      hud.jobPointer(`${special.label} · ${Math.round(to.length())} m`, angle, special.color);
     } else if (spots.length) {
       const near = spots.reduce((a, b) => (Math.hypot(a.x - car.position.x, a.z - car.position.z) < Math.hypot(b.x - car.position.x, b.z - car.position.z) ? a : b));
       const to = new THREE.Vector3(near.x - car.position.x, 0, near.z - car.position.z);
@@ -904,7 +911,7 @@ async function main() {
   });
 
   // Handy for debugging in the browser console.
-  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors, race, bounty, record, secrets };
+  window.HELLDRIVERS = { dev, progress, souls, boss, projectiles, car, chase, lighting, SETTINGS, physics, scene, camera, demons, stats, garage, scrap, region, hazards, gate, travelTo, base, tele, radio, jobs, jobLog, foundry, mirrors, race, bounty, record, secrets, events };
 }
 
 // A full-screen message with buttons (graphics trouble).
