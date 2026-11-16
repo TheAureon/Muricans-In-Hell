@@ -72,6 +72,13 @@ export const GOALS = {
     label: () => 'Go through teleport mirrors',
     on: { teleport: () => 1 },
   },
+  bounty: {
+    total: () => 1,
+    label: (g) => `Hunt down ${g.name}`,
+    on: { bounty: () => 1 },
+    points: (g, s, w) => (w?.bounty?.pos ? [w.bounty.pos] : []),
+    show: () => '',
+  },
   speed: {
     total: () => 1,
     label: (g) => `Hit ${g.kmh} km/h`,

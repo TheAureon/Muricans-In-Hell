@@ -4,6 +4,7 @@
 // Kept in the browser.
 import { MISSIONS } from './missions.js';
 import { dailyJob, isDaily } from './daily.js';
+import { bountyJob } from '../demons/bounties.js';
 import { GOALS } from './goals.js';
 import { CAST } from '../story/story.js';
 import { SETTINGS } from '../settings.js';
@@ -22,7 +23,7 @@ export class JobBoard {
     this.onChange = null;
     // Every job: the story jobs, plus today's daily job for this region.
     this.daily = dailyJob(region);
-    this.list = [...MISSIONS, this.daily];
+    this.list = [...MISSIONS, bountyJob(region), this.daily].filter(Boolean);
     this.#load();
   }
 
@@ -142,7 +143,7 @@ export class JobBoard {
     for (const m of this.byStatus('active')) {
       if (!this.here(m)) continue;
       m.goals.forEach((g, i) => {
-        const pts = GOALS[g.kind]?.points?.(g, this.jobs[m.id].goals[i]) || [];
+        const pts = GOALS[g.kind]?.points?.(g, this.jobs[m.id].goals[i], this.world) || [];
         for (const p of pts) out.push({ x: p.x, z: p.z, color: this.giver(m).color, tracked: m.id === this.tracked });
       });
     }

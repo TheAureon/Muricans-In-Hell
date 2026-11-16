@@ -51,11 +51,11 @@ export class Record {
       case 'boss': d.bosses++; if (e.name) d.bossByName[e.name] = (d.bossByName[e.name] || 0) + 1; this.save(); break;
       case 'wreck': d.wrecks++; d.causes[e.cause || 'Demons'] = (d.causes[e.cause || 'Demons'] || 0) + 1; this.save(); break;
       case 'souls': d.souls += e.n || 0; break;
-      case 'jobDone': d.jobs++; break;
+      case 'jobDone': d.jobs++; this.save(); break;
       case 'teleporter': d.teleporters++; break;
-      case 'secret': d.secrets++; break;
-      case 'bounty': d.bounties++; break;
-      case 'race': d.races++; break;
+      case 'secret': d.secrets++; this.save(); break;
+      case 'bounty': d.bounties++; this.save(); break;
+      case 'race': d.races++; this.save(); break;
       case 'event': d.events++; break;
       case 'drift': d.driftTime += e.dt; break;
       case 'lava': d.lavaTime += e.dt; break;

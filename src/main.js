@@ -54,6 +54,7 @@ import { JobLog } from './ui/jobLog.js';
 import { Record } from './core/record.js';
 import { PART_TYPES } from './vehicle/parts.js';
 import { PaintShop, paintById } from './vehicle/paint.js';
+import { Bounty } from './demons/bounties.js';
 import { applyPaint } from './vehicle/carModel.js';
 import { Beacons } from './world/beacon.js';
 import { DevPanel, loadDevSettings } from './ui/devPanel.js';
@@ -141,6 +142,9 @@ async function main() {
   jobs.emit = (type, e) => { if (mode === 'play') record.on(type, e); jobsEmit(type, e); };
   jobs.onDone = () => record.on('jobDone');
   const jobLog = new JobLog(jobs, record);
+  // This region's WANTED demon (a job from Grizzle).
+  const bounty = new Bounty(scene, demons, region, jobs);
+  jobs.world.bounty = bounty;
   const beacons = new Beacons(scene);
   jobs.onChange = () => { hud.jobs(jobs); jobLog.render(); beacons.set(jobs.beacons()); };
   jobs.onChange();
@@ -217,6 +221,11 @@ async function main() {
   demons.onKill = (d, source) => {
     lighting.flash(d.pos, d.def.heavy ? 1.5 : 0.6);
     if (mode === 'title') return; // the title-screen movie doesn't earn souls
+    if (bounty.isBounty(d)) {
+      hud.banner('BOUNTY CLAIMED', `${d.bounty.name} is dead.`, 5);
+      souls.burst(d.pos, 40);
+      jobs.emit('bounty');
+    }
     radio.say('firstKill');
     jobs.emit('kill', { type: d.type, source });
     const P = SETTINGS.progression;
@@ -607,6 +616,7 @@ async function main() {
     if (!playing) { aim.mesh.visible = false; aimPoint = autopilot.aim; }
     car.render(alpha, dt, aimPoint);
     demons.render(alpha, dt);
+    bounty.render();
     if (!SETTINGS.dev.noEnemies) boss?.render(alpha, dt);
     mirrors?.render(alpha, dt);
     if (!playing) director.update(dt);
@@ -729,6 +739,7 @@ async function main() {
       }
       if (tele && !tele.established && (regionTime += dt) > 75) radio.say('teleporterHint');
       jobs.update(dt, car);
+      bounty.update(dt, car, !SETTINGS.dev.noEnemies);
       if (!car.wrecked) record.on('drive', { dt, speed: car.speed, airborne: !car.grounded });
       if (!car.wrecked && car.onLava > 0 && car.grounded) jobs.emit('lava', { dt });
       if (!car.wrecked && car.drifting) jobs.emit('drift', { dt });

@@ -23,6 +23,7 @@ const _n = new THREE.Vector3();
 const _q = new THREE.Quaternion();
 const _qi = new THREE.Quaternion();
 const _local = new THREE.Vector3();
+const _bountyColor = new THREE.Color();
 const _dummy = new THREE.Object3D();
 const _col = new THREE.Color();
 
@@ -71,7 +72,7 @@ export class Demons {
         pool.push(d);
         this.all.push(d);
         // Every demon looks a little different: slightly bigger or smaller, lighter or darker.
-        d.size = 0.9 + Math.random() * 0.22;
+        d.size = d.baseSize = 0.9 + Math.random() * 0.22;
         const shade = 0.82 + Math.random() * 0.3;
         d.tint.setRGB(shade * (0.95 + Math.random() * 0.1), shade, shade * (0.95 + Math.random() * 0.1));
         mesh.setColorAt(i, d.tint);
@@ -189,6 +190,13 @@ export class Demons {
 
   #remove(d) {
     d.alive = false;
+    if (d.bounty) { // (back to a normal demon for the next spawn)
+      d.bounty = null;
+      d.size = d.baseSize;
+      d.speedJitter = 0.85 + Math.random() * 0.3;
+      d.mesh.setColorAt(d.index, d.tint);
+      d.mesh.instanceColor.needsUpdate = true;
+    }
     _dummy.scale.setScalar(0);
     _dummy.updateMatrix();
     d.mesh.setMatrixAt(d.index, _dummy.matrix);
@@ -197,6 +205,30 @@ export class Demons {
       this.freeBodies.push(d.body);
       d.body = null;
     }
+  }
+
+  // A BOUNTY: one named, oversized, extra-tough demon (see bounties.js).
+  // It never despawns, and runs for it when it's badly hurt.
+  spawnBounty(type, pos, { name, hpMult = 8, size = 2.1, color = 0xffc040 }) {
+    const t = this.types[type];
+    if (!t) return null;
+    let d = t.pool.find((p) => !p.alive);
+    if (!d) { // (pool full: recycle the one farthest away)
+      d = t.pool.reduce((a, b) => (b.pos.distanceTo(pos) > a.pos.distanceTo(pos) ? b : a));
+      this.#remove(d);
+    }
+    const before = new Set(t.pool.filter((p) => p.alive));
+    this.spawnPack(pos, 1, type);
+    d = t.pool.find((p) => p.alive && !before.has(p));
+    if (!d) return null;
+    d.illusion = false;
+    d.hp *= hpMult;
+    d.bounty = { name, maxHp: d.hp };
+    d.size = size;
+    d.speedJitter = 1.3;
+    d.mesh.setColorAt(d.index, _bountyColor.setHex(color));
+    d.mesh.instanceColor.needsUpdate = true;
+    return d;
   }
 
   // ---------------------------------------------------------------- damage
@@ -307,7 +339,7 @@ export class Demons {
       const toCar = _v.subVectors(carPos, d.pos).setY(0);
       const dist = toCar.length();
 
-      if (dist > S.despawnDistance) { this.#remove(d); continue; }
+      if (dist > S.despawnDistance && !d.bounty) { this.#remove(d); continue; }
       d.stun -= dt; d.attackCd -= dt; d.ramCd -= dt; d.lunge = Math.max(0, d.lunge - dt * 4);
       d.flash = Math.max(0, d.flash - dt * 6);
 
@@ -352,7 +384,12 @@ export class Demons {
             else if (d.chargeCd <= 0 && dist < 26 && dist > 6) { d.charging = 1.1; d.chargeCd = st.chargeCooldown; d.lunge = 1; }
           }
           const ux = toCar.x / dist, uz = toCar.z / dist;
-          if (d.def.behavior === 'ranged') {
+          if (d.bounty && d.hp < d.bounty.maxHp * 0.5) {
+            // A hurt bounty runs for it (zig-zagging), so you have to chase it down.
+            const zig = Math.sin(d.phase + performance.now() * 0.0015) * 0.6;
+            tx = (-ux - uz * zig) * sp * 1.2; tz = (-uz + ux * zig) * sp * 1.2;
+            if (Math.abs(d.pos.x) > this.mapHalf || Math.abs(d.pos.z) > this.mapHalf) { tx = -d.pos.x * 0.05; tz = -d.pos.z * 0.05; }
+          } else if (d.def.behavior === 'ranged') {
             // Keep a comfortable distance: flee, close in, or circle.
             if (dist < st.fleeRange) { tx = -ux * sp; tz = -uz * sp; }
             else if (dist > st.preferredRange) { tx = ux * sp * 0.7; tz = uz * sp * 0.7; }
